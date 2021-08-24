@@ -1,3 +1,4 @@
+import ROOT
 
 color_text = '\033[31mpositron : light_red ' \
              '\033[0m, \033[34m electron : blue ' \
@@ -26,3 +27,33 @@ pdg2string = {-11: 'positron',
               -13: 'anti_muon',
               13: 'muon',
               22: 'gamma'}
+
+
+# Helper to set the histogram colors
+def set_hist_colors(hist, lcolor, fcolor):
+    hist.SetLineColor(lcolor)
+    hist.SetFillColor(fcolor)
+
+
+# Function to set legend template for right-side of canvas
+def legend_init_right():
+    legend = ROOT.TLegend(.65, .55, .85, .85)
+    legend.SetBorderSize(0)
+    legend.SetFillColor(0)
+    legend.SetFillStyle(0)
+    legend.SetTextFont(42)
+    legend.SetTextSize(0.030)
+
+    return legend
+
+
+# Function to set legend template for left-side of canvas
+def legend_init_left():
+    legend = ROOT.TLegend(.15, .55, .35, .85)
+    legend.SetBorderSize(0)
+    legend.SetFillColor(0)
+    legend.SetFillStyle(0)
+    legend.SetTextFont(42)
+    legend.SetTextSize(0.030)
+
+    return legend

@@ -1,13 +1,18 @@
-import numpy as np
-import cex_analysis.utils as utils
-import ROOT as rt
+import cex_analysis.plot_utils as utils
+import ROOT
 from ROOT import TEfficiency, TLegend, TH1D
-from abc import abstractclassmethod, abstractmethod
+import awkward as ak
+import plotting_utils
 
 
 class Histogram:
     def __init__(self, config):
         self.config = config
+
+        # Create a map to hold all plot objects
+        # Not necessary to initialize map but do it so keys are known and consistent
+        # Each entry in the lists should be a tuple = (<object>, <legend>)
+        self.hist_map = {"efficiency": [], "hist": [], "stack": []}
 
     def init_eff(self):
         cut_eff = {}
@@ -17,15 +22,11 @@ class Histogram:
         return cut_eff
 
     def init_hists(self):
-        hist_map = {}
-        for hist in self.config["hist_list"]:
-            hist_map[hist] = TH1D("eff", "Eff;x;#epsilon", 40, 0, 80)
-
-        return hist_map
+        return self.hist_map
 
     def merge_hists(self, hist_list):
         """
-        Merge histograms from different threads but the same process
+        Merge equivalent histograms from different threads
         :param hist_list: List of histograms from different threads
         :return: Single merged histogram
         """
@@ -33,8 +34,8 @@ class Histogram:
         hmerge = hist_list[0].Clone("hmerge")
         hmerge.Reset()
 
-        # Merge requires TList input so create and fill it
-        h_list = rt.TList()
+        # Unfortunately `merge()` requires TList input so create and fill one
+        h_list = ROOT.TList()
         for h in hist_list:
             h_list.Add(h)
 
@@ -45,26 +46,91 @@ class Histogram:
     def merge_eff_hist(self, eff_list):
         """
         Leverages the builtin "+=" to merge all TEfficiency objects from the same process
-        :param eff_map: Map of all TEfficiency objects
+        :param eff_list: Map of all TEfficiency objects
         :return: Merged TEfficiency object
         """
-
         merged_eff = TEfficiency()
         for eff in eff_list:
             merged_eff += eff
 
         return merged_eff
 
+    def init_plotting(self, plot_config):
+        """
+        Initialize the plot objects, histograms
+        :param plot_config:
+        :return: Initialize success/failure
+        """
+        init_success = True
+
+        return init_success
+
+    def test_th1(self):
+        h = TH1D("t", "t;x;c", 5, 0, 5)
+
+    def plot_particles(self, x, cut):
+        # Get the config to create the plot for this cut
+        name, title, bins, upper_lim, lower_lim = self.config["cut_plots"][cut]
+        hist = TH1D(name, title, bins, upper_lim, lower_lim)
+
+        # Just a loop in c++ which does hist.Fill()
+        # nullptr sets weights = 1
+        hist.FillN(len(x), ak.to_numpy(x), ROOT.nullptr)
+
+        # Store this hist in our master map
+        self.hist_map["hist"].append(hist)
+
+    def plot_particles_stack(self, x, x_pdg, cut, precut):
+        """
+        Make stacked plot of a given variable with each stack corresponding to a PDG
+        :param precut: Is this pre or Post cut plot
+        :param x: Array of single variable either shape=(<num event>) OR shape=(<num event>, <num daughters>)
+        :param x_pdg: Array of PDG codes with either shape=(<num event>) OR shape=(<num event>, <num daughters>)
+        :param cut: str Cut name
+        :return:
+        """
+        c = ROOT.TCanvas()
+        stack = ROOT.THStack()
+        legend = utils.legend_init_right()
+
+        for pdg in self.config["stack_pdg_list"]:
+            name, title, bins, upper_lim, lower_lim = self.config["cut_plots"][cut]
+            if precut:
+                name = "precut_" + name
+                title = "PreCut-" + title
+            else:
+                name = "postcut_" + name
+                title = "PostCut-" + title
+
+            hstack = TH1D(name, title, bins, lower_lim, upper_lim)
+
+            # Before plotting we flatten from 2D array shape=(<num event>, <num daughters>) to
+            # 1D array shape=(<num event>*<num daughters>)
+            pdg_filtered_array = plotting_utils.daughter_by_pdg(ak.flatten(x, axis=None),
+                                                           ak.flatten(x_pdg, axis=None), pdg)
+
+            if len(pdg_filtered_array) < 1:
+                continue
+
+            # Now use the standard fill function
+            hstack.FillN(len(pdg_filtered_array), pdg_filtered_array, ROOT.nullptr)
+
+            utils.set_hist_colors(hstack, utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1),
+                                  utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1))
+            stack.Add(hstack, "HIST")
+            legend.AddEntry("hstack", utils.pdg2string.get(pdg, "other"))
+
+        stack.Draw()
+
+        self.hist_map["stack"].append((stack, legend))
+
+        return
 
 ###################################################
 
     def plot_particles(self, event):
         pass
 
-    # Helper to set the histogram colors
-    def set_hist_colors(hist, lcolor, fcolor):
-        hist.SetLineColor(lcolor)
-        hist.SetFillColor(fcolor)
 
     def set_hist_lim(hist):
         hist.SetAxisRange(0, 2, "X")
@@ -76,28 +142,6 @@ class Histogram:
     def print_cut_report(pdg, total, passed):
         print(f"{pdg}: (passed/total = {passed}/{total})  (Eff = {100 * (passed / total):.1f}%)")
 
-    # Function to set legend template for right-side of canvas
-    def legend_init_right(self):
-        legend = TLegend(.65, .55, .85, .85)
-        legend.SetBorderSize(0)
-        legend.SetFillColor(0)
-        legend.SetFillStyle(0)
-        legend.SetTextFont(42)
-        legend.SetTextSize(0.030)
-
-        return legend
-
-    # Function to set legend template for left-side of canvas
-    def legend_init_left():
-        legend = TLegend(.15, .55, .35, .85)
-        legend.SetBorderSize(0)
-        legend.SetFillColor(0)
-        legend.SetFillStyle(0)
-        legend.SetTextFont(42)
-        legend.SetTextSize(0.030)
-
-        return legend
-
     def hist_help(file, hist, color, fill=True):
         h = file.Get(hist)
         h.SetLineColor(color)
@@ -106,40 +150,6 @@ class Histogram:
             h.SetFillColor(False)
         return h
 
-    def create_hist_stack(tree, cuts, pdg_list, var_string, bins, llim, ulim, legend):
 
-        stacks = rt.THStack()
-        count = {}
-
-        for p in pdg_list:
-            hist_name = utils.pdg2string[p] + ';Count;' + var_string
-            hb = TH1D('hb', hist_name, bins, llim, ulim)
-
-            count[utils.pdg2string[p]] = tree.Draw(var_string + " >> hb", "reco_beam_true_byHits_PDG==" + str(p) + cuts)
-            h1 = rt.gROOT.FindObject("hb")
-            set_hist_colors(h1, utils.colors[utils.pdg2string[p]], utils.colors[utils.pdg2string[p]])
-            stacks.Add(h1, "HIST")
-            legend.AddEntry("hb", utils.pdg2string[p])
-
-        stacks.Draw()
-
-        return stacks, legend
-
-    def create_hist_stack_df(df, cuts, pdg_list, var_string, bins, llim, ulim, legend):
-
-        stacks = rt.THStack()
-
-        for p in pdg_list:
-            hist_name = utils.pdg2string[p] + ';Count;' + var_string
-
-            h1 = df.Filter(cuts).Filter("reco_beam_true_byHits_PDG==" + str(p)).Histo1D(
-                ("hb", hist_name, bins, llim, ulim), var_string)
-            set_hist_colors(h1, utils.colors[utils.pdg2string[p]], utils.colors[utils.pdg2string[p]])
-            stacks.Add(h1, "HIST")
-            legend.AddEntry(h1, utils.pdg2string[p])
-
-        stacks.Draw()
-
-        return stacks, legend
 
 

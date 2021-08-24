@@ -9,13 +9,13 @@ class BeamQualityCut(EventSelectionBase):
     def __init__(self, config):
         super().__init__(config)
 
-    def selection(self, event):
+    def selection(self, events):
 
         event_passed = True
 
-        if event["bq"] < 85:
+        if events["bq"] < 85:
             event_passed = False
 
-        super().efficiency("BeamQualityCut", event_passed, event["bq"])
+        super().efficiency("BeamQualityCut", event_passed, events["bq"])
 
         return event_passed

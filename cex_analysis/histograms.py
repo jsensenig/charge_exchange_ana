@@ -1,7 +1,6 @@
 import cex_analysis.plot_utils as utils
 from cex_analysis.histogram_data import HistogramData
 import ROOT
-from ROOT import TEfficiency, TLegend, TH1D, THStack
 import awkward as ak
 import plotting_utils
 import numpy as np
@@ -10,6 +9,7 @@ import numpy as np
 class Histogram:
     def __init__(self, config):
         self.config = config
+        self.hist_config = None
 
         # We don't want any plots drawn while running so set ROOT to Batch mode
         ROOT.gROOT.SetBatch(True)
@@ -21,8 +21,11 @@ class Histogram:
     def get_hist_map(self):
         return self.hist_data
 
+    def configure_hists(self, config):
+        self.hist_config = config
+
     @staticmethod
-    def sum_hist_list(hist_list):
+    def merge_hist_list(hist_list):
         # If no histograms, skip or if one just return it
         if len(hist_list) < 1:
             return None
@@ -36,6 +39,25 @@ class Histogram:
 
         return hsum
 
+    @staticmethod
+    def merge_stack_list(stack_list):
+        # If no histograms, skip or if one just return it
+        if len(stack_list) < 1:
+            return None
+        elif len(stack_list) == 1:
+            return stack_list[0].histogram
+
+        # Merge() requires a TList so fill that first
+        tlist = ROOT.TList()
+        for stack in stack_list[1:]:
+            tlist.Add(stack.histogram)
+
+        # Merge all histograms into first one
+        stack_merge = stack_list[0].histogram
+        stack_merge.Merge(tlist, ROOT.nullptr)
+
+        return stack_merge
+
     def merge_efficiency_list(self, eff_list):
         """
         Leverages the builtin "+=" to merge all TEfficiency objects from the same process
@@ -47,18 +69,18 @@ class Histogram:
         elif len(eff_list) == 1:
             return eff_list[0].histogram
 
-        merged_eff = TEfficiency()
-        for eff in eff_list:
-            merged_eff += eff.histogram
+        merged_eff = eff_list[0].histogram
+        for eff in eff_list[1:]:
+            merged_eff.Add(eff.histogram)
 
         return merged_eff
 
     def plot_efficiency(self, xtotal, xpassed, cut):
 
         # Get the config to create the plot for this cut
-        name, title, bins, lower_lim, upper_lim = self.config["cut_plots"][cut]
-        hist_total = TH1D(name + "_total", title, bins, lower_lim, upper_lim)
-        hist_passed = TH1D(name + "_passed", title, bins, lower_lim, upper_lim)
+        name, title, bins, lower_lim, upper_lim = self.hist_config[cut]
+        hist_total = ROOT.TH1D(name + "_total", title, bins, lower_lim, upper_lim)
+        hist_passed = ROOT.TH1D(name + "_passed", title, bins, lower_lim, upper_lim)
 
         # If this is ndim array flatten it
         xtotal = ak.flatten(xtotal, axis=None)
@@ -75,7 +97,7 @@ class Histogram:
         else:
             print("Unknown array type!")
 
-        efficiency = TEfficiency(name + "_eff", title, bins, lower_lim, upper_lim)
+        efficiency = ROOT.TEfficiency(name + "_eff", title, bins, lower_lim, upper_lim)
         efficiency.SetTotalHistogram(hist_total, "")
         efficiency.SetPassedHistogram(hist_passed, "")
 
@@ -85,18 +107,16 @@ class Histogram:
     def plot_particles(self, x, cut, precut):
         c = ROOT.TCanvas()
         legend = utils.legend_init_right()
-        legend.SetBorderSize(1)
-        legend.SetFillColor(1)
 
         # Get the config to create the plot for this cut
-        name, title, bins, lower_lim, upper_lim = self.config["cut_plots"][cut]
+        name, title, bins, lower_lim, upper_lim = self.hist_config[cut]
         if precut:
             name = "precut_" + name
             title = "PreCut-" + title
         else:
             name = "postcut_" + name
             title = "PostCut-" + title
-        hist = TH1D(name, title, bins, lower_lim, upper_lim)
+        hist = ROOT.TH1D(name, title, bins, lower_lim, upper_lim)
 
         # If this is ndim array flatten it
         x = ak.flatten(x, axis=None)
@@ -129,11 +149,11 @@ class Histogram:
             print("Must use Awkward Arrays to plot!")
 
         c = ROOT.TCanvas()
-        stack = THStack()
+        stack = ROOT.THStack()
         legend = utils.legend_init_right()
 
         # The name and binning should be the same for all particles
-        name, title, bins, lower_lim, upper_lim = self.config["cut_plots"][cut]
+        name, title, bins, lower_lim, upper_lim = self.hist_config[cut]
         if precut:
             name = "precut_" + name
             title = "PreCut-" + title
@@ -143,7 +163,7 @@ class Histogram:
 
         for i, pdg in enumerate(self.config["stack_pdg_list"]):
 
-            hstack = TH1D(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
+            hstack = ROOT.TH1D(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
 
             # Before plotting we flatten from 2D array shape=(<num event>, <num daughters>) to
             # 1D array shape=(<num event>*<num daughters>)

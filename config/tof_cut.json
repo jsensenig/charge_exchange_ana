@@ -1,0 +1,10 @@
+{
+  "TOFCut": {
+    "cut_variable": "reco_daughter_PFP_true_byHits_startZ",
+    "upper": 223,
+    "lower": 10
+  },
+  "histograms": {
+    "TOFCut": ["tof_cut", "TOFCut;TOF [ns];Count", 100, 0, 300]
+  }
+}

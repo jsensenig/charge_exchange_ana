@@ -1,4 +1,5 @@
 from cex_analysis.event_selection_base import EventSelectionBase
+import json
 
 
 class TOFCut(EventSelectionBase):
@@ -6,14 +7,19 @@ class TOFCut(EventSelectionBase):
         super().__init__(config)
 
         self.cut_name = "TOFCut"
+        self.config = config
         self.local_config = self.config[self.cut_name]
+        self.local_hist_config = None
         self.cut_variable = self.local_config["cut_variable"]
         self.reco_daughter_pdf = self.config["reco_daughter_pdg"]
 
-    def configure(self):
-        pass
+        # Configure class
+        self.configure()
 
     def selection(self, events, hists):
+
+        # First we configure the histograms we want to make
+        hists.configure_hists(self.local_hist_config)
 
         # Plot the variable before making cut
         self.plot_particles_base(events=events[self.cut_variable], pdg=events[self.reco_daughter_pdf],
@@ -41,6 +47,13 @@ class TOFCut(EventSelectionBase):
 
     def efficiency(self, total_events, passed_events, cut, hists):
         hists.plot_efficiency(xtotal=total_events, xpassed=passed_events, cut=cut)
+
+    def configure(self):
+        config_file = self.config[self.cut_name]["config_file"]
+        with open(config_file, "r") as cfg:
+            tmp_config = json.load(cfg)
+            self.local_config = tmp_config[self.cut_name]
+            self.local_hist_config = tmp_config["histograms"]
 
     def get_cut_doc(self):
         doc_string = "Cut on beamline TOF to select beam particles"

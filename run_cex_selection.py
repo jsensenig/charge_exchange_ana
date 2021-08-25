@@ -5,6 +5,7 @@ import concurrent.futures
 import ROOT
 import uproot
 import os
+import json
 
 
 def check_thread_count(threads):
@@ -53,11 +54,16 @@ def merge_hist_maps(config, hist_maps):
         hist_names = hdata.get_hist_name_list(hist_type_list)
         for name in hist_names:
             hlist = hdata.get_select_hist_name_list(hist_type_list, name)
+            merged_hist = None
             if t == "efficiency":
                 merged_hist = hclass.merge_efficiency_list(hlist)
+            elif t == "hist":
+                merged_hist = hclass.merge_hist_list(hlist)
+            elif t == "stack":
+                merged_hist = hclass.merge_stack_list(hlist)
             else:
-                merged_hist = hclass.sum_hist_list(hlist)
-            if not None:
+                print("Unknown histogram type! ", t)
+            if merged_hist is not None:
                 merged_hist.Write(t + "_" + name)
 
     f.Close()
@@ -93,6 +99,11 @@ def thread_creator(config, num_workers, tree, steps, branches):
         collect_write_results(config, concurrent.futures.as_completed(futures))
 
 
+def configure(config_file):
+
+    with open(config_file, "r") as cfg:
+        return json.load(cfg)
+
 ############################
 
 
@@ -102,7 +113,7 @@ file = "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_0.roo
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG"]
 
 # Number of threads
-num_workers = 1
+num_workers = 4
 num_workers = check_thread_count(num_workers)
 
 tree = open_file(file, tree_name)
@@ -110,14 +121,9 @@ tree = open_file(file, tree_name)
 steps = int(len(tree["run"].array()) / num_workers) + 1
 print("Data steps", steps)
 
-
-# Cut list is an array so order is kept
-config = {"cut_list": ["TOFCut", "BeamQualityCut"],
-          "hist_list": ["TOF"],
-          "reco_daughter_pdg": "reco_daughter_PFP_true_byHits_PDG",
-          "TOFCut": {"cut_variable": "reco_daughter_PFP_true_byHits_startZ", "upper": 223, "lower": 10},
-          "cut_plots": {"TOFCut": ["tof_cut", "TOFCut;TOF [ns];Count", 100, 0, 300]},
-          "stack_pdg_list": [-211, -13, -11, 11, 13, 22, 111, 211, 321, 2212, 0]}
+# Get main configuration
+cfg_file = "config/main.json"
+config = configure(cfg_file)
 
 # Start the analysis threads
 thread_creator(config, num_workers, tree, steps, branches)

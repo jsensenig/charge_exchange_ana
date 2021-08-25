@@ -1,0 +1,15 @@
+{
+  "cut_list": ["TOFCut", "BeamQualityCut"],
+  "hist_list": ["TOF"],
+  "reco_daughter_pdg": "reco_daughter_PFP_true_byHits_PDG",
+  "stack_pdg_list": [-211, -13, -11, 11, 13, 22, 111, 211, 321, 2212, 0],
+  "TOFCut": {
+    "config_file": "config/tof_cut.json",
+    "cut_variable": "reco_daughter_PFP_true_byHits_startZ",
+    "upper": 223,
+    "lower": 10
+  },
+  "cut_plots": {
+    "TOFCut": ["tof_cut", "TOFCut;TOF [ns];Count", 100, 0, 300]
+  }
+}

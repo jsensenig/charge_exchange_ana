@@ -21,11 +21,24 @@ py::array_t<double> daughter_by_pdg(py::array_t<double> x, py::array_t<int> pdg,
 
     double *ptr_x = static_cast<double *>(buf_x.ptr);
 
+    // List all "known" PDGs
+    std::vector<int> pdg_vec = {-211, -13, -11, 11, 13, 22, 111, 211, 321, 2212};
+
     // Use a vector since we don't know a priori the size of the array to be returned
     std::vector<double> xptr_vec;
-    for (size_t idx = 0; idx < buf_x.shape[0]; idx++) {
-      if( pdg_arr(idx) != select_pdg ) continue;
-      xptr_vec.emplace_back(ptr_x[idx]);
+
+    // select_pdg = 0 = "Other"
+    if( select_pdg == 0 ) {
+      for (size_t idx = 0; idx < buf_x.shape[0]; idx++) {
+        auto it = std::find( pdg_vec.begin(), pdg_vec.end(), pdg_arr(idx) );
+        if( it != pdg_vec.end() ) continue;
+        xptr_vec.emplace_back(ptr_x[idx]);
+      }
+    } else {
+      for (size_t idx = 0; idx < buf_x.shape[0]; idx++) {
+        if( pdg_arr(idx) != select_pdg ) continue;
+        xptr_vec.emplace_back(ptr_x[idx]);
+      }
     }
 
     // No pointer is passed, so NumPy will allocate the buffer

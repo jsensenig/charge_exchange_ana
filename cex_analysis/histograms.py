@@ -1,7 +1,7 @@
 import cex_analysis.plot_utils as utils
 from cex_analysis.histogram_data import HistogramData
 import ROOT
-from ROOT import TEfficiency, TLegend, TH1D
+from ROOT import TEfficiency, TLegend, TH1D, THStack
 import awkward as ak
 import plotting_utils
 import numpy as np
@@ -67,16 +67,20 @@ class Histogram:
         h = TH1D("t", "t;x;c", 5, 0, 5)
 
     def plot_particles(self, x, cut, precut):
+        c = ROOT.TCanvas()
         legend = utils.legend_init_right()
+        legend.SetBorderSize(1)
+        legend.SetFillColor(1)
+
         # Get the config to create the plot for this cut
-        name, title, bins, upper_lim, lower_lim = self.config["cut_plots"][cut]
+        name, title, bins, lower_lim, upper_lim = self.config["cut_plots"][cut]
         if precut:
             name = "precut_" + name
             title = "PreCut-" + title
         else:
             name = "postcut_" + name
             title = "PostCut-" + title
-        hist = TH1D(name, title, bins, upper_lim, lower_lim)
+        hist = TH1D(name, title, bins, lower_lim, upper_lim)
 
         # If this is ndim array flatten it
         x = ak.flatten(x, axis=None)
@@ -90,7 +94,8 @@ class Histogram:
         else:
             print("Unknown array type!")
 
-        legend.AddEntry(name)
+        legend.AddEntry(hist, name)
+        hist.GetListOfFunctions().Add(legend)
 
         # Store this hist in our master map as HistogramData class object
         self.hist_data.append(HistogramData("hist", name, hist))
@@ -108,11 +113,11 @@ class Histogram:
             print("Must use Awkward Arrays to plot!")
 
         c = ROOT.TCanvas()
-        stack = ROOT.THStack()
+        stack = THStack()
         legend = utils.legend_init_right()
 
         # The name and binning should be the same for all particles
-        name, title, bins, upper_lim, lower_lim = self.config["cut_plots"][cut]
+        name, title, bins, lower_lim, upper_lim = self.config["cut_plots"][cut]
         if precut:
             name = "precut_" + name
             title = "PreCut-" + title
@@ -120,9 +125,9 @@ class Histogram:
             name = "postcut_" + name
             title = "PostCut-" + title
 
-        for pdg in self.config["stack_pdg_list"]:
+        for i, pdg in enumerate(self.config["stack_pdg_list"]):
 
-            hstack = TH1D(name + str(pdg), title, bins, lower_lim, upper_lim)
+            hstack = TH1D(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
 
             # Before plotting we flatten from 2D array shape=(<num event>, <num daughters>) to
             # 1D array shape=(<num event>*<num daughters>)
@@ -137,14 +142,21 @@ class Histogram:
 
             utils.set_hist_colors(hstack, utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1),
                                   utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1))
-            stack.Add(hstack, "HIST")
-            legend.AddEntry("hstack", utils.pdg2string.get(pdg, "other"))
+
+            legend.AddEntry(hstack, utils.pdg2string.get(pdg, "other"))
+            if i == 0:
+                hstack.GetListOfFunctions().Add(legend)
+
+            stack.Add(hstack)
 
         stack.Draw()
-        print(type(stack), "  -  ", stack)
+        stack.SetName(name)
+        stack.SetTitle(title.split(";")[0])
+        stack.GetXaxis().SetTitle(title.split(";")[1])
+        stack.GetYaxis().SetTitle(title.split(";")[2])
+
         # Store this hist in our master map as a HistogramData class
-        self.hist_data.append(HistogramData("stack", name, type(stack)))
-        print("STACK", self.hist_data[0].histogram)
+        self.hist_data.append(HistogramData("stack", name, stack))
 
         return
 

@@ -7,7 +7,7 @@ class HistogramData:
 
     hist_type: str           # Histogram type e.g. stack, hist, efficiency
     hist_name: str           # Histogram name
-    histogram: typing.Any    # Tuple of (<Histogram Object>, <Legend Object>)
+    histogram: typing.Any    # <Histogram Object>
 
 
 """

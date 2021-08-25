@@ -55,7 +55,8 @@ def merge_hist_maps(config, hist_maps):
             hlist = hdata.get_select_hist_name_list(hist_type_list, name)
             merged_hist = hclass.sum_hist_list(hlist)
             if not None:
-                merged_hist.Write()
+                merged_hist.Write(t + "_" + name)
+
     f.Close()
 
 
@@ -98,7 +99,7 @@ file = "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_0.roo
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG"]
 
 # Number of threads
-num_workers = 5
+num_workers = 1
 num_workers = check_thread_count(num_workers)
 
 tree = open_file(file, tree_name)
@@ -113,7 +114,7 @@ config = {"cut_list": ["TOFCut", "BeamQualityCut"],
           "reco_daughter_pdg": "reco_daughter_PFP_true_byHits_PDG",
           "TOFCut": {"cut_variable": "reco_daughter_PFP_true_byHits_startZ", "upper": 223, "lower": 10},
           "cut_plots": {"TOFCut": ["tof_cut", "TOFCut;TOF [ns];Count", 100, 0, 300]},
-          "stack_pdg_list": [11, 13, 22, 111, 211, 321, 2212]}
+          "stack_pdg_list": [-211, -13, -11, 11, 13, 22, 111, 211, 321, 2212, 0]}
 
 # Start the analysis threads
 thread_creator(config, num_workers, tree, steps, branches)

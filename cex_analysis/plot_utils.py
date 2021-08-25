@@ -26,7 +26,8 @@ pdg2string = {-11: 'positron',
               211: 'pion',
               -13: 'anti_muon',
               13: 'muon',
-              22: 'gamma'}
+              22: 'gamma',
+              0: "other"}
 
 
 # Helper to set the histogram colors

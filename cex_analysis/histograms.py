@@ -5,92 +5,34 @@ from ROOT import TEfficiency, TLegend, TH1D
 import awkward as ak
 import plotting_utils
 import numpy as np
-from copy import deepcopy
 
 
-class Histogram():
+class Histogram:
     def __init__(self, config):
         self.config = config
 
-        # Create a map to hold all plot objects
-        # Not necessary to initialize map but do it so keys are known and consistent
-        # Each entry in the lists should be a tuple = (<object>, <legend>)
-        # Each entry in the lists should be a dict = {<name>: [(<object>, <legend>)]}
-        self.hist_map = {"efficiency": [], "hist": [], "stack": []}
+        # We don't want any plots drawn while running so set ROOT to Batch mode
+        ROOT.gROOT.SetBatch(True)
+        print("Setting ROOT to Batch mode!")
+
+        # Create a list to hold all plot objects
         self.hist_data = []
 
     def get_hist_map(self):
         return self.hist_data
 
-    # def merge_all_plots(self, hist_map, file):
-    #     """
-    #     Merge equivalent histograms from different threads
-    #     :param file:
-    #     :param hist_map: Map of histograms from different threads
-    #     :return: Single merged histogram
-    #     """
-    #     for key in hist_map:
-    #         # We can merge all hists the same way except for TEfficiency objects
-    #         if key == "efficiency":
-    #             self.merge_efficiency_list(hist_map[key])
-    #         else:
-    #             self.merge_hist_list(hist_map[key])
-
-    @staticmethod
-    def merge_hist_list(hist_list):
-        # If no histograms, skip
-        if len(hist_list) < 1:
-            print("Empty histogram list.. returning")
-            return None
-        print("MERGING! ", hist_list[0].hist_type)
-        # Get the first histogram and clear it, so we can merge into it
-        # Note the `histogram` member is a tuple = (Histogram, Legend)
-        if hist_list[0].hist_type == "stack":
-            hmerge = hist_list[0].histogram[0]
-            print(hmerge)
-        else:
-            hmerge = hist_list[0].histogram[0].Clone("hmerge")
-            hmerge.Reset()
-
-        # Unfortunately `merge()` requires TList input so create and fill one
-        tlist = ROOT.TList()
-        for hist in hist_list[1:]:
-            tlist.Add(hist.histogram[0])
-
-        # Merge all histograms and return the result
-        if hmerge.Merge(tlist, ROOT.nullptr) == -1:
-            print("Error merging histograms!")
-
-        return hmerge
-
     @staticmethod
     def sum_hist_list(hist_list):
-        # If no histograms, skip
+        # If no histograms, skip or if one just return it
         if len(hist_list) < 1:
-            print("Empty histogram list.. returning")
             return None
-        print("MERGING! ", hist_list[0].hist_type, " ", hist_list[0].histogram[0])
-        # Get the first histogram and clear it, so we can merge into it
-        # Note the `histogram` member is a tuple = (Histogram, Legend)
-        # if hist_list[0].hist_type == "stack":
-        #     hmerge = hist_list[0].histogram[0]
-        #     print(hmerge)
-        # else:
-        #     hmerge = hist_list[0].histogram[0].Clone("hmerge")
-        #     hmerge.Reset()
+        elif len(hist_list) == 1:
+            return hist_list[0].histogram
 
-        # Unfortunately `merge()` requires TList input so create and fill one
-        # tlist = ROOT.TList()
-        # for hist in hist_list[1:]:
-        #     tlist.Add(hist.histogram[0])
-        hsum = hist_list[0].histogram[0]
-        print(hsum)
+        # Sum all histograms into first one
+        hsum = hist_list[0].histogram
         for hist in hist_list[1:]:
-            hsum.Add(hist.histogram[0])
-        print(hsum)
-        # Merge all histograms and return the result
-        # if hmerge.Merge(tlist, ROOT.nullptr) == -1:
-        #     print("Error merging histograms!")
+            hsum.Add(hist.histogram)
 
         return hsum
 
@@ -101,12 +43,13 @@ class Histogram():
         :return: Merged TEfficiency object
         """
         if len(eff_list) < 1:
-            print("Empty histogram list.. returning")
             return None
+        elif len(eff_list) == 1:
+            return eff_list[0].histogram
 
         merged_eff = TEfficiency()
         for eff in eff_list:
-            merged_eff += eff.histogram[0]
+            merged_eff += eff.histogram
 
         return merged_eff
 
@@ -123,11 +66,20 @@ class Histogram():
     def test_th1(self):
         h = TH1D("t", "t;x;c", 5, 0, 5)
 
-    def plot_particles(self, x, cut):
+    def plot_particles(self, x, cut, precut):
         legend = utils.legend_init_right()
         # Get the config to create the plot for this cut
         name, title, bins, upper_lim, lower_lim = self.config["cut_plots"][cut]
+        if precut:
+            name = "precut_" + name
+            title = "PreCut-" + title
+        else:
+            name = "postcut_" + name
+            title = "PostCut-" + title
         hist = TH1D(name, title, bins, upper_lim, lower_lim)
+
+        # If this is ndim array flatten it
+        x = ak.flatten(x, axis=None)
 
         # Just a loop in c++ which does hist.Fill()
         # nullptr sets weights = 1
@@ -140,7 +92,7 @@ class Histogram():
 
         legend.AddEntry(name)
 
-        # Store this hist in our master map as HistogramData class
+        # Store this hist in our master map as HistogramData class object
         self.hist_data.append(HistogramData("hist", name, hist))
 
     def plot_particles_stack(self, x, x_pdg, cut, precut):
@@ -170,7 +122,7 @@ class Histogram():
 
         for pdg in self.config["stack_pdg_list"]:
 
-            hstack = TH1D(name, title, bins, lower_lim, upper_lim)
+            hstack = TH1D(name + str(pdg), title, bins, lower_lim, upper_lim)
 
             # Before plotting we flatten from 2D array shape=(<num event>, <num daughters>) to
             # 1D array shape=(<num event>*<num daughters>)
@@ -189,16 +141,14 @@ class Histogram():
             legend.AddEntry("hstack", utils.pdg2string.get(pdg, "other"))
 
         stack.Draw()
-
+        print(type(stack), "  -  ", stack)
         # Store this hist in our master map as a HistogramData class
-        self.hist_data.append(HistogramData("stack", name, deepcopy(stack)))
+        self.hist_data.append(HistogramData("stack", name, type(stack)))
+        print("STACK", self.hist_data[0].histogram)
 
         return
 
 ###################################################
-
-    def plot_particles(self, event):
-        pass
 
 
     def set_hist_lim(hist):

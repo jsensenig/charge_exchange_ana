@@ -5,9 +5,9 @@ import typing
 @dataclass
 class HistogramData:
 
-    hist_type: str      # Histogram type e.g. stack, hist, efficiency
-    hist_name: str      # Histogram name
-    histogram: typing.Any    # Tuple of (<Histogram Object>, <Legend Object>) #TODO try typing.Any
+    hist_type: str           # Histogram type e.g. stack, hist, efficiency
+    hist_name: str           # Histogram name
+    histogram: typing.Any    # Tuple of (<Histogram Object>, <Legend Object>)
 
 
 """
@@ -35,6 +35,6 @@ def get_select_hist_name_list(hlist, select_name):
     return [h for h in hlist if h.hist_name == select_name]
 
 
-# Return a list of matching hist_names
+# Return a list of matching  unique hist_names
 def get_hist_name_list(hlist):
-    return [h.hist_name for h in hlist]
+    return set([h.hist_name for h in hlist])

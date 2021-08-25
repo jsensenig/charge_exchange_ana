@@ -35,7 +35,8 @@ class TOFCut(EventSelectionBase):
         return selected_mask
 
     def plot_particles_base(self, events, pdg, precut, hists):
-        hists.plot_particles_stack(x=events, x_pdg=pdg, cut=self.cut_name, precut=precut)
+        #hists.plot_particles_stack(x=events, x_pdg=pdg, cut=self.cut_name, precut=precut)
+        hists.plot_particles(x=events, cut=self.cut_name, precut=precut)
 
     def efficiency(self, cut, passed, value, hists):
         pass

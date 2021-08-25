@@ -7,6 +7,14 @@ import uproot
 import os
 
 
+def check_thread_count(threads):
+    if threads > os.cpu_count():
+        print("Requested", threads, "threads but only", os.cpu_count(), "available!")
+        print("Setting number of threads to", os.cpu_count())
+        return os.cpu_count()
+    return threads
+
+
 def open_file(file_name, tree_dir):
     try:
         file1 = uproot.open(file_name)
@@ -18,40 +26,49 @@ def open_file(file_name, tree_dir):
 
 
 def merge_hist_maps(config, hist_maps):
+    """
+    Here we want to,
+    1. Loop over each type of histogram
+    2. Collect histograms from all threads for a given histogram type
+    3. Add all histograms of the same name (they should be the same histogram
+       just from a different thread)
+    4. Write the summed histogram to file.
+    :param config: Config to set up the
+    :param hist_maps:
+    :return:
+    """
+    # Open file to which we write results
+    f = ROOT.TFile("result_file.root", "RECREATE")
+
     hclass = Histogram(config)
     # hist_maps = [[Thread 0],..., [Thread N]]
-    hist_names = hdata.get_hist_name_list(hist_maps[0])
     type_list = ["stack", "hist", "efficiency"]
     for t in type_list:
         hist_type_list = []
         for res in hist_maps: # results from each thread
             hist_type_list += hdata.get_hist_type_list(res, t)
+        if len(hist_type_list) < 1:
+            continue
+        # Only returns unique names as a set
+        hist_names = hdata.get_hist_name_list(hist_type_list)
         for name in hist_names:
             hlist = hdata.get_select_hist_name_list(hist_type_list, name)
-            print(name, " ", hlist)
-            print(hlist[0].histogram)
-            print(hlist[0].histogram)
             merged_hist = hclass.sum_hist_list(hlist)
-            print("MERGED_HIST", merged_hist)
-            if not None or not {}:
+            if not None:
                 merged_hist.Write()
-
+    f.Close()
 
 
 def collect_write_results(config, thread_results):
 
     result_list = [future.result() for future in thread_results]
+    print("Number of thread results", len(result_list))
 
     if len(result_list) < 1:
         print("No results, just returning")
         return False
 
-    # Open file to which we write results
-    ROOT.TFile.Open("result_file.root", "RECREATE")
-
     merge_hist_maps(config, result_list)
-
-    return
 
 
 def event_selection(config, data):
@@ -60,10 +77,6 @@ def event_selection(config, data):
 
 
 def thread_creator(config, num_workers, tree, steps, branches):
-    if num_workers > os.cpu_count():
-        print("Requested", num_workers, "threads but only", os.cpu_count(), "available!")
-        print("Setting number of threads to", os.cpu_count())
-        num_workers = os.cpu_count()
 
     # Context manager handles joining of the threads
     futures = []
@@ -85,7 +98,8 @@ file = "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_0.roo
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG"]
 
 # Number of threads
-num_workers = 1
+num_workers = 5
+num_workers = check_thread_count(num_workers)
 
 tree = open_file(file, tree_name)
 
@@ -98,7 +112,7 @@ config = {"cut_list": ["TOFCut", "BeamQualityCut"],
           "hist_list": ["TOF"],
           "reco_daughter_pdg": "reco_daughter_PFP_true_byHits_PDG",
           "TOFCut": {"cut_variable": "reco_daughter_PFP_true_byHits_startZ", "upper": 223, "lower": 10},
-          "cut_plots": {"TOFCut": ["tof_cut", "TOFCut;TOF [ns];Count", 50, 150, 50]},
+          "cut_plots": {"TOFCut": ["tof_cut", "TOFCut;TOF [ns];Count", 100, 0, 300]},
           "stack_pdg_list": [11, 13, 22, 111, 211, 321, 2212]}
 
 # Start the analysis threads

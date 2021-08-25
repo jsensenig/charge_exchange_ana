@@ -23,13 +23,14 @@ class TOFCut(EventSelectionBase):
         selected_mask = (self.local_config["lower"] < events[self.cut_variable]) & \
                         (events[self.cut_variable] < self.local_config["upper"])
 
-        # FIXME accept an array
-        #hists.efficiency(self.cut_name, selected_mask, events["tof"])
-
         # Plot the variable before after cut
         self.plot_particles_base(events=events[self.cut_variable, selected_mask],
                                  pdg=events[self.reco_daughter_pdf, selected_mask],
                                  precut=False, hists=hists)
+
+        # Plot the efficiency
+        self.efficiency(total_events=events[self.cut_variable], passed_events=events[self.cut_variable, selected_mask],
+                        cut=self.cut_name, hists=hists)
 
         # Return event selection mask
         return selected_mask
@@ -38,8 +39,8 @@ class TOFCut(EventSelectionBase):
         hists.plot_particles_stack(x=events, x_pdg=pdg, cut=self.cut_name, precut=precut)
         hists.plot_particles(x=events, cut=self.cut_name, precut=precut)
 
-    def efficiency(self, cut, passed, value, hists):
-        pass
+    def efficiency(self, total_events, passed_events, cut, hists):
+        hists.plot_efficiency(xtotal=total_events, xpassed=passed_events, cut=cut)
 
     def get_cut_doc(self):
         doc_string = "Cut on beamline TOF to select beam particles"

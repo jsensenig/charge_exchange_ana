@@ -53,7 +53,10 @@ def merge_hist_maps(config, hist_maps):
         hist_names = hdata.get_hist_name_list(hist_type_list)
         for name in hist_names:
             hlist = hdata.get_select_hist_name_list(hist_type_list, name)
-            merged_hist = hclass.sum_hist_list(hlist)
+            if t == "efficiency":
+                merged_hist = hclass.merge_efficiency_list(hlist)
+            else:
+                merged_hist = hclass.sum_hist_list(hlist)
             if not None:
                 merged_hist.Write(t + "_" + name)
 

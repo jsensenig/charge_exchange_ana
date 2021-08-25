@@ -21,13 +21,13 @@ class EventSelectionBase:
         pass
 
     @abstractmethod
-    def efficiency(self, cut, passed, value, hists):
+    def efficiency(self, total_events, passed_events, cut, hists):
         """
         Keep track of the efficiency of the cut wrt to some variable `value`
         :param hists: Histogram class object
+        :param total_events: Array The events variable on which the cut is applied.
+        :param passed_events: bool array Array of events which passed the cut.
         :param cut: str Name of the cut
-        :param passed: bool array Array of events which passed the cut.
-        :param value: Array The events variable on which the cut is applied.
         :return:
         """
         pass

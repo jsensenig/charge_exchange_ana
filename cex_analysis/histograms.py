@@ -53,18 +53,34 @@ class Histogram:
 
         return merged_eff
 
-    def init_plotting(self, plot_config):
-        """
-        Initialize the plot objects, histograms
-        :param plot_config:
-        :return: Initialize success/failure
-        """
-        init_success = True
+    def plot_efficiency(self, xtotal, xpassed, cut):
 
-        return init_success
+        # Get the config to create the plot for this cut
+        name, title, bins, lower_lim, upper_lim = self.config["cut_plots"][cut]
+        hist_total = TH1D(name + "_total", title, bins, lower_lim, upper_lim)
+        hist_passed = TH1D(name + "_passed", title, bins, lower_lim, upper_lim)
 
-    def test_th1(self):
-        h = TH1D("t", "t;x;c", 5, 0, 5)
+        # If this is ndim array flatten it
+        xtotal = ak.flatten(xtotal, axis=None)
+        xpassed = ak.flatten(xpassed, axis=None)
+
+        # Just a loop in c++ which does hist.Fill()
+        # nullptr sets weights = 1
+        if isinstance(xtotal, ak.Array):
+            hist_total.FillN(len(xtotal), ak.to_numpy(xtotal), ROOT.nullptr)
+            hist_passed.FillN(len(xpassed), ak.to_numpy(xpassed), ROOT.nullptr)
+        elif isinstance(xtotal, np.ndarray):
+            hist_total.FillN(len(xtotal), xtotal, ROOT.nullptr)
+            hist_passed.FillN(len(xpassed), xpassed, ROOT.nullptr)
+        else:
+            print("Unknown array type!")
+
+        efficiency = TEfficiency(name + "_eff", title, bins, lower_lim, upper_lim)
+        efficiency.SetTotalHistogram(hist_total, "")
+        efficiency.SetPassedHistogram(hist_passed, "")
+
+        # Store this hist in our master map as HistogramData class object
+        self.hist_data.append(HistogramData("efficiency", name, efficiency))
 
     def plot_particles(self, x, cut, precut):
         c = ROOT.TCanvas()

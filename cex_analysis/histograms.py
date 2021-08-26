@@ -87,12 +87,18 @@ class Histogram:
         xtotal = ak.flatten(xtotal, axis=None)
         xpassed = ak.flatten(xpassed, axis=None)
 
-        # Just a loop in c++ which does hist.Fill()
-        # nullptr sets weights = 1
+        # Just a loop in c++ which does hist.FillN() (nullptr sets weights = 1)
+        # FillN() only likes double* (python float64) so if array is another type, cast it to float64
         if isinstance(xtotal, ak.Array):
+            if ak.type(xtotal.layout).dtype != 'float64' or ak.type(xpassed.layout).dtype != 'float64':
+                xtotal = ak.values_astype(xtotal, np.float64)
+                xpassed = ak.values_astype(xpassed, np.float64)
             hist_total.FillN(len(xtotal), ak.to_numpy(xtotal), ROOT.nullptr)
             hist_passed.FillN(len(xpassed), ak.to_numpy(xpassed), ROOT.nullptr)
         elif isinstance(xtotal, np.ndarray):
+            if xtotal.dtype != np.float64 or xpassed.type != np.float64:
+                xtotal = xtotal.astype('float64')
+                xpassed = xpassed.astype('float64')
             hist_total.FillN(len(xtotal), xtotal, ROOT.nullptr)
             hist_passed.FillN(len(xpassed), xpassed, ROOT.nullptr)
         else:
@@ -105,7 +111,7 @@ class Histogram:
         # Store this hist in our master map as HistogramData class object
         self.hist_data.append(HistogramData("efficiency", name, efficiency))
 
-    def plot_particles(self, x, cut, precut, htype):
+    def plot_particles(self, x, cut, precut):
         c = ROOT.TCanvas()
         legend = utils.legend_init_right()
 
@@ -118,19 +124,20 @@ class Histogram:
             name = "postcut_" + name
             title = "PostCut-" + title
 
-        if htype == "TH1I":
-            hist = ROOT.TH1I(name, title, bins, lower_lim, upper_lim)
-        else:
-            hist = ROOT.TH1D(name, title, bins, lower_lim, upper_lim)
+        hist = ROOT.TH1D(name, title, bins, lower_lim, upper_lim)
 
         # If this is ndim array flatten it
         x = ak.flatten(x, axis=None)
 
-        # Just a loop in c++ which does hist.Fill()
-        # nullptr sets weights = 1
+        # Just a loop in c++ which does hist.FillN() (nullptr sets weights = 1)
+        # FillN() only likes double* (python float64) so if array is another type, cast it to float64
         if isinstance(x, ak.Array):
+            if ak.type(x.layout).dtype != 'float64':
+                x = ak.values_astype(x, np.float64)
             hist.FillN(len(x), ak.to_numpy(x), ROOT.nullptr)
         elif isinstance(x, np.ndarray):
+            if x.dtype != np.float64:
+                x = x.astype('float64')
             hist.FillN(len(x), x, ROOT.nullptr)
         else:
             print("Unknown array type!")
@@ -141,7 +148,7 @@ class Histogram:
         # Store this hist in our master map as HistogramData class object
         self.hist_data.append(HistogramData("hist", name, hist))
 
-    def plot_particles_stack(self, x, x_pdg, cut, precut, htype):
+    def plot_particles_stack(self, x, x_pdg, cut, precut):
         """
         Make stacked plot of a given variable with each stack corresponding to a PDG
         :param precut: Is this pre or Post cut plot
@@ -172,21 +179,18 @@ class Histogram:
 
         for i, pdg in enumerate(self.config["stack_pdg_list"]):
 
-            if htype == "TH1I":
-                hstack = ROOT.TH1I(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
-            else:
-                hstack = ROOT.TH1D(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
+            hstack = ROOT.TH1D(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
 
             # Before plotting we flatten from 2D array shape=(<num event>, <num daughters>) to
             # 1D array shape=(<num event>*<num daughters>)
             pdg_filtered_array = plotting_utils.daughter_by_pdg(x_flat, x_pdg_flat, pdg)
 
-            # If array is empty skip to next
-            if len(pdg_filtered_array) < 1:
-                continue
+            # If array is not empty fill it, if it is empty still add the histogram to the
+            # stack so we can correctly merge the stacks later. Otherwise the PDGs get mixed.
+            if len(pdg_filtered_array) > 0:
+                # Now use the hist standard fill function and add color
+                hstack.FillN(len(pdg_filtered_array), pdg_filtered_array, ROOT.nullptr)
 
-            # Now use the hist standard fill function and add color
-            hstack.FillN(len(pdg_filtered_array), pdg_filtered_array, ROOT.nullptr)
             utils.set_hist_colors(hstack, utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1),
                                   utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1))
 

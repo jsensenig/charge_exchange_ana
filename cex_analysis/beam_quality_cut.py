@@ -1,5 +1,4 @@
 from cex_analysis.event_selection_base import EventSelectionBase
-import awkward as ak
 import threading
 import json
 
@@ -31,7 +30,7 @@ class BeamQualityCut(EventSelectionBase):
         # The beam quality cut is already a mask, 1 if passed 0 if not
         selected_mask = events[cut_variable]
 
-        # Plot the variable before after cut
+        # Plot the variable after cut
         self.plot_particles_base(events=events[cut_variable, selected_mask],
                                  pdg=events[self.reco_beam_pdg, selected_mask],
                                  precut=False, hists=hists)
@@ -44,14 +43,11 @@ class BeamQualityCut(EventSelectionBase):
         return selected_mask
 
     def plot_particles_base(self, events, pdg, precut, hists):
-        hists.plot_particles_stack(x=events, x_pdg=pdg, cut=self.cut_name, precut=precut, htype="TH1I")
-        events_np = ak.to_numpy(events)
-        hists.plot_particles(x=events_np.astype('float64'), cut=self.cut_name, precut=precut, htype="TH1I")
+        hists.plot_particles_stack(x=events, x_pdg=pdg, cut=self.cut_name, precut=precut)
+        hists.plot_particles(x=events, cut=self.cut_name, precut=precut)
 
     def efficiency(self, total_events, passed_events, cut, hists):
-        total_events_np = ak.to_numpy(total_events)
-        passed_events_np = ak.to_numpy(passed_events)
-        hists.plot_efficiency(xtotal=total_events_np.astype('float64'), xpassed=passed_events_np.astype('float64'), cut=cut)
+        hists.plot_efficiency(xtotal=total_events, xpassed=passed_events, cut=cut)
 
     def configure(self):
         config_file = self.config[self.cut_name]["config_file"]
@@ -62,7 +58,7 @@ class BeamQualityCut(EventSelectionBase):
             self.local_config = tmp_config[self.cut_name]
             self.local_hist_config = tmp_config["histograms"]
         lock.release()
-        print("END of config")
+
         return
 
     def get_cut_doc(self):

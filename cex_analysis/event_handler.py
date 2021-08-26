@@ -71,8 +71,6 @@ class EventHandler:
         :return:
         """
         for cut in self.cut_map:
-            if cut != "TOFCut":
-                continue
             print("Processing cut:", cut)
             event_mask = self.cut_map[cut].selection(events, self.Hist_object)
 

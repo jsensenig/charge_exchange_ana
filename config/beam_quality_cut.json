@@ -1,0 +1,8 @@
+{
+  "BeamQualityCut": {
+    "cut_variable": "reco_beam_passes_beam_cuts"
+  },
+  "histograms": {
+    "BeamQualityCut": ["beam_quality_cut", "BeamQualityCut;Beam Quality;Count", 2, 0, 2]
+  }
+}

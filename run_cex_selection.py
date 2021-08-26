@@ -5,6 +5,7 @@ import concurrent.futures
 import ROOT
 import uproot
 import os
+import time
 import json
 
 
@@ -83,19 +84,21 @@ def collect_write_results(config, thread_results):
 
 def event_selection(config, data):
     event_handler_instance = EventHandler(config)
+    time.sleep(0.1)
     return event_handler_instance.run_selection(events=data)
 
 
-def thread_creator(config, num_workers, tree, steps, branches):
+def thread_creator(flist, config, num_workers, tree, steps, branches):
 
     # Context manager handles joining of the threads
     futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
         # Use iterations of the tree read operation to batch the data for each thread
-        for i, array in enumerate(tree.iterate(expressions=branches, step_size=steps, report=True)):
+        for i, array in enumerate(uproot.iterate(files=flist, expressions=branches, report=True, num_workers=num_workers)):
             print("---------- Starting thread", i, "----------")
             futures.append(executor.submit(event_selection, config, array[0]))
             print(array[1]) # The report part of the array tuple from the tree iterator
+            time.sleep(0.2)
         collect_write_results(config, concurrent.futures.as_completed(futures))
 
 
@@ -107,23 +110,38 @@ def configure(config_file):
 ############################
 
 
-tree_name = "pduneana/beamana;2"
+# tree_name = "pduneana/beamana;2"
+tree_name = "pionana/beamana"
 # file = "/Users/jsen/tmp/pion_qe/pduneana_2gev_n2590.root"
-file = "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_0.root"
-branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG"]
+file = "~/tmp/pion_qe/pionana_Prod4_mc_1GeV_1_14_21.root"
+branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
+            "reco_beam_true_byHits_PDG"]
+file_list = ["~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_0.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_1.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_2.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_3.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_4.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_5.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_6.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_7.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_8.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_9.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_10.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_11.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_12.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_13.root",
+             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_14.root"]
 
 # Number of threads
 num_workers = 4
 num_workers = check_thread_count(num_workers)
-
-tree = open_file(file, tree_name)
-
-steps = int(len(tree["run"].array()) / num_workers) + 1
-print("Data steps", steps)
 
 # Get main configuration
 cfg_file = "config/main.json"
 config = configure(cfg_file)
 
 # Start the analysis threads
-thread_creator(config, num_workers, tree, steps, branches)
+print("Starting threads")
+thread_creator(file_list, config, num_workers, "tree", "steps", branches)
+
+print("Completed Analysis!")

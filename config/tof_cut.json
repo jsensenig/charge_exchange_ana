@@ -5,6 +5,6 @@
     "lower": 10
   },
   "histograms": {
-    "TOFCut": ["tof_cut", "TOFCut;TOF [ns];Count", 100, 0, 300]
+    "TOFCut": ["tof_cut", "TOFCut;TOF [ns];Count", 50, 0, 300]
   }
 }

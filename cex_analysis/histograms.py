@@ -58,7 +58,8 @@ class Histogram:
 
         return stack_merge
 
-    def merge_efficiency_list(self, eff_list):
+    @staticmethod
+    def merge_efficiency_list(eff_list):
         """
         Leverages the builtin "+=" to merge all TEfficiency objects from the same process
         :param eff_list: Map of all TEfficiency objects
@@ -104,7 +105,7 @@ class Histogram:
         # Store this hist in our master map as HistogramData class object
         self.hist_data.append(HistogramData("efficiency", name, efficiency))
 
-    def plot_particles(self, x, cut, precut):
+    def plot_particles(self, x, cut, precut, htype):
         c = ROOT.TCanvas()
         legend = utils.legend_init_right()
 
@@ -116,7 +117,11 @@ class Histogram:
         else:
             name = "postcut_" + name
             title = "PostCut-" + title
-        hist = ROOT.TH1D(name, title, bins, lower_lim, upper_lim)
+
+        if htype == "TH1I":
+            hist = ROOT.TH1I(name, title, bins, lower_lim, upper_lim)
+        else:
+            hist = ROOT.TH1D(name, title, bins, lower_lim, upper_lim)
 
         # If this is ndim array flatten it
         x = ak.flatten(x, axis=None)
@@ -136,7 +141,7 @@ class Histogram:
         # Store this hist in our master map as HistogramData class object
         self.hist_data.append(HistogramData("hist", name, hist))
 
-    def plot_particles_stack(self, x, x_pdg, cut, precut):
+    def plot_particles_stack(self, x, x_pdg, cut, precut, htype):
         """
         Make stacked plot of a given variable with each stack corresponding to a PDG
         :param precut: Is this pre or Post cut plot
@@ -161,30 +166,41 @@ class Histogram:
             name = "postcut_" + name
             title = "PostCut-" + title
 
+        # Flatten the array once
+        x_flat = ak.flatten(x, axis=None)
+        x_pdg_flat = ak.flatten(x_pdg, axis=None)
+
         for i, pdg in enumerate(self.config["stack_pdg_list"]):
 
-            hstack = ROOT.TH1D(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
+            if htype == "TH1I":
+                hstack = ROOT.TH1I(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
+            else:
+                hstack = ROOT.TH1D(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
 
             # Before plotting we flatten from 2D array shape=(<num event>, <num daughters>) to
             # 1D array shape=(<num event>*<num daughters>)
-            pdg_filtered_array = plotting_utils.daughter_by_pdg(ak.flatten(x, axis=None),
-                                                                ak.flatten(x_pdg, axis=None), pdg)
+            pdg_filtered_array = plotting_utils.daughter_by_pdg(x_flat, x_pdg_flat, pdg)
 
+            # If array is empty skip to next
             if len(pdg_filtered_array) < 1:
                 continue
 
-            # Now use the standard fill function
+            # Now use the hist standard fill function and add color
             hstack.FillN(len(pdg_filtered_array), pdg_filtered_array, ROOT.nullptr)
-
             utils.set_hist_colors(hstack, utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1),
                                   utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1))
 
-            legend.AddEntry(hstack, utils.pdg2string.get(pdg, "other"))
+            # Get the fraction of PDG
+            pdg_fraction = round((100. * len(pdg_filtered_array) / len(x_flat)), 2)
+
+            legend.AddEntry(hstack, utils.pdg2string.get(pdg, "other") + "  " + str(pdg_fraction) + "%")
+            # Only add the legend to one histogram so we don't have duplicates in the THStack
             if i == 0:
                 hstack.GetListOfFunctions().Add(legend)
 
             stack.Add(hstack)
 
+        # Draw and tidy the THStack
         stack.Draw()
         stack.SetName(name)
         stack.SetTitle(title.split(";")[0])

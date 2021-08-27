@@ -1,5 +1,5 @@
 {
-  "cut_list": ["TOFCut", "BeamQualityCut"],
+  "cut_list": ["TOFCut", "BeamQualityCut", "ShowerCut"],
   "hist_list": ["TOF"],
   "reco_beam_pdg": "reco_beam_true_byHits_PDG",
   "reco_daughter_pdg": "reco_daughter_PFP_true_byHits_PDG",
@@ -9,5 +9,8 @@
   },
   "BeamQualityCut": {
     "config_file": "config/beam_quality_cut.json"
+  },
+  "ShowerCut": {
+    "config_file": "config/shower_cut.json"
   }
 }

@@ -115,25 +115,25 @@ tree_name = "pionana/beamana"
 # file = "/Users/jsen/tmp/pion_qe/pduneana_2gev_n2590.root"
 file = "~/tmp/pion_qe/pionana_Prod4_mc_1GeV_1_14_21.root"
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
-            "reco_beam_true_byHits_PDG"]
-file_list = ["~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_0.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_1.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_2.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_3.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_4.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_5.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_6.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_7.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_8.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_9.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_10.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_11.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_12.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_13.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_14.root"]
+            "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection"]
+file_list = ["~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_0.root"]
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_1.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_2.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_3.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_4.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_5.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_6.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_7.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_8.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_9.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_10.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_11.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_12.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_13.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v1_all_daughter/pduneana_14.root"]
 
 # Number of threads
-num_workers = 4
+num_workers = 1
 num_workers = check_thread_count(num_workers)
 
 # Get main configuration

@@ -1,0 +1,10 @@
+{
+  "APA3Cut": {
+    "cut_variable": "reco_beam_calo_endZ",
+    "upper": 223,
+    "lower": 0
+  },
+  "histograms": {
+    "APA3Cut": ["apa3_cut", "APA3Cut;EndZ [cm];Count", 50, 0, 600]
+  }
+}

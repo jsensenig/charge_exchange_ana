@@ -1,6 +1,4 @@
 from cex_analysis.event_selection_base import EventSelectionBase
-import threading
-import json
 
 
 class APA3Cut(EventSelectionBase):
@@ -14,7 +12,8 @@ class APA3Cut(EventSelectionBase):
         self.reco_daughter_pdf = self.config["reco_beam_pdg"]
 
         # Configure class
-        self.configure()
+        self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
+                                                                      cut_name=self.cut_name)
 
     def selection(self, events, hists):
 
@@ -50,18 +49,6 @@ class APA3Cut(EventSelectionBase):
 
     def efficiency(self, total_events, passed_events, cut, hists):
         hists.plot_efficiency(xtotal=total_events, xpassed=passed_events, cut=cut)
-
-    def configure(self):
-        config_file = self.config[self.cut_name]["config_file"]
-        lock = threading.Lock()
-        lock.acquire()
-        with open(config_file, "r") as cfg:
-            tmp_config = json.load(cfg)
-            self.local_config = tmp_config[self.cut_name]
-            self.local_hist_config = tmp_config["histograms"]
-        lock.release()
-
-        return
 
     def get_cut_doc(self):
         doc_string = "Cut on beamline TOF to select beam particles"

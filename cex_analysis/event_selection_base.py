@@ -1,4 +1,6 @@
 from abc import abstractmethod
+import threading
+import json
 
 
 class EventSelectionBase:
@@ -45,17 +47,26 @@ class EventSelectionBase:
         """
         pass
 
-    @abstractmethod
-    def configure(self):
+    @staticmethod
+    def configure(self, config_file, cut_name):
         """
         Implement the configuration for the concrete cut class here.
         """
-        pass
+        lock = threading.Lock()
+        lock.acquire()
+
+        with open(config_file, "r") as cfg:
+            tmp_config = json.load(cfg)
+            local_config = tmp_config[cut_name]
+            local_hist_config = tmp_config["histograms"]
+        lock.release()
+
+        return local_config, local_hist_config
 
     @abstractmethod
     def get_cut_doc(self):
         """
-         Implement here a short docstring description of the cut.
-         An overview of it's inputs and goals for the cut.
+         Implement here a short description of the cut.
+         A list of it's inputs and goals for the cut.
         """
         pass

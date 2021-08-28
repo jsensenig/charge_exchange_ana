@@ -1,7 +1,5 @@
 from cex_analysis.event_selection_base import EventSelectionBase
 import numpy as np
-import threading
-import json
 
 
 class ShowerCut(EventSelectionBase):
@@ -15,12 +13,14 @@ class ShowerCut(EventSelectionBase):
         self.reco_beam_pdg = self.config["reco_daughter_pdg"]
 
         # Configure class
-        self.configure()
+        self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
+                                                                      cut_name=self.cut_name)
 
     def max_shower_energy_cut(self, events):
         # Get the maximum shower energy for each event
         max_energy = np.max(events[self.local_config["shower_energy_var"]], axis=1)
-        max_energy_cut =  max_energy > self.local_config["max_energy_cut"]
+        # Create a mask if the max shower energy is greater than the threshold
+        max_energy_cut = max_energy > self.local_config["max_energy_cut"]
         # Reduce daughter level to event level mask
         return np.any(max_energy_cut, axis=0)
 
@@ -88,17 +88,6 @@ class ShowerCut(EventSelectionBase):
 
     def efficiency(self, total_events, passed_events, cut, hists):
         hists.plot_efficiency(xtotal=total_events, xpassed=passed_events, cut=cut)
-
-    def configure(self):
-        config_file = self.config[self.cut_name]["config_file"]
-        lock = threading.Lock()
-        lock.acquire()
-        with open(config_file, "r") as cfg:
-            tmp_config = json.load(cfg)
-            self.local_config = tmp_config[self.cut_name]
-            self.local_hist_config = tmp_config["histograms"]
-        lock.release()
-        return
 
     def get_cut_doc(self):
         doc_string = "Cut on daughter showers"

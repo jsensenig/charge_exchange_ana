@@ -2,11 +2,11 @@ from cex_analysis.event_selection_base import EventSelectionBase
 import numpy as np
 
 
-class ShowerCut(EventSelectionBase):
+class DaughterPionCut(EventSelectionBase):
     def __init__(self, config):
         super().__init__(config)
 
-        self.cut_name = "ShowerCut"
+        self.cut_name = "DaughterPionCut"
         self.config = config
         self.reco_beam_pdg = self.config["reco_daughter_pdg"]
 
@@ -14,39 +14,9 @@ class ShowerCut(EventSelectionBase):
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
 
-    def max_shower_energy_cut(self, events):
-        # Get the maximum shower energy for each event
-        max_energy = np.max(events[self.local_config["shower_energy_var"]], axis=1)
-        # Create a mask if the max shower energy is greater than the threshold
-        max_energy_cut = max_energy > self.local_config["max_energy_cut"]
-        # Reduce daughter level to event level mask
-        return np.any(max_energy_cut, axis=0)
-
-    def cnn_shower_cut(self, events):
-        # Create a mask for all daughters with CNN EM-like score <0.5
-        return events[self.local_config["track_like_cnn_var"]] < self.local_config["cnn_shower_cut"]
-
-    def min_shower_energy_cut(self, events):
-        return events[self.local_config["shower_energy_var"]] > self.local_config["small_energy_shower_cut"]
-
-    def shower_count_cut(self, events):
-        """
-        1. CNN cut to select shower-like daughters
-        2. Energy cut, eliminate small showers from e.g. de-excitation gammas
-        :param events:
-        :return:
-        """
-        # Perform a 2 step cut on showers, get a daughter mask from each
-        cnn_shower_mask = self.cnn_shower_cut(events)
-        min_shower_energy = self.min_shower_energy_cut(events)
-
-        # Shower selection mask
-        shower_mask = cnn_shower_mask & min_shower_energy
-
-        # We want to count the number of potential showers in each event
-        shower_count = np.count_nonzero(events[self.local_config["shower_energy_var"], shower_mask], axis=1)
-
-        return shower_count == 2
+    def chi2_ndof(self, events):
+        return (events[self.local_config["proton_chi2"]] / events[self.local_config["proton_ndof"]]) \
+               > self.local_config["chi2_ndof_cut"]
 
     def selection(self, events, hists):
         # First we configure the histograms we want to make
@@ -59,14 +29,11 @@ class ShowerCut(EventSelectionBase):
         self.plot_particles_base(events=events[cut_variable], pdg=events[self.reco_beam_pdg],
                                  precut=True, hists=hists)
 
-        # Max shower
-        max_shower_energy_mask = self.max_shower_energy_cut(events)
-
-        # Candidate shower count
-        shower_count_mask = self.shower_count_cut(events)
+        daughter_pion_mask = self.chi2_ndof(events)
 
         # Combine all event level masks
-        selected_mask = max_shower_energy_mask & shower_count_mask
+        # We want to _reject_ events if there are daughter chaarged pions so negate the mask
+        selected_mask = ~np.any(daughter_pion_mask, axis=1)
 
         # Plot the variable after cut
         self.plot_particles_base(events=events[cut_variable, selected_mask],
@@ -88,5 +55,6 @@ class ShowerCut(EventSelectionBase):
         hists.plot_efficiency(xtotal=total_events, xpassed=passed_events, cut=cut)
 
     def get_cut_doc(self):
-        doc_string = "Cut on daughter showers"
+        doc_string = "Reject events which have daughter charged pions." \
+                     "Since our signal is pi+ --> pi0 + N  (N = some number of nucleons)"
         return doc_string

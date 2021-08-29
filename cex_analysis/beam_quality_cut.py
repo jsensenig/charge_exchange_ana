@@ -7,8 +7,6 @@ class BeamQualityCut(EventSelectionBase):
 
         self.cut_name = "BeamQualityCut"
         self.config = config
-        self.local_config = None
-        self.local_hist_config = None
         self.reco_beam_pdg = self.config["reco_beam_pdg"]
 
         # Configure class

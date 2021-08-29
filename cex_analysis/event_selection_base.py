@@ -48,7 +48,7 @@ class EventSelectionBase:
         pass
 
     @staticmethod
-    def configure(self, config_file, cut_name):
+    def configure(config_file, cut_name):
         """
         Implement the configuration for the concrete cut class here.
         """

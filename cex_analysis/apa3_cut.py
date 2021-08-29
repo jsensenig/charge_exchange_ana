@@ -7,8 +7,6 @@ class APA3Cut(EventSelectionBase):
 
         self.cut_name = "APA3Cut"
         self.config = config
-        self.local_config = None
-        self.local_hist_config = None
         self.reco_daughter_pdf = self.config["reco_beam_pdg"]
 
         # Configure class

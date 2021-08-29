@@ -7,8 +7,6 @@ class TOFCut(EventSelectionBase):
 
         self.cut_name = "TOFCut"
         self.config = config
-        self.local_config = None
-        self.local_hist_config = None
         self.reco_daughter_pdf = self.config["reco_daughter_pdg"]
 
         # Configure class

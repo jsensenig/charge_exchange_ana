@@ -15,7 +15,7 @@ class ShowerCut(EventSelectionBase):
                                                                       cut_name=self.cut_name)
 
     def max_shower_energy_cut(self, events):
-        # Get the maximum shower energy for each event
+        # Get the maximum daughter shower energy for each event
         max_energy = np.max(events[self.local_config["shower_energy_var"]], axis=1)
         # Create a mask if the max shower energy is greater than the threshold
         max_energy_cut = max_energy > self.local_config["max_energy_cut"]
@@ -46,6 +46,7 @@ class ShowerCut(EventSelectionBase):
         # We want to count the number of potential showers in each event
         shower_count = np.count_nonzero(events[self.local_config["shower_energy_var"], shower_mask], axis=1)
 
+        # Create the event mask, true if there are 2 candidate showers
         return shower_count == 2
 
     def selection(self, events, hists):
@@ -59,10 +60,10 @@ class ShowerCut(EventSelectionBase):
         self.plot_particles_base(events=events[cut_variable], pdg=events[self.reco_beam_pdg],
                                  precut=True, hists=hists)
 
-        # Max shower
+        # Max shower energy mask to select only events with at least one large shower
         max_shower_energy_mask = self.max_shower_energy_cut(events)
 
-        # Candidate shower count
+        # Candidate shower count mask
         shower_count_mask = self.shower_count_cut(events)
 
         # Combine all event level masks

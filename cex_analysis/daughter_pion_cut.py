@@ -32,7 +32,7 @@ class DaughterPionCut(EventSelectionBase):
         daughter_pion_mask = self.chi2_ndof(events)
 
         # Combine all event level masks
-        # We want to _reject_ events if there are daughter chaarged pions so negate the mask
+        # We want to _reject_ events if there are daughter charged pions so negate the selection mask
         selected_mask = ~np.any(daughter_pion_mask, axis=1)
 
         # Plot the variable after cut

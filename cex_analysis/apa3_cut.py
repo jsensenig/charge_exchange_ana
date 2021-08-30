@@ -25,7 +25,7 @@ class APA3Cut(EventSelectionBase):
         self.plot_particles_base(events=events[cut_variable], pdg=events[self.reco_daughter_pdf],
                                  precut=True, hists=hists)
 
-        # Perform the actual cut on TOF
+        # Perform the cut on the beam particle endpoint
         selected_mask = (self.local_config["lower"] < events[cut_variable]) & \
                         (events[cut_variable] < self.local_config["upper"])
 

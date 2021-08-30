@@ -25,6 +25,7 @@ class BeamQualityCut(EventSelectionBase):
                                  precut=True, hists=hists)
 
         # The beam quality cut is already a mask, 1 if passed 0 if not
+        # also these are already at the event level so it's okay as is
         selected_mask = events[cut_variable]
 
         # Plot the variable after cut

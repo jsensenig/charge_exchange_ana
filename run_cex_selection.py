@@ -2,6 +2,7 @@ from cex_analysis.event_handler import EventHandler
 from cex_analysis.histograms import Histogram
 import cex_analysis.histogram_data as hdata
 import concurrent.futures
+import awkward as ak
 import ROOT
 import uproot
 import os
@@ -71,15 +72,22 @@ def merge_hist_maps(config, hist_maps):
 
 
 def collect_write_results(config, thread_results):
+    print(thread_results)
+    # Result is a tuple (<Histogram Result>, <Selection Mask>)
+    # We can only get the results once as the threads finish so fill a list with the tuples
+    tuple_list = [future.result() for future in thread_results]
+    result_hist_list = [hists[0] for hists in tuple_list]
+    result_mask_list = [masks[1] for masks in tuple_list]
+    print("Number of thread results", len(result_hist_list))
 
-    result_list = [future.result() for future in thread_results]
-    print("Number of thread results", len(result_list))
-
-    if len(result_list) < 1:
+    if len(result_hist_list) < 1:
         print("No results, just returning")
         return False
 
-    merge_hist_maps(config, result_list)
+    merge_hist_maps(config, result_hist_list)
+
+    selected_events = sum([ak.sum(m, axis=0) for m in result_mask_list])
+    print("Selected", selected_events, " events")
 
 
 def event_selection(config, data):

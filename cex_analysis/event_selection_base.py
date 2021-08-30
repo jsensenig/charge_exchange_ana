@@ -52,6 +52,8 @@ class EventSelectionBase:
         """
         Implement the configuration for the concrete cut class here.
         """
+        # Lock the file read just to make sure there are no conflicts
+        # between threads reading the same file.
         lock = threading.Lock()
         lock.acquire()
 

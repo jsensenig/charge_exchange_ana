@@ -48,6 +48,7 @@ def calculate_efficiency(cut_efficiency_dict, cut_total_dict, process_true_count
     purity_list = []
     cum_eff_list = []
     eff_list = []
+    selection_list = []
 
     for i, cut in enumerate(cut_efficiency_dict):
         if process_true_count < 1:
@@ -60,7 +61,8 @@ def calculate_efficiency(cut_efficiency_dict, cut_total_dict, process_true_count
             eff_list.append(cum_eff_list[-1] - eff)
         cum_eff_list.append(eff)
         purity_list.append(cut_efficiency_dict[cut] / cut_total_dict[cut])
+        selection_list.append(str(cut_efficiency_dict[cut]) + "/" + str(cut_total_dict[cut]))
 
-    return cum_eff_list, purity_list, eff_list
+    return cum_eff_list, purity_list, eff_list, selection_list
 
 

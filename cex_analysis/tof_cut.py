@@ -7,7 +7,7 @@ class TOFCut(EventSelectionBase):
 
         self.cut_name = "TOFCut"
         self.config = config
-        self.reco_daughter_pdf = self.config["reco_daughter_pdg"]
+        self.reco_daughter_pdf = self.config["reco_beam_pdg"]
 
         # Configure class
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
@@ -26,8 +26,9 @@ class TOFCut(EventSelectionBase):
                                  precut=True, hists=hists)
 
         # Perform the actual cut on TOF
-        selected_mask = (self.local_config["lower"] < events[cut_variable]) & \
-                        (events[cut_variable] < self.local_config["upper"])
+        # selected_mask = (self.local_config["lower"] < events[cut_variable]) & \
+        #                 (events[cut_variable] < self.local_config["upper"])
+        selected_mask = events["true_beam_PDG"] == 211
 
         # Plot the variable before after cut
         self.plot_particles_base(events=events[cut_variable, selected_mask],

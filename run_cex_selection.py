@@ -77,12 +77,13 @@ def calculate_efficiency(selected_true, selected_total, true_count_list):
                                                                     cut_total_dict_list=selected_total,
                                                                     process_true_count_list=true_count_list)
 
-    cum_eff, purity, eff = eff_data.calculate_efficiency(cut_efficiency_dict=total_eff,
-                                                         cut_total_dict=total_sel,
-                                                         process_true_count=total_count)
+    cum_eff, purity, eff, sel = eff_data.calculate_efficiency(cut_efficiency_dict=total_eff,
+                                                              cut_total_dict=total_sel,
+                                                              process_true_count=total_count)
 
-    for ceff, f, p, cut in zip(cum_eff, eff, purity, total_eff):
-        print("Cut: [", cut, "] Cumulative eff:", ceff, " Eff:", f, " Purity:", p)
+    for ceff, f, p, cut, s in zip(cum_eff, eff, purity, total_eff, sel):
+        print("Cut: [\033[92m", '{:<20}'.format(cut), "\033[0m] Cumulative eff:", '{:.4f}'.format(ceff),
+              " Eff:", '{:.4f}'.format(f), "Purity:", '{:.4f}'.format(p), "Selection:", s, "True/Total")
 
 
 def collect_write_results(config, thread_results):
@@ -105,7 +106,7 @@ def collect_write_results(config, thread_results):
     calculate_efficiency(result_select_list, result_total_list, result_true_count_list)
 
     selected_events = sum([ak.sum(m, axis=0) for m in result_mask_list])
-    print("Selected", selected_events, " events out of ", sum(result_true_count_list), "CEX events")
+    print("Selected", selected_events, " events out of", sum(result_true_count_list), "true CEX events")
 
 
 def event_selection(config, data):
@@ -114,7 +115,7 @@ def event_selection(config, data):
     return event_handler_instance.run_selection(events=data)
 
 
-def thread_creator(flist, config, num_workers, tree, steps, branches):
+def thread_creator(flist, config, num_workers, branches):
 
     # Context manager handles joining of the threads
     futures = []
@@ -136,31 +137,21 @@ def configure(config_file):
 ############################
 
 
-# tree_name = "pduneana/beamana;2"
-tree_name = "pionana/beamana;2"
-# file = "/Users/jsen/tmp/pion_qe/pduneana_2gev_n2590.root"
-file = "~/tmp/pion_qe/pionana_Prod4_mc_1GeV_1_14_21.root"
+tree_name = "pionana/beamana"
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
             "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
             "reco_beam_calo_endZ", "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof",
             "true_daughter_nPiMinus", "true_daughter_nPiPlus", "true_daughter_nPi0", "true_daughter_nProton",
-            "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess"]
+            "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess", "true_beam_PDG"]
 
-file_list = ["~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_0.root"]
-             #"~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_1.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_2.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_3.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_4.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_5.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_6.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_7.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_8.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_9.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_10.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_11.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_12.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_13.root",
-             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_14.root"]
+# Provide a text file with one file per line
+files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
+with open(files) as f:
+    file_list = f.readlines()
+file_list = [line.strip() for line in file_list]
+
+#file_list = ["/Users/jsen/tmp/pion_qe/pduneana_2gev_n2590.root"]
+#file_list = ["~/tmp/pion_qe/pionana_Prod4_mc_1GeV_1_14_21.root"]
 
 # Number of threads
 num_workers = 4
@@ -172,6 +163,6 @@ config = configure(cfg_file)
 
 # Start the analysis threads
 print("Starting threads")
-thread_creator(file_list, config, num_workers, "tree", "steps", branches)
+thread_creator(file_list, config, num_workers, branches)
 
 print("Completed Analysis!")

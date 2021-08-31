@@ -2,29 +2,18 @@ from cex_analysis.event_selection_base import EventSelectionBase
 import numpy as np
 
 
-class MaxShowerEnergyCut(EventSelectionBase):
+class MichelCut(EventSelectionBase):
     def __init__(self, config):
         super().__init__(config)
 
-        self.cut_name = "MaxShowerEnergyCut"
+        self.cut_name = "MichelCut"
         self.config = config
         self.reco_beam_pdg = self.config["reco_daughter_pdg"]
+        self.chi2_ndof_var = "proton_chi2_ndof"
 
         # Configure class
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
-
-    def max_shower_energy_cut(self, events):
-        # We only want to look at shower-like daughters
-        cnn_shower_mask = self.cnn_shower_cut(events)
-        # Get the maximum daughter shower energy for each event
-        max_energy = np.max(events[self.local_config["shower_energy_var"], cnn_shower_mask], axis=1)
-        # Return a mask: true if the max shower energy is greater than the threshold
-        return max_energy > self.local_config["max_energy_cut"]
-
-    def cnn_shower_cut(self, events):
-        # Create a mask for all daughters with CNN EM-like score <0.5
-        return events[self.local_config["track_like_cnn_var"]] < self.local_config["cnn_shower_cut"]
 
     def selection(self, events, hists):
         # First we configure the histograms we want to make
@@ -37,8 +26,11 @@ class MaxShowerEnergyCut(EventSelectionBase):
         self.plot_particles_base(events=events[cut_variable], pdg=events[self.reco_beam_pdg],
                                  precut=True, hists=hists)
 
-        # Max shower energy mask to select only events with at least one large shower
-        selected_mask = self.max_shower_energy_cut(events)
+        daughter_michel_mask = events[cut_variable] > self.local_config["cnn_michel_cut"]
+
+        # We want to _reject_ events if there are daughter michel electrons (presumably from pions decays)
+        # so negate the selection mask
+        selected_mask = ~np.any(daughter_michel_mask, axis=1)
 
         # Plot the variable after cut
         self.plot_particles_base(events=events[cut_variable, selected_mask],
@@ -60,5 +52,6 @@ class MaxShowerEnergyCut(EventSelectionBase):
         hists.plot_efficiency(xtotal=total_events, xpassed=passed_events, cut=cut)
 
     def get_cut_doc(self):
-        doc_string = "Cut on daughter showers"
+        doc_string = "Reject events which have daughter charged pions." \
+                     "Since our signal is pi+ --> pi0 + N  (N = some number of nucleons)"
         return doc_string

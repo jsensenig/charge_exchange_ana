@@ -1,0 +1,9 @@
+{
+  "MichelCut": {
+    "cut_variable": "reco_daughter_PFP_michelScore_collection",
+    "cnn_michel_cut": 0.5
+  },
+  "histograms": {
+    "MichelCut": ["michel_cut", "MichelCut;#chi^2/ndof;Count", 100, 0, 1000]
+  }
+}

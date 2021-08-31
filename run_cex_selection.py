@@ -142,7 +142,8 @@ branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHi
             "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
             "reco_beam_calo_endZ", "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof",
             "true_daughter_nPiMinus", "true_daughter_nPiPlus", "true_daughter_nPi0", "true_daughter_nProton",
-            "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess", "true_beam_PDG"]
+            "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess", "true_beam_PDG",
+            "reco_daughter_PFP_michelScore_collection"]
 
 # Provide a text file with one file per line
 files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"

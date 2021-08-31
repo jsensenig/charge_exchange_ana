@@ -1,5 +1,6 @@
 from cex_analysis.event_handler import EventHandler
 from cex_analysis.histograms import Histogram
+import cex_analysis.efficiency_data as eff_data
 import cex_analysis.histogram_data as hdata
 import concurrent.futures
 import awkward as ak
@@ -71,6 +72,19 @@ def merge_hist_maps(config, hist_maps):
     f.Close()
 
 
+def calculate_efficiency(selected_true, selected_total, true_count_list):
+    total_eff, total_sel, total_count = eff_data.combine_efficiency(cut_efficiency_dict_list=selected_true,
+                                                                    cut_total_dict_list=selected_total,
+                                                                    process_true_count_list=true_count_list)
+
+    cum_eff, purity, eff = eff_data.calculate_efficiency(cut_efficiency_dict=total_eff,
+                                                         cut_total_dict=total_sel,
+                                                         process_true_count=total_count)
+
+    for ceff, f, p, cut in zip(cum_eff, eff, purity, total_eff):
+        print("Cut: [", cut, "] Cumulative eff:", ceff, " Eff:", f, " Purity:", p)
+
+
 def collect_write_results(config, thread_results):
     print(thread_results)
     # Result is a tuple (<Histogram Result>, <Selection Mask>)
@@ -78,6 +92,9 @@ def collect_write_results(config, thread_results):
     tuple_list = [future.result() for future in thread_results]
     result_hist_list = [hists[0] for hists in tuple_list]
     result_mask_list = [masks[1] for masks in tuple_list]
+    result_select_list = [eff[2] for eff in tuple_list]
+    result_total_list = [eff[3] for eff in tuple_list]
+    result_true_count_list = [eff[4] for eff in tuple_list]
     print("Number of thread results", len(result_hist_list))
 
     if len(result_hist_list) < 1:
@@ -85,9 +102,10 @@ def collect_write_results(config, thread_results):
         return False
 
     merge_hist_maps(config, result_hist_list)
+    calculate_efficiency(result_select_list, result_total_list, result_true_count_list)
 
     selected_events = sum([ak.sum(m, axis=0) for m in result_mask_list])
-    print("Selected", selected_events, " events")
+    print("Selected", selected_events, " events out of ", sum(result_true_count_list), "CEX events")
 
 
 def event_selection(config, data):
@@ -119,28 +137,30 @@ def configure(config_file):
 
 
 # tree_name = "pduneana/beamana;2"
-tree_name = "pionana/beamana"
+tree_name = "pionana/beamana;2"
 # file = "/Users/jsen/tmp/pion_qe/pduneana_2gev_n2590.root"
 file = "~/tmp/pion_qe/pionana_Prod4_mc_1GeV_1_14_21.root"
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
             "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
-            "reco_beam_calo_endZ", "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof"]
+            "reco_beam_calo_endZ", "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof",
+            "true_daughter_nPiMinus", "true_daughter_nPiPlus", "true_daughter_nPi0", "true_daughter_nProton",
+            "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess"]
 
-file_list = ["~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_0.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_1.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_2.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_3.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_4.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_5.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_6.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_7.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_8.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_9.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_10.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_11.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_12.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_13.root",
-             "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_14.root"]
+file_list = ["~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_0.root"]
+             #"~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_1.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_2.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_3.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_4.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_5.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_6.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_7.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_8.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_9.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_10.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_11.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_12.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_13.root",
+             # "~/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_14.root"]
 
 # Number of threads
 num_workers = 4

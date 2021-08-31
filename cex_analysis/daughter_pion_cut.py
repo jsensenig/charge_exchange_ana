@@ -48,6 +48,7 @@ class DaughterPionCut(EventSelectionBase):
         return selected_mask
 
     def plot_particles_base(self, events, pdg, precut, hists):
+        print("PIONCUT", len(events))
         hists.plot_particles_stack(x=events, x_pdg=pdg, cut=self.cut_name, precut=precut)
         hists.plot_particles(x=events, cut=self.cut_name, precut=precut)
 

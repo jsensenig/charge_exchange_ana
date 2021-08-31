@@ -14,14 +14,6 @@ class ShowerCut(EventSelectionBase):
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
 
-    def max_shower_energy_cut(self, events):
-        # Get the maximum daughter shower energy for each event
-        max_energy = np.max(events[self.local_config["shower_energy_var"]], axis=1)
-        # Create a mask if the max shower energy is greater than the threshold
-        max_energy_cut = max_energy > self.local_config["max_energy_cut"]
-        # Reduce daughter level to event level mask
-        return np.any(max_energy_cut, axis=0)
-
     def cnn_shower_cut(self, events):
         # Create a mask for all daughters with CNN EM-like score <0.5
         return events[self.local_config["track_like_cnn_var"]] < self.local_config["cnn_shower_cut"]
@@ -60,14 +52,8 @@ class ShowerCut(EventSelectionBase):
         self.plot_particles_base(events=events[cut_variable], pdg=events[self.reco_beam_pdg],
                                  precut=True, hists=hists)
 
-        # Max shower energy mask to select only events with at least one large shower
-        max_shower_energy_mask = self.max_shower_energy_cut(events)
-
         # Candidate shower count mask
-        shower_count_mask = self.shower_count_cut(events)
-
-        # Combine all event level masks
-        selected_mask = max_shower_energy_mask & shower_count_mask
+        selected_mask = self.shower_count_cut(events)
 
         # Plot the variable after cut
         self.plot_particles_base(events=events[cut_variable, selected_mask],

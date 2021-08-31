@@ -1,5 +1,5 @@
 {
-  "cut_list": ["BeamQualityCut", "APA3Cut", "ShowerCut", "DaughterPionCut"],
+  "cut_list": ["MaxShowerEnergyCut", "BeamQualityCut", "APA3Cut", "ShowerCut", "DaughterPionCut"],
   "hist_list": ["TOF"],
   "reco_beam_pdg": "reco_beam_true_byHits_PDG",
   "reco_daughter_pdg": "reco_daughter_PFP_true_byHits_PDG",
@@ -12,6 +12,9 @@
   },
   "APA3Cut": {
     "config_file": "config/apa3_cut.json"
+  },
+  "MaxShowerEnergyCut": {
+    "config_file": "config/max_shower_energy_cut.json"
   },
     "ShowerCut": {
     "config_file": "config/shower_cut.json"

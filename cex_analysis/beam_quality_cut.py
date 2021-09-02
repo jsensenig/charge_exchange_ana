@@ -1,4 +1,6 @@
 from cex_analysis.event_selection_base import EventSelectionBase
+import awkward as ak
+import numpy as np
 
 
 class BeamQualityCut(EventSelectionBase):
@@ -13,6 +15,66 @@ class BeamQualityCut(EventSelectionBase):
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
 
+    def beam_to_tpc_cut(self, events):
+
+        """
+        1. Calculate the difference between beam particle and the average divided by its RMS for X, Y, Z, XY
+        """
+
+        # Shift the start to the mean and normalize by the RMS for each dimension
+        beam_dx = (events[self.local_config["beam_startX"]] - self.local_config["beam_startX_MC"]) \
+                  / self.local_config["beam_startX_rms_MC"]
+
+        beam_dy = (events[self.local_config["beam_startY"]] - self.local_config["beam_startY_MC"]) \
+                  / self.local_config["beam_startY_rms_MC"]
+
+        beam_dz = (events[self.local_config["beam_startZ"]] - self.local_config["beam_startZ_MC"]) \
+                  / self.local_config["beam_startZ_rms_MC"]
+
+        # Convert to numpy array with shape (2,N) where N is number of events
+        beam_xy = np.vstack(ak.to_numpy([beam_dx, beam_dx]).T)
+        # Get the length of the pairs in the xy plane
+        beam_dxy = np.linalg.norm(beam_xy, axis=1)
+
+        """ 
+        2. Calculate the dot product between beam particle direction and the average beam direction
+        """
+
+        # Now check the angle between MC and the beam direction
+        pointx = events[self.local_config["beam_endX"]] - events[self.local_config["beam_startX"]]
+        pointy = events[self.local_config["beam_endY"]] - events[self.local_config["beam_startY"]]
+        pointz = events[self.local_config["beam_endZ"]] - events[self.local_config["beam_startZ"]]
+        # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector
+        beam_dir = np.vstack(ak.to_numpy([pointx, pointy, pointz]).T)
+        # Normalize the direction vector
+        norm = np.linalg.norm(beam_dir, axis=1)
+        beam_dir_unit = beam_dir / np.stack((norm, norm, norm), axis=1)
+
+        # Define the MC direction vector
+        mc_direction_unit = np.cos(np.radians(np.array([self.local_config["beam_anglex_deg_mc"],
+                                                        self.local_config["beam_angley_deg_mc"],
+                                                        self.local_config["beam_anglez_deg_mc"]])))
+        # ...and normalize it
+        mc_direction_unit = mc_direction_unit / np.linalg.norm(mc_direction_unit)
+
+        # Create N copies of the MC unit vector so we can take dot product with the beam direction
+        beam_dir_mc_unit = np.full_like(beam_dir_unit, mc_direction_unit)
+        beam_dot = np.diag(beam_dir_unit @ beam_dir_mc_unit.T)
+
+        """ 
+        3. Apply cuts to the calculations above and combine the resulting masks
+        """
+
+        # Now apply cuts to \Delta{x,y,z} / \sigma_{x,y,z} and dot product
+        mask_dx = (beam_dx > self.local_config["beam_start_min_dx"]) & (beam_dx < self.local_config["beam_start_max_dx"])
+        mask_dy = (beam_dy > self.local_config["beam_start_min_dy"]) & (beam_dy < self.local_config["beam_start_max_dy"])
+        mask_dz = (beam_dz > self.local_config["beam_start_min_dz"]) & (beam_dz < self.local_config["beam_start_max_dz"])
+        mask_dxy = (beam_dxy > self.local_config["beam_start_min_dxy"]) & (beam_dxy < self.local_config["beam_start_max_dxy"])
+        mask_angle = (beam_dot > self.local_config["min_angle"]) & (beam_dot < self.local_config["max_angle"])
+
+        # Combine the masks together for the final selection
+        return mask_dxy & mask_angle
+
     def selection(self, events, hists):
         # First we configure the histograms we want to make
         hists.configure_hists(self.local_hist_config)
@@ -26,7 +88,11 @@ class BeamQualityCut(EventSelectionBase):
 
         # The beam quality cut is already a mask, 1 if passed 0 if not
         # also these are already at the event level so it's okay as is
-        selected_mask = events[cut_variable]
+        # The first is the old cut and second the updated one
+        selected_mask_old = events[cut_variable]
+        selected_mask = self.beam_to_tpc_cut(events)
+
+        print("Selected new/old", np.sum(selected_mask), " ", np.sum(selected_mask_old))
 
         # Plot the variable after cut
         self.plot_particles_base(events=events[cut_variable, selected_mask],

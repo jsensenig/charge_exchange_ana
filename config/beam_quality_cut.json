@@ -1,6 +1,31 @@
 {
   "BeamQualityCut": {
-    "cut_variable": "reco_beam_passes_beam_cuts"
+    "cut_variable": "reco_beam_passes_beam_cuts",
+    "beam_startX": "reco_beam_calo_startX",
+    "beam_startY": "reco_beam_calo_startY",
+    "beam_startZ": "reco_beam_calo_startZ",
+    "beam_endX": "reco_beam_calo_endX",
+    "beam_endY": "reco_beam_calo_endY",
+    "beam_endZ": "reco_beam_calo_endZ",
+    "beam_startX_MC": -30.8075,
+    "beam_startY_MC": 422.41,
+    "beam_startZ_MC": 0.11171,
+    "beam_startX_rms_MC": 5.01719,
+    "beam_startY_rms_MC": 4.50862,
+    "beam_startZ_rms_MC": 0.217733,
+    "beam_start_min_dx": -3.0,
+    "beam_start_min_dy": -3.0,
+    "beam_start_min_dz": -3.0,
+    "beam_start_min_dxy": -1.0,
+    "beam_start_max_dx": 3.0,
+    "beam_start_max_dy": 3.0,
+    "beam_start_max_dz": 3.0,
+    "beam_start_max_dxy": 3.0,
+    "beam_anglex_deg_mc": 101.578,
+    "beam_angley_deg_mc": 101.189,
+    "beam_anglez_deg_mc": 16.5942,
+    "min_angle": 0.95,
+    "max_angle": 2.0
   },
   "histograms": {
     "BeamQualityCut": ["beam_quality_cut", "BeamQualityCut;Beam Quality;Count", 2, 0, 2]

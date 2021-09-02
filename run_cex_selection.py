@@ -1,3 +1,4 @@
+from timeit import default_timer as timer
 from cex_analysis.event_handler import EventHandler
 from cex_analysis.histograms import Histogram
 import cex_analysis.efficiency_data as eff_data
@@ -82,7 +83,7 @@ def calculate_efficiency(selected_true, selected_total, true_count_list):
                                                               process_true_count=total_count)
 
     for ceff, f, p, cut, s in zip(cum_eff, eff, purity, total_eff, sel):
-        print("Cut: [\033[92m", '{:<20}'.format(cut), "\033[0m] Cumulative eff:", '{:.4f}'.format(ceff),
+        print("Cut: [\033[92m", '{:<18}'.format(cut), "\033[0m] Cumulative eff:", '{:.4f}'.format(ceff),
               " Eff:", '{:.4f}'.format(f), "Purity:", '{:.4f}'.format(p), "Selection:", s, "True/Total")
 
 
@@ -137,13 +138,14 @@ def configure(config_file):
 ############################
 
 
-tree_name = "pionana/beamana"
+tree_name = "pionana/beamana;2"
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
             "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
             "reco_beam_calo_endZ", "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof",
             "true_daughter_nPiMinus", "true_daughter_nPiPlus", "true_daughter_nPi0", "true_daughter_nProton",
             "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess", "true_beam_PDG",
-            "reco_daughter_PFP_michelScore_collection"]
+            "reco_daughter_PFP_michelScore_collection", "reco_beam_calo_startX", "reco_beam_calo_startY",
+            "reco_beam_calo_startZ", "reco_beam_calo_endX", "reco_beam_calo_endY", "reco_beam_calo_endZ"]
 
 # Provide a text file with one file per line
 files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
@@ -151,11 +153,13 @@ with open(files) as f:
     file_list = f.readlines()
 file_list = [line.strip() for line in file_list]
 
+# file_list = file_list[0:1]
+
 #file_list = ["/Users/jsen/tmp/pion_qe/pduneana_2gev_n2590.root"]
 #file_list = ["~/tmp/pion_qe/pionana_Prod4_mc_1GeV_1_14_21.root"]
 
 # Number of threads
-num_workers = 4
+num_workers = 1
 num_workers = check_thread_count(num_workers)
 
 # Get main configuration
@@ -164,6 +168,8 @@ config = configure(cfg_file)
 
 # Start the analysis threads
 print("Starting threads")
+start = timer()
 thread_creator(file_list, config, num_workers, branches)
 
-print("Completed Analysis!")
+end = timer()
+print("Completed Analysis! (", round((end - start), 4), "s)")

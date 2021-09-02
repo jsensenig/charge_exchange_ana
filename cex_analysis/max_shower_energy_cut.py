@@ -34,30 +34,29 @@ class MaxShowerEnergyCut(EventSelectionBase):
         cut_variable = self.local_config["cut_variable"]
 
         # Plot the variable before making cut
-        self.plot_particles_base(events=events[cut_variable], pdg=events[self.reco_beam_pdg],
-                                 precut=True, hists=hists)
+        self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdg], precut=True, hists=hists)
 
         # Max shower energy mask to select only events with at least one large shower
         selected_mask = self.max_shower_energy_cut(events)
 
         # Plot the variable after cut
-        self.plot_particles_base(events=events[cut_variable, selected_mask],
-                                 pdg=events[self.reco_beam_pdg, selected_mask],
+        self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_beam_pdg, selected_mask],
                                  precut=False, hists=hists)
 
         # Plot the efficiency
-        self.efficiency(total_events=events[cut_variable], passed_events=events[cut_variable, selected_mask],
-                        cut=self.cut_name, hists=hists)
+        self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)
 
         # Return event selection mask
         return selected_mask
 
     def plot_particles_base(self, events, pdg, precut, hists):
-        hists.plot_particles_stack(x=events, x_pdg=pdg, cut=self.cut_name, precut=precut)
-        hists.plot_particles(x=events, cut=self.cut_name, precut=precut)
+        for idx, plot in enumerate(self.local_hist_config):
+            hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
+            hists.plot_particles(x=events[plot], idx=idx, precut=precut)
 
     def efficiency(self, total_events, passed_events, cut, hists):
-        hists.plot_efficiency(xtotal=total_events, xpassed=passed_events, cut=cut)
+        for idx, plot in enumerate(self.local_hist_config):
+            hists.plot_efficiency(xtotal=total_events[plot], xpassed=passed_events[plot], idx=idx)
 
     def get_cut_doc(self):
         doc_string = "Cut on daughter showers"

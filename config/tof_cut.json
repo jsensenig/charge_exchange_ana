@@ -4,7 +4,7 @@
     "upper": 97.0,
     "lower": 96.0
   },
-  "histograms": {
-    "TOFCut": ["tof_cut", "TOFCut;TOF [ns];Count", 80, 90, 150]
-  }
+  "histograms": [
+    { "true_beam_PDG": ["tof_cut", "TOFCut;TOF [ns];Count", 80, 90, 150] }
+  ]
 }

@@ -141,7 +141,7 @@ def configure(config_file):
 tree_name = "pionana/beamana;2"
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
             "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
-            "reco_beam_calo_endZ", "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof",
+            "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof",
             "true_daughter_nPiMinus", "true_daughter_nPiPlus", "true_daughter_nPi0", "true_daughter_nProton",
             "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess", "true_beam_PDG",
             "reco_daughter_PFP_michelScore_collection", "reco_beam_calo_startX", "reco_beam_calo_startY",
@@ -173,3 +173,5 @@ thread_creator(file_list, config, num_workers, branches)
 
 end = timer()
 print("Completed Analysis! (", round((end - start), 4), "s)")
+
+#"cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MaxShowerEnergyCut", "ShowerCut", "DaughterPionCut", "MichelCut"],

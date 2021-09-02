@@ -59,6 +59,8 @@ class BeamQualityCut(EventSelectionBase):
 
         # Create N copies of the MC unit vector so we can take dot product with the beam direction
         beam_dir_mc_unit = np.full_like(beam_dir_unit, mc_direction_unit)
+        # Take dot product. Not sure if there is a better way, here we matrix multiply the directions and
+        # get the diagonal of resulting matrix which is the dot product of the vectors
         beam_dot = np.diag(beam_dir_unit @ beam_dir_mc_unit.T)
 
         """ 
@@ -73,7 +75,7 @@ class BeamQualityCut(EventSelectionBase):
         mask_angle = (beam_dot > self.local_config["min_angle"]) & (beam_dot < self.local_config["max_angle"])
 
         # Combine the masks together for the final selection
-        return mask_dxy & mask_angle
+        return mask_dxy & mask_angle #& mask_dz
 
     def selection(self, events, hists):
         # First we configure the histograms we want to make
@@ -83,8 +85,7 @@ class BeamQualityCut(EventSelectionBase):
         cut_variable = self.local_config["cut_variable"]
 
         # Plot the variable before making cut
-        self.plot_particles_base(events=events[cut_variable], pdg=events[self.reco_beam_pdg],
-                                 precut=True, hists=hists)
+        self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdg], precut=True, hists=hists)
 
         # The beam quality cut is already a mask, 1 if passed 0 if not
         # also these are already at the event level so it's okay as is
@@ -95,23 +96,23 @@ class BeamQualityCut(EventSelectionBase):
         print("Selected new/old", np.sum(selected_mask), " ", np.sum(selected_mask_old))
 
         # Plot the variable after cut
-        self.plot_particles_base(events=events[cut_variable, selected_mask],
-                                 pdg=events[self.reco_beam_pdg, selected_mask],
+        self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_beam_pdg, selected_mask],
                                  precut=False, hists=hists)
 
         # Plot the efficiency
-        self.efficiency(total_events=events[cut_variable], passed_events=events[cut_variable, selected_mask],
-                        cut=self.cut_name, hists=hists)
+        self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)
 
         # Return event selection mask
         return selected_mask
 
     def plot_particles_base(self, events, pdg, precut, hists):
-        hists.plot_particles_stack(x=events, x_pdg=pdg, cut=self.cut_name, precut=precut)
-        hists.plot_particles(x=events, cut=self.cut_name, precut=precut)
+        for idx, plot in enumerate(self.local_hist_config):
+            hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
+            hists.plot_particles(x=events[plot], idx=idx, precut=precut)
 
     def efficiency(self, total_events, passed_events, cut, hists):
-        hists.plot_efficiency(xtotal=total_events, xpassed=passed_events, cut=cut)
+        for idx, plot in enumerate(self.local_hist_config):
+            hists.plot_efficiency(xtotal=total_events[plot], xpassed=passed_events[plot], idx=idx)
 
     def get_cut_doc(self):
         doc_string = "Cut on beamline TOF to select beam particles"

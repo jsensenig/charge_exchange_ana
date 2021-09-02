@@ -7,7 +7,7 @@
     "cnn_shower_cut": 0.5,
     "small_energy_shower_cut": 10
   },
-  "histograms": {
-    "ShowerCut": ["shower_cut", "ShowerCut;Shower Energy [MeV];Count", 150, 0, 1500]
-  }
+  "histograms": [
+    { "reco_daughter_allShower_energy": ["shower_cut", "ShowerCut;Shower Energy [MeV];Count", 150, 0, 1500] }
+  ]
 }

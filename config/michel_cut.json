@@ -3,7 +3,7 @@
     "cut_variable": "reco_daughter_PFP_michelScore_collection",
     "cnn_michel_cut": 0.6
   },
-  "histograms": {
-    "MichelCut": ["michel_cut", "MichelCut;Michel Score;Count", 25, 0, 1]
-  }
+  "histograms": [
+    { "reco_daughter_PFP_michelScore_collection": ["michel_cut", "MichelCut;Michel Score;Count", 25, 0, 1] }
+  ]
 }

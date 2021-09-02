@@ -76,10 +76,10 @@ class Histogram:
 
         return merged_eff
 
-    def plot_efficiency(self, xtotal, xpassed, cut):
+    def plot_efficiency(self, xtotal, xpassed, idx):
 
         # Get the config to create the plot for this cut
-        name, title, bins, lower_lim, upper_lim = self.hist_config[cut]
+        name, title, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
         hist_total = ROOT.TH1D(name + "_total", title, bins, lower_lim, upper_lim)
         hist_passed = ROOT.TH1D(name + "_passed", title, bins, lower_lim, upper_lim)
 
@@ -111,12 +111,12 @@ class Histogram:
         # Store this hist in our master map as HistogramData class object
         self.hist_data.append(HistogramData("efficiency", name, efficiency))
 
-    def plot_particles(self, x, cut, precut):
+    def plot_particles(self, x, idx, precut):
         c = ROOT.TCanvas()
         legend = utils.legend_init_right()
 
         # Get the config to create the plot for this cut
-        name, title, bins, lower_lim, upper_lim = self.hist_config[cut]
+        name, title, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
         if precut:
             name = "precut_" + name
             title = "PreCut-" + title
@@ -148,7 +148,7 @@ class Histogram:
         # Store this hist in our master map as HistogramData class object
         self.hist_data.append(HistogramData("hist", name, hist))
 
-    def plot_particles_stack(self, x, x_pdg, cut, precut):
+    def plot_particles_stack(self, x, x_pdg, idx, precut):
         """
         Make stacked plot of a given variable with each stack corresponding to a PDG
         :param precut: Is this pre or Post cut plot
@@ -165,7 +165,7 @@ class Histogram:
         legend = utils.legend_init_right()
 
         # The name and binning should be the same for all particles
-        name, title, bins, lower_lim, upper_lim = self.hist_config[cut]
+        name, title, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
         if precut:
             name = "precut_" + name
             title = "PreCut-" + title

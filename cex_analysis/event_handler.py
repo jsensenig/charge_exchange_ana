@@ -2,6 +2,7 @@ from cex_analysis.cut_factory import CutFactory
 from cex_analysis.event_selection_base import EventSelectionBase
 from cex_analysis.histograms import Histogram
 from cex_analysis.efficiency_data import EfficiencyData
+from cex_analysis.true_process import TrueProcess
 import awkward as ak
 
 from pathlib import Path
@@ -69,6 +70,10 @@ class EventHandler:
         :param events: Array of events to be analyzed
         :return:
         """
+        # Add the interaction process columns
+        classify_process = TrueProcess()
+        events = classify_process.classify_event_process(events=events)
+
         true_process_mask = self.get_num_true_process_events(events)
         self.efficiency.set_num_true_process(ak.sum(true_process_mask, axis=0))
         # Add a column which specifies whether this is a true process

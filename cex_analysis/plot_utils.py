@@ -17,6 +17,16 @@ colors = {'positron': 46,
           'gamma': 94,
           'other': 29}
 
+proc_colors = {'pion_elastic': 46,
+               'pion_and_pi0': 49,
+               'pi0_production': 8,
+               'single_charge_exchange': 64,
+               'double_charge_exchange': 67,
+               'pion_production': 38,
+               'absorption': 53,
+               'quasi_elastic': 94,
+               'other': 29}
+
 pdg2string = {-11: 'positron',
               11: 'electron',
               2112: 'neutron',

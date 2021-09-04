@@ -75,7 +75,8 @@ class BeamQualityCut(EventSelectionBase):
         mask_angle = (beam_dot > self.local_config["min_angle"]) & (beam_dot < self.local_config["max_angle"])
 
         # Combine the masks together for the final selection
-        return mask_dxy & mask_angle #& mask_dz
+        # return mask_dxy & mask_angle
+        return mask_dx & mask_dy & mask_dz & mask_angle
 
     def selection(self, events, hists):
         # First we configure the histograms we want to make
@@ -106,7 +107,9 @@ class BeamQualityCut(EventSelectionBase):
         return selected_mask
 
     def plot_particles_base(self, events, pdg, precut, hists):
+        hists.plot_process(x=events, precut=precut)
         for idx, plot in enumerate(self.local_hist_config):
+            hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
             hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
             hists.plot_particles(x=events[plot], idx=idx, precut=precut)
 

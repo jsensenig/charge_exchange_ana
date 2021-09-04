@@ -1,5 +1,6 @@
 import cex_analysis.plot_utils as utils
 from cex_analysis.histogram_data import HistogramData
+from cex_analysis.true_process import TrueProcess
 import ROOT
 import awkward as ak
 import plotting_utils
@@ -18,11 +19,31 @@ class Histogram:
         # Create a list to hold all plot objects
         self.hist_data = []
 
+        # Get the true process list
+        self.true_process_list = TrueProcess.get_process_list()
+
+        # Compile the C++ we will use for speed
+        self.compile_cpp_helpers()
+
     def get_hist_map(self):
         return self.hist_data
 
     def configure_hists(self, config):
         self.hist_config = config
+
+    @staticmethod
+    def compile_cpp_helpers():
+
+        # Fill a histogram with strings
+        compilation_success = ROOT.gInterpreter.Declare("""
+            void fill_hist_th1i_string( std::string proc, TH1I *hist, int num ) {
+                for(int i = 0; i < num; i++) hist->Fill(proc.c_str(), 1);
+           }
+        """)
+
+        # If any code fails to compile throw an error
+        if not compilation_success:
+            ValueError
 
     @staticmethod
     def merge_hist_list(hist_list):
@@ -183,7 +204,8 @@ class Histogram:
 
             # Before plotting we flatten from 2D array shape=(<num event>, <num daughters>) to
             # 1D array shape=(<num event>*<num daughters>)
-            pdg_filtered_array = plotting_utils.daughter_by_pdg(x_flat, x_pdg_flat, pdg)
+            pdg_list = [-211, -13, -11, 11, 13, 22, 111, 211, 321, 2212]
+            pdg_filtered_array = plotting_utils.daughter_by_pdg(x_flat, x_pdg_flat, pdg, pdg_list)
 
             # If array is not empty fill it, if it is empty still add the histogram to the
             # stack so we can correctly merge the stacks later. Otherwise the PDGs get mixed.
@@ -216,27 +238,95 @@ class Histogram:
 
         return
 
-###################################################
+    def plot_process(self, x, precut):
+        c = ROOT.TCanvas()
+        legend = utils.legend_init_right()
 
+        # Get the config to create the plot for this cut
+        name, title, bins, lower_lim, upper_lim = list(self.hist_config[0].values())[0]
+        if precut:
+            name = "precut_proc_" + name
+            title = "PreCut-Proc-" + title
+        else:
+            name = "postcut_proc_" + name
+            title = "PostCut-Proc-" + title
 
-    def set_hist_lim(hist):
-        hist.SetAxisRange(0, 2, "X")
+        hist = ROOT.TH1I(name, title, len(self.true_process_list)+1, 0, len(self.true_process_list)+1)
 
-    def print_count(count):
-        for p in count:
-            print(p, ":", count[p])
+        for proc in self.true_process_list:
+            ROOT.fill_hist_th1i_string(proc, hist, np.int(ak.sum(x[proc])))
 
-    def print_cut_report(pdg, total, passed):
-        print(f"{pdg}: (passed/total = {passed}/{total})  (Eff = {100 * (passed / total):.1f}%)")
+        legend.AddEntry(hist, name)
+        hist.GetListOfFunctions().Add(legend)
 
-    def hist_help(file, hist, color, fill=True):
-        h = file.Get(hist)
-        h.SetLineColor(color)
-        h.SetFillColor(color)
-        if not fill:
-            h.SetFillColor(False)
-        return h
+        # Store this hist in our master map as HistogramData class object
+        self.hist_data.append(HistogramData("hist", name, hist))
 
+    def plot_process_stack(self, x, idx, variable, precut):
+        """
+        Make stacked plot of a given variable with each stack corresponding to a PDG
+        :param precut: Is this pre or Post cut plot
+        :param x: Array of single variable either shape=(<num event>) OR shape=(<num event>, <num daughters>)
+        :param x_pdg: Array of PDG codes with either shape=(<num event>) OR shape=(<num event>, <num daughters>)
+        :param cut: str Cut name
+        :return:
+        """
+        c = ROOT.TCanvas()
+        stack = ROOT.THStack()
+        legend = utils.legend_init_right()
 
+        # The name and binning should be the same for all particles
+        name, title, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
+        if precut:
+            name = "precut_proc_" + name
+            title = "PreCut-" + title
+        else:
+            name = "postcut_proc_" + name
+            title = "PostCut-" + title
 
+        for i, proc in enumerate(self.true_process_list):
 
+            # Filter and flatten the array
+            proc_mask = x[proc]
+            xprox = x[proc_mask]
+            x_flat = ak.flatten(xprox[variable], axis=None)
+
+            hstack = ROOT.TH1D(name + "_" + proc, title, bins, lower_lim, upper_lim)
+
+            # Just a loop in c++ which does hist.FillN() (nullptr sets weights = 1)
+            # FillN() only likes double* (python float64) so if array is another type, cast it to float64
+            if len(x_flat) > 0:
+                if isinstance(x_flat, ak.Array):
+                    if ak.type(x_flat.layout).dtype != 'float64':
+                        x_flat = ak.values_astype(x_flat, np.float64)
+                    hstack.FillN(len(x_flat), ak.to_numpy(x_flat), ROOT.nullptr)
+                elif isinstance(x_flat, np.ndarray):
+                    if x_flat.dtype != np.float64:
+                        x_flat = x_flat.astype('float64')
+                    hstack.FillN(len(x_flat), x_flat, ROOT.nullptr)
+                else:
+                    print("Unknown array type!")
+
+            utils.set_hist_colors(hstack, utils.proc_colors.get(proc, 1), utils.proc_colors.get(proc, 1))
+
+            # Get the fraction of PDG
+            pdg_fraction = round((100. * len(x_flat) / len(proc_mask)), 2)
+
+            legend.AddEntry(hstack, proc + "  " + str(pdg_fraction) + "%")
+            # Only add the legend to one histogram so we don't have duplicates in the THStack
+            if i == 0:
+                hstack.GetListOfFunctions().Add(legend)
+
+            stack.Add(hstack)
+
+        # Draw and tidy the THStack
+        stack.Draw()
+        stack.SetName(name)
+        stack.SetTitle(title.split(";")[0])
+        stack.GetXaxis().SetTitle(title.split(";")[1])
+        stack.GetYaxis().SetTitle(title.split(";")[2])
+
+        # Store this hist in our master map as a HistogramData class
+        self.hist_data.append(HistogramData("stack", name, stack))
+
+        return

@@ -44,6 +44,11 @@ class TrueProcess:
     '''
 
     @staticmethod
+    def get_process_list():
+        return ["pion_elastic", "single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic",
+                "pion_production", "pi0_production", "pion_and_pi0"]
+
+    @staticmethod
     def single_charge_exchange(events):
         return (events["true_daughter_nPiMinus"] == 0) & (events["true_daughter_nPiPlus"] == 0) & \
                (events["true_daughter_nPi0"] == 1) & \

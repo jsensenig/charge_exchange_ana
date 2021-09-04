@@ -2,7 +2,7 @@
   "MaxShowerEnergyCut": {
     "cut_variable": "reco_daughter_allShower_energy",
     "shower_energy_var": "reco_daughter_allShower_energy",
-    "max_energy_cut": 175,
+    "max_energy_cut": 150,
     "track_like_cnn_var": "reco_daughter_PFP_trackScore_collection",
     "cnn_shower_cut": 0.4
   },

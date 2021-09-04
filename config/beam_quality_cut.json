@@ -7,9 +7,9 @@
     "beam_endX": "reco_beam_calo_endX",
     "beam_endY": "reco_beam_calo_endY",
     "beam_endZ": "reco_beam_calo_endZ",
-    "beam_startX_MC": -29.57,
-    "beam_startY_MC": 422.40,
-    "beam_startZ_MC": 0.11171,
+    "beam_startX_MC": -24.50,
+    "beam_startY_MC": 422.98,
+    "beam_startZ_MC": 0.10,
     "beam_startX_rms_MC": 5.01719,
     "beam_startY_rms_MC": 4.50862,
     "beam_startZ_rms_MC": 0.217733,
@@ -24,7 +24,7 @@
     "beam_anglex_deg_mc": 101.578,
     "beam_angley_deg_mc": 101.189,
     "beam_anglez_deg_mc": 16.5942,
-    "min_angle": 0.96,
+    "min_angle": 0.95,
     "max_angle": 2.0
   },
   "histograms": [

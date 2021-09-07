@@ -85,4 +85,6 @@ void beam_quality() {
     delete map.second;
   }
 
+  file_address->Close();
+
 }

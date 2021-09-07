@@ -80,6 +80,9 @@ void beam_quality() {
   }
 
   // Normalize, fit and save the histograms
-  for( auto &map : hist_map ) fit_hist( map.first, map.second );
+  for( auto &map : hist_map ) { 
+    fit_hist( map.first, map.second );
+    delete map.second;
+  }
 
 }

@@ -1,10 +1,10 @@
 {
   "TOFCut": {
-    "cut_variable": "true_beam_PDG",
-    "upper": 97.0,
-    "lower": 96.0
+    "cut_variable": "beam_inst_TOF",
+    "upper": 96.5,
+    "lower": 95.0
   },
   "histograms": [
-    { "true_beam_PDG": ["tof_cut", "TOFCut;TOF [ns];Count", 80, 90, 150] }
+    { "beam_inst_TOF": ["tof_cut", "TOFCut;TOF [ns];Count", 80, 90, 150] }
   ]
 }

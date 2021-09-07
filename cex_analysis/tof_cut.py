@@ -25,9 +25,11 @@ class TOFCut(EventSelectionBase):
         self.plot_particles_base(events=events, pdg=events[self.reco_daughter_pdf], precut=True, hists=hists)
 
         # Perform the actual cut on TOF
-        # selected_mask = (self.local_config["lower"] < events[cut_variable]) & \
-        #                 (events[cut_variable] < self.local_config["upper"])
-        selected_mask = events["true_beam_PDG"] == 211
+        # also cut out positrons since they are vetoed in the data
+        selected_mask = (self.local_config["lower"] < events[cut_variable][:, 0]) & \
+                        (events[cut_variable][:, 0] < self.local_config["upper"]) & \
+                        (events["true_beam_PDG"] != -11)
+        # selected_mask = events["true_beam_PDG"] == 211
 
         # Plot the variable before after cut
         self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_daughter_pdf, selected_mask],

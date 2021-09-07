@@ -75,8 +75,8 @@ class BeamQualityCut(EventSelectionBase):
         mask_angle = (beam_dot > self.local_config["min_angle"]) & (beam_dot < self.local_config["max_angle"])
 
         # Combine the masks together for the final selection
-        # return mask_dxy & mask_angle
-        return mask_dx & mask_dy & mask_dz & mask_angle
+        return mask_dz & mask_dxy & mask_angle
+        #return mask_dx & mask_dy & mask_dz & mask_angle
 
     def selection(self, events, hists):
         # First we configure the histograms we want to make

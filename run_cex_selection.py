@@ -138,7 +138,7 @@ def configure(config_file):
 ############################
 
 
-tree_name = "pionana/beamana;2"
+tree_name = "pionana/beamana;17"
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
             "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
             "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof", "beam_inst_TOF",
@@ -148,16 +148,18 @@ branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHi
             "reco_beam_calo_startZ", "reco_beam_calo_endX", "reco_beam_calo_endY", "reco_beam_calo_endZ"]
 
 # Provide a text file with one file per line
-files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
-#files = "/Users/jsen/tmp/pion_qe/2gev_full_mc_sample/newShower_n14580_no_alldaughter/2gev_full_mc.txt"
-with open(files) as f:
-    file_list = f.readlines()
-file_list = [line.strip() for line in file_list]
+#files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
+#files = "~/tmp/pion_qe/2gev_full_mc_sample/newShower_n14580_no_alldaughter_all/all_files.txt"
+
+# with open(files) as f:
+#     file_list = f.readlines()
+# file_list = [line.strip() for line in file_list]
 
 #file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/full_mc_merged.root"]
 
 #file_list = ["/Users/jsen/tmp/pion_qe/pduneana_2gev_n2590.root"]
 #file_list = ["~/tmp/pion_qe/pionana_Prod4_mc_1GeV_1_14_21.root"]
+file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/output.root"]
 
 # Number of threads
 num_workers = 4

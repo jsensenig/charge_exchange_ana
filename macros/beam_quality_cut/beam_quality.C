@@ -13,7 +13,7 @@ void fit_hist( const std::string &name, TH1D* hist ) {
   hist->Draw();
 
   // .. and save to a .pdf
-  std::string pdf_name = "beam_" + name + "_fit.pdf";
+  std::string pdf_name = "beam_" + name + "_fit.png";
   c.SaveAs(pdf_name.c_str());
 
 }

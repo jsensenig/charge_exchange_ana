@@ -5,7 +5,7 @@ and angle x,y,z.
 
 ![Beamay](beam_angley_fit.png)
 
-![Beamaz](beam_angley_fit.png)
+![Beamaz](beam_anglez_fit.png)
 
 ![Beamsx](beam_startx_fit.png)
 

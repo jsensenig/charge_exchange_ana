@@ -1,3 +1,4 @@
+import numpy as np
 
 
 class TrueProcess:
@@ -40,7 +41,7 @@ class TrueProcess:
         return events
 
     '''
-    Below are the definitions for all the classified processes
+    Below are the definitions of the true processes
     '''
 
     @staticmethod
@@ -49,9 +50,19 @@ class TrueProcess:
                 "pion_production", "pi0_production", "pion_and_pi0"]
 
     @staticmethod
+    def mask_daughter_momentum(events, momentum_threshold, pdg_select):
+        momentum_var = "true_beam_daughter_startP"
+        daughter_pdg_var = "true_beam_daughter_PDG"
+        # Momentum in GeV
+        mom_mask = (events[momentum_var] > momentum_threshold) & (events[daughter_pdg_var] == pdg_select)
+        return np.count_nonzero(mom_mask, axis=1)
+
+    @staticmethod
     def single_charge_exchange(events):
-        return (events["true_daughter_nPiMinus"] == 0) & (events["true_daughter_nPiPlus"] == 0) & \
-               (events["true_daughter_nPi0"] == 1) & \
+        selected_pi0 = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.1, pdg_select=111)
+        selected_pi_plus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.125, pdg_select=211)
+        selected_pi_minus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.125, pdg_select=-211)
+        return (selected_pi_plus == 0) & (selected_pi_minus == 0) & (selected_pi0 == 1) & \
                ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 
     @staticmethod

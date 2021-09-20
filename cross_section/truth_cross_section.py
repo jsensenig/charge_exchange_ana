@@ -2,6 +2,7 @@ import numpy as np
 import awkward as ak
 from ROOT import TH3D, nullptr
 
+
 class TruthCrossSection:
     """
     It is assumed the events passed to this class are pre-selected to be only sCEX
@@ -10,14 +11,16 @@ class TruthCrossSection:
         self.config = config
 
     def extract_truth_xsec(self, events):
-        pass
-
-    def get_pi0_variables(self, events):
+        """
+        Extract the cross section from the true variables and return a 3D histogram
+        :param events:
+        :return: TH3D 3D histogram of the cross section variables
+        """
 
         beam_ke = self.beam_end_ke(events)
         pi0_ke = self.pi0_start_ke(events)
         pi0_angle = self.pi0_angle(events)
-        xsec_hist = self.bin_cross_section_variables(beam_ke=beam_ke, pi0_ke=pi0_ke, pi0_angle=pi0_angle)
+        return self.bin_cross_section_variables(beam_ke=beam_ke, pi0_ke=pi0_ke, pi0_angle=pi0_angle)
 
     def beam_end_ke(self, events):
         """
@@ -78,15 +81,15 @@ class TruthCrossSection:
         pi0_norm = np.linalg.norm(pi0_dir, axis=1)
         pi0_dir_unit = pi0_dir / np.stack((pi0_norm, pi0_norm, pi0_norm), axis=1)
 
-        # Calculate the angle between beam and pi0 direction by taking arccos of the dot product of their
+        # Calculate the cos angle between beam and pi0 direction by taking the dot product of their
         # respective direction unit vectors
-        return np.arccos(np.diag(beam_dir_unit @ pi0_dir_unit.T))
+        return np.diag(beam_dir_unit @ pi0_dir_unit.T)
 
     def bin_cross_section_variables(self, beam_ke, pi0_ke, pi0_angle):
 
-        beam_ke_bins = [1000., 1800., 2000., 2200.]  # MeV/c
-        pi0_ke_bins = [0., 400., 800., 1200., 2000.]  # MeV/c
-        pi0_angle_bins = [0., np.pi/2., (3. * np.pi) / 2., np.pi]  # rad
+        beam_ke_bins = [1000., 1400., 2200.]  # MeV/c
+        pi0_ke_bins = [0., 300., 500., 700., 1200.]  # MeV/c
+        pi0_angle_bins = [-1., 0.5, 0.75, 1.]  # cos(angle)
 
         xsec_hist = TH3D("xsec_binning", "XSec Variables;#pi0 KE [MeV/c];#pi0 Angle [rad];Beam KE [MeV/c]",
                          pi0_ke_bins, pi0_angle_bins, beam_ke_bins)

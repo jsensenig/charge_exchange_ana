@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class HistogramData:
+class Pi0Data:
     """
     Data class for reconstructed pi0 variables
     """

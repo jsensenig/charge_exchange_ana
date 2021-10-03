@@ -1,15 +1,17 @@
 from timeit import default_timer as timer
+from cross_section.cex_dd_cross_section import CexDDCrossSection
 from cex_analysis.event_handler import EventHandler
 from cex_analysis.histograms import Histogram
 import cex_analysis.efficiency_data as eff_data
 import cex_analysis.histogram_data as hdata
 import concurrent.futures
 import awkward as ak
+import numpy as np
 import ROOT
 import uproot
-import os
 import time
 import json
+import os
 
 
 def check_thread_count(threads):
@@ -87,13 +89,16 @@ def calculate_efficiency(selected_true, selected_total, true_count_list):
               " Eff:", '{:.4f}'.format(f), "Purity:", '{:.4f}'.format(p), "Selection:", s, "True/Total")
 
 
-def collect_write_results(config, thread_results):
+def collect_write_results(config, thread_results, flist, branches):
     print(thread_results)
     # Result is a tuple (<Histogram Result>, <Selection Mask>)
     # We can only get the results once as the threads finish so fill a list with the tuples
     tuple_list = [future.result() for future in thread_results]
     result_hist_list = [hists[0] for hists in tuple_list]
-    result_mask_list = [masks[1] for masks in tuple_list]
+    event_selection_mask = np.array([], dtype=bool)
+    for masks in tuple_list:
+        event_selection_mask = np.hstack((event_selection_mask, ak.to_numpy(masks[1])))
+
     result_select_list = [eff[2] for eff in tuple_list]
     result_total_list = [eff[3] for eff in tuple_list]
     result_true_count_list = [eff[4] for eff in tuple_list]
@@ -106,7 +111,12 @@ def collect_write_results(config, thread_results):
     merge_hist_maps(config, result_hist_list)
     calculate_efficiency(result_select_list, result_total_list, result_true_count_list)
 
-    selected_events = sum([ak.sum(m, axis=0) for m in result_mask_list])
+    all_events = uproot.concatenate(files=flist, expressions=branches)
+    xsec = CexDDCrossSection(None)
+    xsec.extract_cross_section(all_events=all_events, selected_events=all_events, total_incident_pion=14000)
+
+    #selected_events = sum([ak.sum(m, axis=0) for m in result_mask_list])
+    selected_events = ak.sum(event_selection_mask)
     print("Selected", selected_events, " events out of", sum(result_true_count_list), "true CEX events")
 
 
@@ -125,9 +135,9 @@ def thread_creator(flist, config, num_workers, branches):
         for i, array in enumerate(uproot.iterate(files=flist, expressions=branches, report=True, num_workers=num_workers)):
             print("---------- Starting thread", i, "----------")
             futures.append(executor.submit(event_selection, config, array[0]))
-            print(array[1]) # The report part of the array tuple from the tree iterator
+            print(array[1])  # The report part of the array tuple from the tree iterator
             time.sleep(0.2)
-        collect_write_results(config, concurrent.futures.as_completed(futures))
+        collect_write_results(config, concurrent.futures.as_completed(futures), flist, branches)
 
 
 def configure(config_file):
@@ -140,25 +150,23 @@ def configure(config_file):
 
 tree_name = "pionana/beamana;17"
 branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
+            "reco_daughter_PFP_true_byHits_parPDG", "true_beam_daughter_startP", "true_beam_daughter_PDG",
             "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
             "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof", "beam_inst_TOF",
             "true_daughter_nPiMinus", "true_daughter_nPiPlus", "true_daughter_nPi0", "true_daughter_nProton",
-            "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess", "true_beam_PDG",
-            "reco_daughter_PFP_michelScore_collection", "reco_beam_calo_startX", "reco_beam_calo_startY",
-            "reco_beam_calo_startZ", "reco_beam_calo_endX", "reco_beam_calo_endY", "reco_beam_calo_endZ"]
+            "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess", "true_beam_endP", "true_beam_endPx",
+            "true_beam_endPy", "true_beam_endPz", "reco_daughter_PFP_michelScore_collection", "reco_beam_calo_startX",
+            "reco_beam_calo_startY", "reco_beam_calo_startZ", "reco_beam_calo_endX", "reco_beam_calo_endY",
+            "reco_beam_calo_endZ", "true_beam_daughter_startPx", "true_beam_daughter_startPy", "true_beam_daughter_startPz"]
 
 # Provide a text file with one file per line
-#files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
-#files = "~/tmp/pion_qe/2gev_full_mc_sample/newShower_n14580_no_alldaughter_all/all_files.txt"
+files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
 
-# with open(files) as f:
-#     file_list = f.readlines()
-# file_list = [line.strip() for line in file_list]
+with open(files) as f:
+    file_list = f.readlines()
+file_list = [line.strip() for line in file_list]
 
-#file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/full_mc_merged.root"]
-
-#file_list = ["/Users/jsen/tmp/pion_qe/pduneana_2gev_n2590.root"]
-#file_list = ["~/tmp/pion_qe/pionana_Prod4_mc_1GeV_1_14_21.root"]
+# Full MC merged file
 file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/output.root"]
 
 # Number of threads
@@ -176,5 +184,3 @@ thread_creator(file_list, config, num_workers, branches)
 
 end = timer()
 print("Completed Analysis! (", round((end - start), 4), "s)")
-
-#"cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MaxShowerEnergyCut", "ShowerCut", "DaughterPionCut", "MichelCut"],

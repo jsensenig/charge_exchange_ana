@@ -35,15 +35,11 @@ class Histogram:
     def compile_cpp_helpers():
 
         # Fill a histogram with strings
-        compilation_success = ROOT.gInterpreter.Declare("""
+        ROOT.gInterpreter.ProcessLine("""
             void fill_hist_th1i_string( std::string proc, TH1I *hist, int num ) {
                 for(int i = 0; i < num; i++) hist->Fill(proc.c_str(), 1);
            }
         """)
-
-        # If any code fails to compile throw an error
-        if not compilation_success:
-            ValueError
 
     @staticmethod
     def merge_hist_list(hist_list):

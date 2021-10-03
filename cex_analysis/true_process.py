@@ -59,9 +59,9 @@ class TrueProcess:
 
     @staticmethod
     def single_charge_exchange(events):
-        selected_pi0 = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.1, pdg_select=111)
-        selected_pi_plus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.125, pdg_select=211)
-        selected_pi_minus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.125, pdg_select=-211)
+        selected_pi0 = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.0, pdg_select=111)
+        selected_pi_plus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.0, pdg_select=211)
+        selected_pi_minus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.0, pdg_select=-211)
         return (selected_pi_plus == 0) & (selected_pi_minus == 0) & (selected_pi0 == 1) & \
                ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 

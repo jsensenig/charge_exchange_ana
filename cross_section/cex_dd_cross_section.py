@@ -40,7 +40,9 @@ class CexDDCrossSection:
         #if self.config["run_truth_xsec"]:
         if True:
             truth_3d_hist = self.run_truth_cross_section(events=all_events[true_scex_mask])
-            self.calculate_double_differential_xsec(truth_3d_hist, total_incident_pion, True)
+            incident_pions = np.sum(all_events["true_beam_PDG"] == 211, axis=0)
+            print("NUMBER OF INCIDENT PI+", incident_pions)
+            self.calculate_double_differential_xsec(truth_3d_hist, incident_pions, True)
 
         # Close file and return
         self.close_file()
@@ -79,8 +81,8 @@ class CexDDCrossSection:
 
         avogadro_constant    = 6.02214076e23  # 1 / mol
         argon_molar_mass     = 39.95          # g / mol
-        liquid_argon_density = 1.39           # g / cm ^ 3
-        fiducial_thickness   = 230.5          # 222. # cm
+        liquid_argon_density = 1.39           # g / cm^3
+        fiducial_thickness   = 230.5          # 222 cm
 
         # N_tgt = 39.9624 / (6.022e23) * (1.3973) = 4.7492e-23 = Ar atomic mass / (Avagadro's number * LAr density)
         num_target = argon_molar_mass / (avogadro_constant * liquid_argon_density * fiducial_thickness)
@@ -93,13 +95,14 @@ class CexDDCrossSection:
         for beambin_i in range(1, beam_bins+1):  # beam KE
 
             beam_bin_center = xsec_3d_hist.GetZaxis().GetBinCenter(beambin_i)
-
-            energy_xsec = self.plot_xsec_energy(xsec_3d_hist, beambin_i, num_target, beam_bin_center, energy_bins, angle_bins,
+            # Cross section plotted wrt to pi0 KE
+            self.plot_xsec_energy(xsec_3d_hist, beambin_i, num_target, beam_bin_center, energy_bins, angle_bins,
                                                 total_events, xsec_graphs, truth_vars)
-            self.write_graphs_to_file(energy_xsec)
-            angle_xsec = self.plot_xsec_angle(xsec_3d_hist, beambin_i, num_target, beam_bin_center, energy_bins, angle_bins,
+            # Cross section plotted wrt to pi0 cos(theta)
+            self.plot_xsec_angle(xsec_3d_hist, beambin_i, num_target, beam_bin_center, energy_bins, angle_bins,
                                               total_events, xsec_graphs, truth_vars)
-            self.write_graphs_to_file(angle_xsec)
+
+        self.write_graphs_to_file(xsec_graphs)
 
     @staticmethod
     def write_graphs_to_file(graph_dict):
@@ -147,18 +150,15 @@ class CexDDCrossSection:
             # Get TGraph
             gr_name = "beam_" + str(int(beam_bin_center)) + "_angle_" + str(int(TMath.ACos(angle_center) * TMath.RadToDeg()))
             if truth_vars:
-                gr_name += "truth_vars"
+                gr_name += "_truth_vars"
 
-            xsec_graphs[gr_name] = self.plot_cross_section(xsec, angle_center, energy, beam_bin_center, xsec_xerr,
-                                                           xsec_yerr, False)
+            xsec_graphs[gr_name] = self.plot_cross_section(xsec, energy, angle_center, beam_bin_center, xsec_xerr,
+                                                           xsec_yerr, False, "Energy")
 
-            true_gr_name = "true_beam_" + str(int(beam_bin_center)) + "_angle_" + \
-                           str(int(TMath.ACos(angle_center) * TMath.RadToDeg()))
+            xsec_graphs["true_" + gr_name] = self.plot_cross_section(true_xsec, energy, angle_center, beam_bin_center,
+                                                                     true_xsec_xerr, true_xsec_yerr, True, "Energy")
 
-            xsec_graphs[true_gr_name] = self.plot_cross_section(true_xsec, angle_center, energy, beam_bin_center,
-                                                                true_xsec_xerr, true_xsec_yerr, True)
-
-        return xsec_graphs
+        #return xsec_graphs
 
     def plot_xsec_angle(self, xsec_3d_hist, beambin_i, num_target, beam_bin_center, energy_bins, angle_bins,
                         total_events, xsec_graphs, truth_vars):
@@ -191,8 +191,8 @@ class CexDDCrossSection:
                 true_xsec_xerr.append(0.)
                 true_xsec_yerr.append(0.)
 
-                angle.append(energy_center)
-                xsec_xerr.append(ebin_width / 2.)
+                angle.append(angle_center)
+                xsec_xerr.append(abin_width / 2.)
 
                 print("Ebin width ", ebin_width, " Abin width ", abin_width, " N_int ", num_interactions, " Energy ",
                       energy_center, " Angle ", angle_center, " Xsec ", xsec_calc)
@@ -200,23 +200,39 @@ class CexDDCrossSection:
             # Get TGraph
             gr_name = "beam_" + str(int(beam_bin_center)) + "_energy_" + str(int(energy_center))
             if truth_vars:
-                gr_name += "truth_vars"
+                gr_name += "_truth_vars"
 
+            # Graph the cross section extracted from the events
             xsec_graphs[gr_name] = self.plot_cross_section(xsec, energy_center, angle, beam_bin_center, xsec_xerr,
-                                                           xsec_yerr, False)
+                                                           xsec_yerr, False, "Angle")
 
-            true_gr_name = "true_beam_" + str(int(beam_bin_center)) + "_energy_" + str(int(energy_center))
+            # Graph the Geant nominal cross section
+            xsec_graphs["true_" + gr_name] = self.plot_cross_section(true_xsec, energy_center, angle, beam_bin_center,
+                                                                true_xsec_xerr, true_xsec_yerr, True, "Angle")
 
-            xsec_graphs[true_gr_name] = self.plot_cross_section(true_xsec, energy_center, angle, beam_bin_center,
-                                                                true_xsec_xerr, true_xsec_yerr, True)
+        #return xsec_graphs
 
-        return xsec_graphs
-
-    def plot_cross_section(self, xsec, energy, angle, beam_energy, xerr, yerr, true_xsec):
+    def plot_cross_section(self, xsec, energy, angle, beam_energy, xerr, yerr, true_xsec, xaxis):
 
         print("Writing Xsec to file")
 
-        xsec_graph = TGraphErrors(len(angle), np.asarray(angle), np.asarray(xsec), np.asarray(xerr), np.asarray(yerr))
+        if xaxis == "Energy":
+            angle_degrees = str(int(TMath.ACos(angle) * TMath.RadToDeg()))
+            title = "#pi^{+} CEX Cross-section (#theta_{#pi^{0}} = " + angle_degrees + " [deg])" + \
+                    " (T_{#pi^{+}} = " + str(int(beam_energy)) + " [MeV/c])"
+            xaxis_title = "T_{#pi^{0}} [MeV]"
+            xsec_graph = TGraphErrors(len(energy), np.asarray(energy), np.asarray(xsec), np.asarray(xerr),
+                                      np.asarray(yerr))
+        elif xaxis == "Angle":
+            title = "#pi^{+} CEX Cross-section (T_{#pi^{0}} = " + str(int(energy)) + " [MeV/c])" + \
+                    " (T_{#pi^{+}} = " + str(int(beam_energy)) + " [MeV/c])"
+            xaxis_title = "cos#theta_{#pi^{0}}"
+            xsec_graph = TGraphErrors(len(angle), np.asarray(angle), np.asarray(xsec), np.asarray(xerr),
+                                      np.asarray(yerr))
+        else:
+            print("Unknown X-axis plot", xaxis)
+            raise RuntimeError
+
         xsec_graph.SetLineWidth(1)
         xsec_graph.SetMarkerStyle(8)
         xsec_graph.SetMarkerSize(0.5)
@@ -225,24 +241,23 @@ class CexDDCrossSection:
         else:
             xsec_graph.SetLineColor(46)
 
-        title = "#pi^{+} CEX Cross-section (T_{#pi^{0}} = " + str(int(energy)) + " [MeV/c])" + \
-                " (T_{#pi^{+}} = " + str(int(beam_energy)) + " [MeV/c])"
         xsec_graph.SetTitle(title)
-        xsec_graph.GetXaxis().SetTitle("cos#theta_{#pi^{0}}")
+        xsec_graph.GetXaxis().SetTitle(xaxis_title)
         xsec_graph.GetYaxis().SetTitle("#frac{d^{2}#sigma}{dT_{#pi^{0}}d#Omega_{#pi^{0}}} [#mub/MeV/sr]")
 
         return xsec_graph
 
     def get_geant_cross_section(self, energy, angle, beam):
+        # If the beam KE does not exist we should know, throw error
+        if int(beam) not in self.geant_xsec_dict.keys():
+            print("No match for beam", int(beam), "in dictionary", self.geant_xsec_dict.keys())
+            raise RuntimeError
+
         """
         1) Select the correct 2D plot for the incident pion energy
         2) find the global bin number corresponding to the values of energy, angle
         """
-        if int(beam) in self.geant_xsec_dict.keys():
-            global_bin = self.geant_xsec_dict[int(beam)].FindBin(energy, angle)
-        else:
-            print("No match for beam", int(beam), "in dictionary", self.geant_xsec_dict.keys())
-            raise RuntimeError
+        global_bin = self.geant_xsec_dict[int(beam)].FindBin(energy, angle)
         """
         # 3) get the content in that bin.bin content = coss section[mb]
         """
@@ -260,9 +275,11 @@ class CexDDCrossSection:
         beam_bins = np.array([1000, 1400., 1800., 2200.])
         beam_energy_hist = TH1D("beam_energy", "Beam Pi+ Kinetic Energy;T_{#pi^{+}} [MeV/c];Count", len(beam_bins)-1, beam_bins)
 
-        geant_file = "/Users/jsen/tmp_fit/cross_section_cex_n100k_Textended.root"
+        geant_file = "/Users/jsen/tmp_fit/cross_section_cex_n1m_Textended.root"
         geant_xsec_file = TFile(geant_file)
 
+        # cd into the ROOT directory so we can clone the histograms from file
+        # otherwise we lose the histograms when the file is closed
         gROOT.cd()
         for bin_i in range(1, beam_energy_hist.GetXaxis().GetNbins()+1):
             bin_center = beam_energy_hist.GetBinCenter(bin_i)

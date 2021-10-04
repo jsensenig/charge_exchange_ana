@@ -114,15 +114,14 @@ class TruthCrossSection:
 
         # TODO add check that all 3 arrays are the same length
 
-        # Just a loop in c++ which does hist.FillN() (nullptr sets weights = 1)
-        # FillN() only likes double* (python float64) so if array is another type, cast it to float64
+        # Use a c++ loop to fill the histogram
+        # Using a double* in c++ (python equiv. float64) so if array is another type, cast it to float64
         if len(beam_ke) > 0 and len(pi0_ke) > 0 and len(pi0_angle) > 0:
             if isinstance(beam_ke, np.ndarray):
                 if beam_ke.dtype != np.float64:
                     pi0_ke.astype('float64')
                     pi0_angle.astype('float64')
                     beam_ke.astype('float64')
-                # Use a c++ loop to fill the histogram
                 ROOT.fill_hist_th3d(len(pi0_ke), pi0_ke, pi0_angle, beam_ke, xsec_hist)
             else:
                 print("Unknown array type!")

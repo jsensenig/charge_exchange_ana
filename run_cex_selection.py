@@ -94,14 +94,26 @@ def collect_write_results(config, thread_results, flist, branches):
     # Result is a tuple (<Histogram Result>, <Selection Mask>)
     # We can only get the results once as the threads finish so fill a list with the tuples
     tuple_list = [future.result() for future in thread_results]
+
+    # 1. The histograms created in the selection
     result_hist_list = [hists[0] for hists in tuple_list]
+
+    # 2. The selection masks created in the selection
     event_selection_mask = np.array([], dtype=bool)
+    selected_events_count = 0
     for masks in tuple_list:
+        selected_events_count += ak.sum(masks[1])
         event_selection_mask = np.hstack((event_selection_mask, ak.to_numpy(masks[1])))
 
+    # 3. The cut efficiency and purity
     result_select_list = [eff[2] for eff in tuple_list]
+
+    # 4. The selected plots created in the selection (to be used in efficiency plots)
     result_total_list = [eff[3] for eff in tuple_list]
+
+    # 5. The true selected events (to be used in efficiency plots)
     result_true_count_list = [eff[4] for eff in tuple_list]
+
     print("Number of thread results", len(result_hist_list))
 
     if len(result_hist_list) < 1:
@@ -116,8 +128,7 @@ def collect_write_results(config, thread_results, flist, branches):
     xsec.extract_cross_section(all_events=all_events, selected_events=all_events, total_incident_pion=14000)
 
     #selected_events = sum([ak.sum(m, axis=0) for m in result_mask_list])
-    selected_events = ak.sum(event_selection_mask)
-    print("Selected", selected_events, " events out of", sum(result_true_count_list), "true CEX events")
+    print("Selected", selected_events_count, " events out of", sum(result_true_count_list), "true CEX events")
 
 
 def event_selection(config, data):
@@ -170,7 +181,7 @@ file_list = [line.strip() for line in file_list]
 file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/output.root"]
 
 # Number of threads
-num_workers = 4
+num_workers = 1
 num_workers = check_thread_count(num_workers)
 
 # Get main configuration

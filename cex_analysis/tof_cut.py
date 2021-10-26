@@ -26,9 +26,10 @@ class TOFCut(EventSelectionBase):
 
         # Perform the actual cut on TOF
         # also cut out positrons since they are vetoed in the data
-        selected_mask = (self.local_config["lower"] < events[cut_variable][:, 0]) & \
-                        (events[cut_variable][:, 0] < self.local_config["upper"]) & \
-                        (events["true_beam_PDG"] != -11)
+        #selected_mask = (self.local_config["lower"] < events[cut_variable][:, 0]) & \
+        #                (events[cut_variable][:, 0] < self.local_config["upper"]) & \
+        #                (events["true_beam_PDG"] != -11)
+        selected_mask = (events[cut_variable][:, 0] < 100.) & (events["true_beam_PDG"] != -11)
         #selected_mask = events["true_beam_PDG"] == 211
 
         # Plot the variable before after cut

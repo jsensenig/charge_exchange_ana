@@ -160,7 +160,7 @@ def configure(config_file):
 
 
 tree_name = "pionana/beamana;17"
-branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
+branches = ["event", "reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
             "reco_daughter_PFP_true_byHits_parPDG", "true_beam_daughter_startP", "true_beam_daughter_PDG",
             "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
             "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof", "beam_inst_TOF",
@@ -168,7 +168,11 @@ branches = ["reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHi
             "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess", "true_beam_endP", "true_beam_endPx",
             "true_beam_endPy", "true_beam_endPz", "reco_daughter_PFP_michelScore_collection", "reco_beam_calo_startX",
             "reco_beam_calo_startY", "reco_beam_calo_startZ", "reco_beam_calo_endX", "reco_beam_calo_endY",
-            "reco_beam_calo_endZ", "true_beam_daughter_startPx", "true_beam_daughter_startPy", "true_beam_daughter_startPz"]
+            "reco_beam_calo_endZ", "true_beam_daughter_startPx", "true_beam_daughter_startPy", "true_beam_daughter_startPz",
+            "reco_beam_true_byHits_endProcess"]
+
+# Space-point branches
+branches += ["reco_daughter_PFP_shower_spacePts_X","reco_daughter_PFP_shower_spacePts_Y","reco_daughter_PFP_shower_spacePts_Z"]
 
 # Provide a text file with one file per line
 files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
@@ -178,7 +182,9 @@ with open(files) as f:
 file_list = [line.strip() for line in file_list]
 
 # Full MC merged file
-file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/output.root"]
+#file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/output.root"]
+#file_list = ["/Users/jsen/tmp/tmp_pi0_shower/pduneana_2gev_sub1_45972403_0_4_n500.root"]
+file_list = ["/Users/jsen/tmp/tmp_pi0_shower/pduneana_full_mc_n500.root"]
 
 # Number of threads
 num_workers = 1

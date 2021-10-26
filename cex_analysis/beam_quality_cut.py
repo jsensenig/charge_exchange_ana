@@ -94,6 +94,9 @@ class BeamQualityCut(EventSelectionBase):
         selected_mask_old = events[cut_variable]
         selected_mask = self.beam_to_tpc_cut(events)
 
+        #FIXME
+        #selected_mask = selected_mask_old
+
         print("Selected new/old", np.sum(selected_mask), " ", np.sum(selected_mask_old))
 
         # Plot the variable after cut

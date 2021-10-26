@@ -250,7 +250,7 @@ class Histogram:
         hist = ROOT.TH1I(name, title, len(self.true_process_list)+1, 0, len(self.true_process_list)+1)
 
         for proc in self.true_process_list:
-            ROOT.fill_hist_th1i_string(proc, hist, np.int(ak.sum(x[proc])))
+            ROOT.fill_hist_th1i_string(proc, hist, np.int(ak.count_nonzero(x[proc])))
 
         legend.AddEntry(hist, name)
         hist.GetListOfFunctions().Add(legend)

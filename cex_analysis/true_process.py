@@ -4,7 +4,8 @@ import numpy as np
 class TrueProcess:
 
     def __init__(self):
-        pass
+        self.pdg_dict = {"pi-minus": -211, "anti-muon": -13, "positron": -11, "electron": 11, "muon": 13, "gamma": 22,
+                         "pi-zero": 111, "pi-plus": 211, "kaon": 321, "neutron": 2112, "proton": 2212}
 
     def classify_event_process(self, events):
         """
@@ -12,10 +13,19 @@ class TrueProcess:
         :param events: Record of events
         :return: Same Record of events but with one additional column per process
         """
-        pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic")
+
+        # Count the number of daughter particles of each PDG type
+        events = self.get_particle_counts(events)
+        print("OUTSIDE FUNC", events["pi-zero-count"].type, " -- ", np.sum(events["pi-zero-count"]))
+
+        #pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic")
+        pion_inelastic = (events["reco_beam_true_byHits_PDG"] == 211) & (events["reco_beam_true_byHits_endProcess"] == "pi+Inelastic")
 
         # Pion elastic
         events["pion_elastic"] = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+elastic")
+
+        # Pion In-elastic
+        events["pion_inelastic"] = pion_inelastic
 
         # Single charge exchange, the singal
         events["single_charge_exchange"] = pion_inelastic & self.single_charge_exchange(events)
@@ -46,8 +56,20 @@ class TrueProcess:
 
     @staticmethod
     def get_process_list():
-        return ["pion_elastic", "single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic",
-                "pion_production", "pi0_production", "pion_and_pi0"]
+        return ["pion_inelastic", "pion_elastic", "single_charge_exchange", "double_charge_exchange", "absorption",
+                "quasi_elastic", "pion_production", "pi0_production", "pion_and_pi0"]
+
+    def get_particle_counts(self, events):
+        for pdg in self.pdg_dict:
+            if pdg == "pi-zero":
+                events[pdg + "-count"] = np.count_nonzero(
+                    events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
+            else:
+                tmp = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
+                print("COUNTING:", pdg + "-count     --> ", tmp.type, "  -- ", tmp[4])
+                events[pdg + "-count"] = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
+
+        return events
 
     @staticmethod
     def mask_daughter_momentum(events, momentum_threshold, pdg_select):
@@ -64,6 +86,13 @@ class TrueProcess:
         selected_pi_minus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.0, pdg_select=-211)
         return (selected_pi_plus == 0) & (selected_pi_minus == 0) & (selected_pi0 == 1) & \
                ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
+
+    # def single_charge_exchange(self, events):
+    #     selected_pi0 = events["pi-zero-count"]
+    #     selected_pi_plus = events["pi-plus-count"]
+    #     selected_pi_minus = events["pi-minus-count"]
+    #     return (selected_pi_plus == 0) & (selected_pi_minus == 0) & (selected_pi0 == 1) & \
+    #            ((events["proton-count"] > 0) | (events["neutron-count"] > 0))
 
     @staticmethod
     def double_charge_exchange(events):

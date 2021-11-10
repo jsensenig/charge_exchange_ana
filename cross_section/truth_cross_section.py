@@ -77,7 +77,8 @@ class TruthCrossSection:
 
         # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector
         # and normalize
-        beam_dir = np.vstack(ak.to_numpy([events[beam_end_px], events[beam_end_py], events[beam_end_pz]]).T)
+        # beam_dir = np.vstack(ak.to_numpy([events[beam_end_px], events[beam_end_py], events[beam_end_pz]]).T)
+        beam_dir = np.vstack((ak.to_numpy(events[beam_end_px]), ak.to_numpy(events[beam_end_py]), ak.to_numpy(events[beam_end_pz]))).T
         beam_norm = np.linalg.norm(beam_dir, axis=1)
         beam_dir_unit = beam_dir / np.stack((beam_norm, beam_norm, beam_norm), axis=1)
 
@@ -112,9 +113,9 @@ class TruthCrossSection:
         pi0_angle = pi0_angle.flatten()
         beam_ke = beam_ke.flatten()
 
-        # TODO add check that all 3 arrays are the same length
+        # TODO add check to make sure all 3 arrays are the same length
 
-        # Use a c++ loop to fill the histogram
+        # ROOT doesn't have a FillN() method for 3D hist. so make our own loop in C++ to fill it
         # Using a double* in c++ (python equiv. float64) so if array is another type, cast it to float64
         if len(beam_ke) > 0 and len(pi0_ke) > 0 and len(pi0_angle) > 0:
             if isinstance(beam_ke, np.ndarray):

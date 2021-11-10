@@ -267,11 +267,6 @@ class CexDDCrossSection:
         """
         Implement the configuration for the concrete cut class here.
         """
-
-        # with open(config_file, "r") as cfg:
-        #     tmp_config = json.load(cfg)
-        #     local_config = tmp_config
-
         beam_bins = np.array([1000, 1400., 1800., 2200.])
         beam_energy_hist = TH1D("beam_energy", "Beam Pi+ Kinetic Energy;T_{#pi^{+}} [MeV/c];Count", len(beam_bins)-1, beam_bins)
 

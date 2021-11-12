@@ -64,7 +64,7 @@ class ShowerCut(EventSelectionBase):
         use_new_method = True
         if use_new_method:
             peak_count_list = []
-            #for evt in events:
+            # for evt in events:
             for i in range(0, len(events)):
                 print("---> I", events["event"][i])
                 if events[i] is None:
@@ -74,7 +74,11 @@ class ShowerCut(EventSelectionBase):
                 if coord is None:
                    peak_count_list.append(0)
                    continue
-                shower_dir = self.dir.get_shower_direction_unit(coord)
+                rmask = coord[:, 3] <= (14. * 3.)  # 3 * X_0
+                shower_dir = []
+                if np.count_nonzero(rmask) > 0:
+                    shower_dir = self.dir.get_shower_direction_unit(coord[rmask])
+                    # shower_dir = self.dir.get_shower_direction_unit(coord)
                 peak_count_list.append(len(shower_dir))
                                                                   
             selected_mask = (np.asarray(peak_count_list) == 1) | (np.asarray(peak_count_list) == 2)

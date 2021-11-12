@@ -1,4 +1,5 @@
 from cex_analysis.event_selection_base import EventSelectionBase
+import awkward as ak
 import numpy as np
 
 
@@ -22,6 +23,7 @@ class DaughterPionCut(EventSelectionBase):
     def chi2_ndof(self, events):
         return events[self.chi2_ndof_var] > self.local_config["chi2_ndof_cut"]
 
+
     def selection(self, events, hists):
         # First we configure the histograms we want to make
         hists.configure_hists(self.local_hist_config)
@@ -38,8 +40,20 @@ class DaughterPionCut(EventSelectionBase):
         daughter_pion_mask = self.chi2_ndof(events)
 
         # Combine all event level masks
-        # We want to _reject_ events if there are daughter charged pions so negate the selection mask
-        selected_mask = ~np.any((track_score_mask & daughter_pion_mask), axis=1)
+        # We want to *reject* events if there are daughter charged pions so negate the selection mask
+
+        """
+        We are playing a little trick here, so be careful with these masks!
+        Here we want to reject an event if it evaluates to True i.e. if the event
+        DOES have a daughter pion. The way the masks work mean an event that evaluates to None
+        for whatever reason will be rejected which is not correct. Basically if an event
+        is None it should still be included in the event selection because we do not have
+        evidence for why it should be rejected. In other words we want to actively
+        (not passively) reject events so we don't mysteriously introduce biases in our selection.
+        """
+
+        selected_mask = np.any((track_score_mask & daughter_pion_mask), axis=1)
+        selected_mask = ak.Array(~ak.to_numpy(selected_mask).data)
 
         # Plot the variable after cut
         self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_beam_pdg, selected_mask],

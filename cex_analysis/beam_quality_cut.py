@@ -32,7 +32,7 @@ class BeamQualityCut(EventSelectionBase):
                   / self.local_config["beam_startZ_rms_MC"]
 
         # Convert to numpy array with shape (2,N) where N is number of events
-        beam_xy = np.vstack(ak.to_numpy([beam_dx, beam_dx]).T)
+        beam_xy = np.vstack(ak.to_numpy(beam_dx, beam_dy).T)
         # Get the length of the pairs in the xy plane
         beam_dxy = np.linalg.norm(beam_xy, axis=1)
 
@@ -45,7 +45,7 @@ class BeamQualityCut(EventSelectionBase):
         pointy = events[self.local_config["beam_endY"]] - events[self.local_config["beam_startY"]]
         pointz = events[self.local_config["beam_endZ"]] - events[self.local_config["beam_startZ"]]
         # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector
-        beam_dir = np.vstack(ak.to_numpy([pointx, pointy, pointz]).T)
+        beam_dir = np.vstack((ak.to_numpy(pointx), ak.to_numpy(pointy), ak.to_numpy(pointz))).T
         # Normalize the direction vector
         norm = np.linalg.norm(beam_dir, axis=1)
         beam_dir_unit = beam_dir / np.stack((norm, norm, norm), axis=1)

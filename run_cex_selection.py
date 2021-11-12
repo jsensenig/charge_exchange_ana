@@ -123,7 +123,8 @@ def collect_write_results(config, thread_results, flist, branches):
     merge_hist_maps(config, result_hist_list)
     calculate_efficiency(result_select_list, result_total_list, result_true_count_list)
 
-    all_events = uproot.concatenate(files=flist, expressions=branches)
+    #all_events = uproot.concatenate(files=flist, expressions=branches)
+    all_events = uproot.concatenate(files={flist[0]:"pduneana/beamana;2"}, expressions=branches)
     xsec = CexDDCrossSection(None)
     xsec.extract_cross_section(all_events=all_events, selected_events=all_events, total_incident_pion=14000)
 
@@ -143,7 +144,8 @@ def thread_creator(flist, config, num_workers, branches):
     futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
         # Use iterations of the tree read operation to batch the data for each thread
-        for i, array in enumerate(uproot.iterate(files=flist, expressions=branches, report=True, num_workers=num_workers)):
+        for i, array in enumerate(uproot.iterate(files={flist[0]:"pduneana/beamana;2"}, expressions=branches, report=True, num_workers=num_workers)):
+        #for i, array in enumerate(uproot.iterate(files=flist, expressions=branches, report=True, num_workers=num_workers)):
             print("---------- Starting thread", i, "----------")
             futures.append(executor.submit(event_selection, config, array[0]))
             print(array[1])  # The report part of the array tuple from the tree iterator
@@ -184,7 +186,8 @@ file_list = [line.strip() for line in file_list]
 # Full MC merged file
 #file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/output.root"]
 #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/pduneana_2gev_sub1_45972403_0_4_n500.root"]
-file_list = ["/Users/jsen/tmp/tmp_pi0_shower/pduneana_full_mc_n500.root"]
+#file_list = ["/Users/jsen/tmp/tmp_pi0_shower/pduneana_full_mc_n500.root"]
+file_list = ["/Users/jsen/tmp/tmp_pi0_shower/full_mc_shower_sample/pduneana_n1000.root"]
 
 # Number of threads
 num_workers = 1

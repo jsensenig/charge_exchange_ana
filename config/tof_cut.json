@@ -1,7 +1,7 @@
 {
   "TOFCut": {
     "cut_variable": "beam_inst_TOF",
-    "upper": 100.0,
+    "upper": 97.0,
     "lower": 95.0
   },
   "histograms": [

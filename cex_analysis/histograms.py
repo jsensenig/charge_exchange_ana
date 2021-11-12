@@ -3,6 +3,7 @@ from cex_analysis.histogram_data import HistogramData
 from cex_analysis.true_process import TrueProcess
 import ROOT
 import awkward as ak
+#import cex_analysis.plot_utils
 import plotting_utils
 import numpy as np
 
@@ -215,7 +216,7 @@ class Histogram:
             # Get the fraction of PDG
             pdg_fraction = round((100. * len(pdg_filtered_array) / len(x_flat)), 2)
 
-            legend.AddEntry(hstack, utils.pdg2string.get(pdg, "other") + "  " + str(pdg_fraction) + "%")
+            legend.AddEntry(hstack, utils.pdg2string.get(pdg, "other") + "  " + str(ak.count_nonzero(pdg_filtered_array)) + "/" + str(ak.count_nonzero(x_flat)) + " (" + str(pdg_fraction) + "%)")
             # Only add the legend to one histogram so we don't have duplicates in the THStack
             if i == 0:
                 hstack.GetListOfFunctions().Add(legend)
@@ -308,7 +309,7 @@ class Histogram:
             # Get the fraction of PDG
             pdg_fraction = round((100. * len(x_flat) / len(proc_mask)), 2)
 
-            legend.AddEntry(hstack, proc + "  " + str(pdg_fraction) + "%")
+            legend.AddEntry(hstack, proc + "  " + str(ak.count_nonzero(x_flat)) + "/" + str(ak.count_nonzero(proc_mask)) + " (" + str(pdg_fraction) + "%)")
             # Only add the legend to one histogram so we don't have duplicates in the THStack
             if i == 0:
                 hstack.GetListOfFunctions().Add(legend)

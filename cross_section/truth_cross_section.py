@@ -75,10 +75,10 @@ class TruthCrossSection:
         daughter_start_py = "true_beam_daughter_startPy"
         daughter_start_pz = "true_beam_daughter_startPz"
 
-        # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector
-        # and normalize
-        # beam_dir = np.vstack(ak.to_numpy([events[beam_end_px], events[beam_end_py], events[beam_end_pz]]).T)
-        beam_dir = np.vstack((ak.to_numpy(events[beam_end_px]), ak.to_numpy(events[beam_end_py]), ak.to_numpy(events[beam_end_pz]))).T
+        # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector and normalize
+        beam_dir = np.vstack((ak.to_numpy(events[beam_end_px]),
+                              ak.to_numpy(events[beam_end_py]),
+                              ak.to_numpy(events[beam_end_pz]))).T
         beam_norm = np.linalg.norm(beam_dir, axis=1)
         beam_dir_unit = beam_dir / np.stack((beam_norm, beam_norm, beam_norm), axis=1)
 

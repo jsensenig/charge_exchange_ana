@@ -1,0 +1,14 @@
+*.DS_Store
+*.swp
+
+# test-related
+*.pyc
+.cache
+.pytest_cache
+
+# developer environments
+.idea
+__pycache__
+*.png
+*.pdf
+*.root

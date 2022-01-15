@@ -1,5 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+#include <vector>
 #include <iostream>
 
 #define STRINGIFY(x) #x
@@ -11,7 +13,7 @@ namespace py = pybind11;
 // Function to select daughters accordign to pdg
 // Reads/writes array data directly from numpy buffer to save time and memory
 // Must receive a flattened array
-py::array_t<double> daughter_by_pdg(py::array_t<double> x, py::array_t<int> pdg, int select_pdg) {
+py::array_t<double> daughter_by_pdg(py::array_t<double> x, py::array_t<int> pdg, int select_pdg, std::vector<int> &pdg_vec) {
     
     py::buffer_info buf_x = x.request();
     // Here we need access to the actual values so we can make the selection
@@ -20,9 +22,6 @@ py::array_t<double> daughter_by_pdg(py::array_t<double> x, py::array_t<int> pdg,
     if (buf_x.size != pdg_arr.size()) throw std::runtime_error("Input shapes must match");
 
     double *ptr_x = static_cast<double *>(buf_x.ptr);
-
-    // List all "known" PDGs
-    std::vector<int> pdg_vec = {-211, -13, -11, 11, 13, 22, 111, 211, 321, 2212};
 
     // Use a vector since we don't know a priori the size of the array to be returned
     std::vector<double> xptr_vec;
@@ -65,16 +64,14 @@ PYBIND11_MODULE(plotting_utils, m) {
         .. autosummary::
            :toctree: _generate
            daughter_by_pdg
+           test_fill_hist
     )pbdoc";
-
 
 
     /// Read a Numpy array directly from memory and select daughter by PDG
     m.def("daughter_by_pdg", &daughter_by_pdg, R"pbdoc(
        Read a Numpy array directly from memory and select daughter by PDG input=(1D numpy.ndarray>, <1D numpy.ndarray PDG>)
     )pbdoc");
-
-
 
 
 #ifdef VERSION_INFO

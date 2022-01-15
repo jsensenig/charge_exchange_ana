@@ -16,7 +16,6 @@ class RecoCrossSection:
         :param events:
         :return: TH3D 3D histogram of the cross section variables
         """
-
         beam_ke = self.beam_end_ke(events)
         pi0_ke = self.pi0_start_ke(events)
         pi0_angle = self.pi0_angle(events)

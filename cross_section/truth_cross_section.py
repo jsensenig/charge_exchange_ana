@@ -33,7 +33,29 @@ class TruthCrossSection:
         pi0_ke = self.pi0_start_ke(events)
         pi0_angle = self.pi0_angle(events)
 
+        beam_ke = self.flatten_and_convert_array(beam_ke)
+        pi0_ke = self.flatten_and_convert_array(pi0_ke)
+        pi0_angle = self.flatten_and_convert_array(pi0_angle)
+
+        # Plot these variables so we have record of what went into the cross section
+        self.plot_xsec_variables(pi0_ke=pi0_ke, pi0_angle=pi0_angle, beam_end_ke=beam_ke)
+
         return self.bin_cross_section_variables(beam_ke=beam_ke, pi0_ke=pi0_ke, pi0_angle=pi0_angle)
+
+    def plot_xsec_variables(self, pi0_ke, pi0_angle, beam_end_ke):
+        print("SHAPES: pi0_ke", pi0_ke.shape, " pi0_angle", pi0_angle.shape, " beam_ke", beam_end_ke.shape)
+        # Fill a finely binned histogram so we know the distributions
+        beam_ke_fine = ROOT.TH1D("cex_beam_ke_fine", ";Beam KE [MeV/c];Count", 140, 800., 2200.)
+        pi0_ke_fine = ROOT.TH1D("cex_pi0_ke_fine", ";#pi0 KE [MeV/c];Count", 100, 0., 1800.)
+        pi0_angle_fine = ROOT.TH1D("cex_pi0_angle_fine", ";#pi0 cos#theta;Count", 40, -1., 1.)
+
+        beam_ke_fine.FillN(len(beam_end_ke), beam_end_ke, ROOT.nullptr)
+        pi0_ke_fine.FillN(len(pi0_ke), pi0_ke, ROOT.nullptr)
+        pi0_angle_fine.FillN(len(pi0_angle), pi0_angle, ROOT.nullptr)
+
+        beam_ke_fine.Write()
+        pi0_ke_fine.Write()
+        pi0_angle_fine.Write()
 
     def beam_end_ke(self, events):
         """
@@ -45,7 +67,7 @@ class TruthCrossSection:
         pi_mass = 0.13957039  # pi+/- [GeV/c]
 
         events_beam_end_momentum = ak.to_numpy(events[beam_end_momentum])
-        return 1000. * np.sqrt(np.square(pi_mass) + np.square(events_beam_end_momentum)) - pi_mass
+        return 1000. * (np.sqrt(np.square(pi_mass) + np.square(events_beam_end_momentum)) - pi_mass)
 
     def pi0_start_ke(self, events):
         """
@@ -84,15 +106,14 @@ class TruthCrossSection:
 
         # Select only the pi0 daughter
         pi0_daughter_mask = events[daughter_pdg] == 111
-        pi0_dir_px = ak.to_numpy(events[daughter_start_px, pi0_daughter_mask])
-        pi0_dir_py = ak.to_numpy(events[daughter_start_py, pi0_daughter_mask])
-        pi0_dir_pz = ak.to_numpy(events[daughter_start_pz, pi0_daughter_mask])
+        pi0_dir_px = ak.to_numpy(events[daughter_start_px, pi0_daughter_mask])[:,0]
+        pi0_dir_py = ak.to_numpy(events[daughter_start_py, pi0_daughter_mask])[:,0]
+        pi0_dir_pz = ak.to_numpy(events[daughter_start_pz, pi0_daughter_mask])[:,0]
 
         # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector
         # and normalize
-        pi0_dir = np.vstack([pi0_dir_px, pi0_dir_py, pi0_dir_pz])
+        pi0_dir = np.vstack((pi0_dir_px, pi0_dir_py, pi0_dir_pz)).T
         pi0_norm = np.linalg.norm(pi0_dir, axis=1)
-        print(pi0_dir.shape, " ", np.stack((pi0_norm, pi0_norm, pi0_norm), axis=1).shape)
         pi0_dir_unit = pi0_dir / np.stack((pi0_norm, pi0_norm, pi0_norm), axis=1)
 
         # Calculate the cos angle between beam and pi0 direction by taking the dot product of their
@@ -101,7 +122,9 @@ class TruthCrossSection:
 
     def bin_cross_section_variables(self, beam_ke, pi0_ke, pi0_angle):
 
-        beam_ke_bins = np.array([1000., 1400., 1800., 2200.])  # MeV/c
+        beam_ke_bins = np.array([1000, 1500., 1800., 2100.])  # MeV/c
+        #beam_ke_bins = np.array([950., 1550., 1900., 2050.])
+        #beam_ke_bins = np.array([950., 1050., 1150., 1250., 1350., 1450., 1550., 1650., 1750., 1850., 1950., 2050])
         pi0_ke_bins = np.array([0., 300., 500., 700., 1200.])  # MeV/c
         pi0_angle_bins = np.array([-1., 0.5, 0.75, 1.])  # cos(angle)
 
@@ -109,22 +132,29 @@ class TruthCrossSection:
                               len(pi0_ke_bins)-1, pi0_ke_bins, len(pi0_angle_bins)-1, pi0_angle_bins,
                               len(beam_ke_bins)-1, beam_ke_bins)
 
-        pi0_ke = pi0_ke.flatten()
-        pi0_angle = pi0_angle.flatten()
-        beam_ke = beam_ke.flatten()
+        print("Shapes: pi0_ke", pi0_ke.shape, " pi0_angle", pi0_angle.shape, " beam_ke", beam_ke.shape)
 
         # TODO add check to make sure all 3 arrays are the same length
 
         # ROOT doesn't have a FillN() method for 3D hist. so make our own loop in C++ to fill it
         # Using a double* in c++ (python equiv. float64) so if array is another type, cast it to float64
         if len(beam_ke) > 0 and len(pi0_ke) > 0 and len(pi0_angle) > 0:
-            if isinstance(beam_ke, np.ndarray):
-                if beam_ke.dtype != np.float64:
-                    pi0_ke.astype('float64')
-                    pi0_angle.astype('float64')
-                    beam_ke.astype('float64')
-                ROOT.fill_hist_th3d(len(pi0_ke), pi0_ke, pi0_angle, beam_ke, xsec_hist)
-            else:
-                print("Unknown array type!")
+            ROOT.fill_hist_th3d(len(pi0_ke), pi0_ke, pi0_angle, beam_ke, xsec_hist)
 
         return xsec_hist
+
+    @staticmethod
+    def flatten_and_convert_array(array):
+        """
+        Flatten array and convert it to float64 if not already.
+        Necessary to work with ROOT FillN method.
+        :param array:
+        :return:
+        """
+        array = array.flatten()
+        if isinstance(array, np.ndarray):
+            if array.dtype != np.float64:
+                array.astype('float64')
+        else:
+            print("Unknown array type!")
+        return array

@@ -15,10 +15,14 @@ class TrueProcess:
         """
 
         # Count the number of daughter particles of each PDG type
-        events = self.get_particle_counts(events)
+        events = self.get_reco_particle_counts(events)
 
         pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic")
-        #pion_inelastic = (events["reco_beam_true_byHits_PDG"] == 211) & (events["reco_beam_true_byHits_endProcess"] == "pi+Inelastic")
+
+        # Momentum cut on true charged pions, i.e., pions with momentum < cut momentum are indistinguishable from say
+        # protons and other charged particles. set to 0.125
+        valid_piplus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.150, pdg_select=211)
+        valid_piminus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.150, pdg_select=-211)
 
         # Pion elastic
         events["pion_elastic"] = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+elastic")
@@ -27,25 +31,39 @@ class TrueProcess:
         events["pion_inelastic"] = pion_inelastic
 
         # Single charge exchange, the singal
-        events["single_charge_exchange"] = pion_inelastic & self.single_charge_exchange(events)
+        events["single_charge_exchange"] = pion_inelastic & self.single_charge_exchange(events, valid_piplus, valid_piminus)
 
         # Double charge exchange
-        events["double_charge_exchange"] = pion_inelastic & self.double_charge_exchange(events)
+        events["double_charge_exchange"] = pion_inelastic & self.double_charge_exchange(events, valid_piplus, valid_piminus)
 
         # Absorption
-        events["absorption"] = pion_inelastic & self.absorption(events)
+        events["absorption"] = pion_inelastic & self.absorption(events, valid_piplus, valid_piminus)
 
         # Quasi-elastic
-        events["quasi_elastic"] = pion_inelastic & self.quasi_elastic(events)
+        events["quasi_elastic"] = pion_inelastic & self.quasi_elastic(events, valid_piplus, valid_piminus)
 
         # Pion production
-        events["pion_production"] = pion_inelastic & self.pion_production(events)
+        events["pion_production"] = pion_inelastic & self.pion_production(events, valid_piplus, valid_piminus)
 
         # pi0 production
-        events["pi0_production"] = pion_inelastic & self.pi0_and_pion(events)
+        events["pi0_production"] = pion_inelastic & self.pi0_production(events, valid_piplus, valid_piminus)
 
         # Pion and pi0
-        events["pion_and_pi0"] = pion_inelastic & self.pi0_and_pion(events)
+        events["pion_and_pi0"] = pion_inelastic & self.pi0_and_pion(events, valid_piplus, valid_piminus)
+
+        # Combining all multiple pions together
+        events["charged_neutral_pion_production"] = pion_inelastic & self.charged_neutral_pion_production(events, valid_piplus, valid_piminus)
+
+        # 1 charged and neutral pion, charged pion NOT reconstructed (only in truth)
+        events["mctruth_charged_neutral_pion"] = pion_inelastic & self.mctruth_charged_neutral_pion(events, valid_piplus, valid_piminus)
+
+        # 1 charged and neutral pion, charged pion IS reconstructed (in truth AND reco)
+        events["mcreco_charged_neutral_pion"] = pion_inelastic & self.mcreco_charged_neutral_pion(events)
+
+        # other (fill "other" column with all zeroes)
+        events["other"] = np.zeros_like(events["pion_inelastic"])
+        # if event not already in a category, classify as "other"
+        events["other"] = ~np.any(events[self.get_process_list()])
 
         return events
 
@@ -55,17 +73,17 @@ class TrueProcess:
 
     @staticmethod
     def get_process_list():
-        return ["single_charge_exchange", "double_charge_exchange", "absorption",
-                "quasi_elastic", "pion_production", "pi0_production", "pion_and_pi0"]
+        # return ["single_charge_exchange", "double_charge_exchange", "absorption",
+        #         "quasi_elastic", "pion_production", "pi0_production", "pion_and_pi0"]
+        return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "other",
+                "pion_production", "pi0_production", "mctruth_charged_neutral_pion", "mcreco_charged_neutral_pion"]
 
-    def get_particle_counts(self, events):
+    def get_reco_particle_counts(self, events):
         for pdg in self.pdg_dict:
             if pdg == "pi-zero":
-                events[pdg + "-count"] = np.count_nonzero(
-                    events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
+                events["mcreco-" + pdg + "-count"] = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
             else:
-                tmp = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
-                events[pdg + "-count"] = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
+                events["mcreco-" + pdg + "-count"] = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
 
         return events
 
@@ -87,54 +105,53 @@ class TrueProcess:
         return np.count_nonzero(mom_mask, axis=1)
 
     @staticmethod
-    def single_charge_exchange(events):
-        selected_pi0 = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.0, pdg_select=111)
-        selected_pi_plus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.125, pdg_select=211)
-        selected_pi_minus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.125, pdg_select=-211)
-        return (selected_pi_plus == 0) & (selected_pi_minus == 0) & (selected_pi0 == 1) & \
-               ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
-
-    # def single_charge_exchange(self, events):
-    #     selected_pi0 = events["pi-zero-count"]
-    #     selected_pi_plus = events["pi-plus-count"]
-    #     selected_pi_minus = events["pi-minus-count"]
-    #     return (selected_pi_plus == 0) & (selected_pi_minus == 0) & (selected_pi0 == 1) & \
-    #            ((events["proton-count"] > 0) | (events["neutron-count"] > 0))
-
-    @staticmethod
-    def double_charge_exchange(events):
-        return (events["true_daughter_nPiMinus"] == 1) & (events["true_daughter_nPiPlus"] == 0) & \
-               (events["true_daughter_nPi0"] == 0) & \
+    def single_charge_exchange(events, piplus, piminus):
+        return (piplus == 0) & (piminus == 0) & (events["true_daughter_nPi0"] == 1) & \
                ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 
     @staticmethod
-    def absorption(events):
-        return (events["true_daughter_nPiMinus"] == 0) & (events["true_daughter_nPiPlus"] == 0) & \
-               (events["true_daughter_nPi0"] == 0) & \
+    def double_charge_exchange(events, piplus, piminus):
+        return (piminus == 1) & (piplus == 0) & (events["true_daughter_nPi0"] == 0) & \
                ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 
     @staticmethod
-    def quasi_elastic(events):
-        return (events["true_daughter_nPiMinus"] == 0) & (events["true_daughter_nPiPlus"] == 1) & \
-               (events["true_daughter_nPi0"] == 0) & \
+    def absorption(events, piplus, piminus):
+        return (piminus == 0) & (piplus == 0) & (events["true_daughter_nPi0"] == 0) & \
                ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 
     @staticmethod
-    def pion_production(events):
-        return (((events["true_daughter_nPiMinus"] > 1) | (events["true_daughter_nPiPlus"] > 1)) |
-                ((events["true_daughter_nPiMinus"] > 0) & (events["true_daughter_nPiPlus"] > 0))) & \
-                (events["true_daughter_nPi0"] == 0) & \
+    def quasi_elastic(events, piplus, piminus):
+        return (piminus == 0) & (piplus == 1) & (events["true_daughter_nPi0"] == 0) & \
+               ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
+
+    @staticmethod
+    def pion_production(events, piplus, piminus):
+        return (((piminus > 1) | (piplus > 1)) |
+                ((piminus > 0) & (piplus > 0))) & (events["true_daughter_nPi0"] == 0) & \
                 ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 
     @staticmethod
-    def pi0_production(events):
-        return (events["true_daughter_nPiMinus"] == 0) & (events["true_daughter_nPiPlus"] == 0) & \
-               (events["true_daughter_nPi0"] > 1) & \
+    def pi0_production(events, piplus, piminus):
+        return (piminus == 0) & (piplus == 0) & (events["true_daughter_nPi0"] > 1) & \
                ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 
     @staticmethod
-    def pi0_and_pion(events):
-        return ((events["true_daughter_nPiMinus"] > 0) | (events["true_daughter_nPiPlus"] > 0)) & \
-               (events["true_daughter_nPi0"] > 0) & \
+    def pi0_and_pion(events, piplus, piminus):
+        return ((piminus > 0) | (piplus > 0)) & (events["true_daughter_nPi0"] > 0) & \
                ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 
+    @staticmethod
+    def charged_neutral_pion_production(events, piplus, piminus):
+        return ((piminus > 1) | (piplus > 1)) | ((piminus > 0) & (piplus > 0)) | \
+               (events["true_daughter_nPi0"] > 1)
+
+    @staticmethod
+    def mctruth_charged_neutral_pion(events, piplus, piminus):
+        pi_minus_count = (events["mcreco-pi-minus-count"] == 0) & (piminus == 1)
+        pi_plus_count = (events["mcreco-pi-plus-count"] == 0) & (piplus == 1)
+        return (pi_minus_count | pi_plus_count) & (events["true_daughter_nPi0"] == 1)
+
+    @staticmethod
+    def mcreco_charged_neutral_pion(events):
+        return ((events["mcreco-pi-minus-count"] == 1) | (events["mcreco-pi-plus-count"] == 1)) & \
+               (events["true_daughter_nPi0"] == 1)

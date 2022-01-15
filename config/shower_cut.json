@@ -8,6 +8,7 @@
     "small_energy_shower_cut": 10
   },
   "histograms": [
-    { "reco_daughter_allShower_energy": ["shower_cut", "ShowerCut;Shower Energy [MeV];Count", 150, 0, 1500] }
+    { "reco_daughter_allShower_energy": ["shower_cut", "ShowerCut;Shower Energy [MeV];Count", 100, 0, 1500] },
+    { "reco_daughter_PFP_nHits": ["shower_cut_nhit", "ShowerCut nHit;nHit;Count", 100, 0, 3000] }
   ]
 }

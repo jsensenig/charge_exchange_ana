@@ -1,4 +1,5 @@
 from cex_analysis.event_selection_base import EventSelectionBase
+import numpy as np
 
 
 class TOFCut(EventSelectionBase):
@@ -29,8 +30,11 @@ class TOFCut(EventSelectionBase):
         #selected_mask = (self.local_config["lower"] < events[cut_variable][:, 0]) & \
         #                (events[cut_variable][:, 0] < self.local_config["upper"]) & \
         #                (events["true_beam_PDG"] != -11)
+
         selected_mask = (events[cut_variable][:, 0] < 97.) & (events["true_beam_PDG"] != -11)
-        #selected_mask = events["true_beam_PDG"] == 211
+
+        print("TOF Selected Events True Beam PDG: ", np.unique(events["true_beam_PDG", selected_mask], return_counts=True))
+        print("TOF Selected Events True nPi0: ", np.unique(events["true_daughter_nPi0", selected_mask], return_counts=True))
 
         # Plot the variable before after cut
         self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_daughter_pdf, selected_mask],

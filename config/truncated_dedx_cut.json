@@ -1,0 +1,8 @@
+{
+  "TruncatedDedxCut": {
+    "cut_variable": "reco_daughter_allTrack_dEdX_SCE"
+  },
+  "histograms": [
+    { "daughter_masked_dedx": ["truncated_dedx_cut", "Daughter Truncated dEdX Cut;dE/dx [MeV/cm];Count", 50, 0, 10] }
+  ]
+}

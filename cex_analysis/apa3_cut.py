@@ -18,6 +18,9 @@ class APA3Cut(EventSelectionBase):
         # First we configure the histograms we want to make
         hists.configure_hists(self.local_hist_config)
 
+        # FIXME just testing
+        events["test_column"] = events["event"]
+
         # The variable on which we cut
         cut_variable = self.local_config["cut_variable"]
 

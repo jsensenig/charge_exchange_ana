@@ -42,7 +42,7 @@ class EventSelectionBase:
         :param hists: Histogram class object
         :param events: Array The batch of events pre/post cut.
         :param pdg: Array Truth particle PDG allows the plotting of particles by PDG
-        :param precut: Bool Specify if this is pre or post cut
+        :param precut: Bool Specify if this is pre (True) or post (False) cut
         :return:
         """
         pass

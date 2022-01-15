@@ -3,58 +3,44 @@ import awkward as ak
 import numpy as np
 
 
-class DaughterPionCut(EventSelectionBase):
+class TruncatedDedxCut(EventSelectionBase):
     def __init__(self, config):
         super().__init__(config)
 
-        self.cut_name = "DaughterPionCut"
+        self.cut_name = "TruncatedDedxCut"
         self.config = config
         self.reco_beam_pdg = self.config["reco_daughter_pdg"]
-        self.chi2_ndof_var = "proton_chi2_ndof"
 
         # Configure class
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
-
-    def cnn_track_cut(self, events):
-        # Create a mask for all daughters with CNN track-like score >0.6
-        return events[self.local_config["track_like_cnn_var"]] > self.local_config["cnn_track_cut"]
-
-    def chi2_ndof(self, events):
-        return events[self.chi2_ndof_var] > self.local_config["chi2_ndof_cut"]
-
 
     def selection(self, events, hists):
         # First we configure the histograms we want to make
         hists.configure_hists(self.local_hist_config)
 
         # The variable on which we cut
-        cut_variable = self.chi2_ndof_var
+        cut_variable = self.local_config["cut_variable"]
 
-        events[self.chi2_ndof_var] = events[self.local_config["proton_chi2"]] / events[self.local_config["proton_ndof"]]
+        track_score_mask = events["reco_daughter_PFP_trackScore_collection"] > 0.35
+
+        good_dedx_mask = (events[cut_variable] > 0.) & (events[cut_variable] < 1000.)
+        events["daughter_masked_dedx"] = ak.mean(events[cut_variable][good_dedx_mask], axis=2, mask_identity=False)
 
         # Plot the variable before making cut
         self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdg], precut=True, hists=hists)
 
-        track_score_mask = self.cnn_track_cut(events)
-        daughter_pion_mask = self.chi2_ndof(events)
+        # We want to _reject_ events if there are daughter michel electrons (presumably from pions decays)
+        # so negate the selection mask
 
-        # Combine all event level masks
-        # We want to *reject* events if there are daughter charged pions so negate the selection mask
-
-        """
-        We are playing a little trick here, so be careful with these masks!
-        Here we want to reject an event if it evaluates to True i.e. if the event
-        DOES have a daughter pion. The way the masks work mean an event that evaluates to None
-        for whatever reason will be rejected which is not correct. Basically if an event
-        is None it should still be included in the event selection because we do not have
-        evidence for why it should be rejected. In other words we want to actively
-        (not passively) reject events so we don't mysteriously introduce biases in our selection.
-        """
         # Take the logical OR of each daughter in the events
-        selected_mask = np.any((track_score_mask & daughter_pion_mask), axis=1)
+        daughter_pion_mask = (events["daughter_masked_dedx"] > 0.5) & (events["daughter_masked_dedx"] < 2.8)
+        daughter_pion_mask = daughter_pion_mask & track_score_mask
+
+        selected_mask = np.any(daughter_pion_mask, axis=1)
+
         # Take the logical NOT of the array and cast it back to an Awkward array.
-        # Casting into a Numpy array converts None to False (the subsequent negation turns it to True)
+        # Casting into a Numpy array converts None to False (the negation then turns it True)
         selected_mask = ak.Array(~ak.to_numpy(selected_mask).data)
 
         # Plot the variable after cut

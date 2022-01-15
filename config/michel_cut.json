@@ -1,9 +1,9 @@
 {
   "MichelCut": {
     "cut_variable": "reco_daughter_PFP_michelScore_collection",
-    "cnn_michel_cut": 0.1
+    "cnn_michel_cut": 0.7
   },
   "histograms": [
-    { "reco_daughter_PFP_michelScore_collection": ["michel_cut", "MichelCut;Michel Score;Count", 25, 0, 1] }
+    { "reco_daughter_PFP_michelScore_collection": ["michel_cut", "Daughter MichelCut;Michel Score;Count", 25, 0, 1] }
   ]
 }

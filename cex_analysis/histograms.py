@@ -195,33 +195,39 @@ class Histogram:
         x_flat = ak.flatten(x, axis=None)
         x_pdg_flat = ak.flatten(x_pdg, axis=None)
 
-        for i, pdg in enumerate(self.config["stack_pdg_list"]):
+        # Keep all the PDG selected arrays in here so we can sort and add to THStack by count
+        pdg_filtered_dict = {}
+        pdg_lengths_dict = {}
+
+        for pdg in self.config["stack_pdg_list"]:
+            # Before plotting we flatten from 2D array shape=(<num event>, <num daughters>) to
+            # 1D array shape=(<num event>*<num daughters>)
+            pdg_filtered_dict[pdg] = plotting_utils.daughter_by_pdg(x_flat, x_pdg_flat, pdg, self.config["stack_pdg_list"])
+            pdg_lengths_dict[pdg] = len(pdg_filtered_dict[pdg])
+
+        # sorted() sorts the values in descending order
+        sorted_length = sorted(pdg_lengths_dict, key=pdg_lengths_dict.get, reverse=True)
+        for i, pdg in enumerate(sorted_length):
 
             hstack = ROOT.TH1D(name + "_" + str(pdg), title, bins, lower_lim, upper_lim)
 
-            # Before plotting we flatten from 2D array shape=(<num event>, <num daughters>) to
-            # 1D array shape=(<num event>*<num daughters>)
-            pdg_list = [-211, -13, -11, 11, 13, 22, 111, 211, 321, 2212]
-            pdg_filtered_array = plotting_utils.daughter_by_pdg(x_flat, x_pdg_flat, pdg, pdg_list)
+            if len(pdg_filtered_dict[pdg]) > 0:
+                hstack.FillN(len(pdg_filtered_dict[pdg]), pdg_filtered_dict[pdg], ROOT.nullptr)
 
-            # If array is not empty fill it, if it is empty still add the histogram to the
-            # stack so we can correctly merge the stacks later. Otherwise the PDGs get mixed.
-            if len(pdg_filtered_array) > 0:
-                # Now use the hist standard fill function and add color
-                hstack.FillN(len(pdg_filtered_array), pdg_filtered_array, ROOT.nullptr)
-
-            utils.set_hist_colors(hstack, utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1),
-                                  utils.colors.get(utils.pdg2string.get(pdg, "Other"), 1))
+            utils.set_hist_colors(hstack, utils.colors.get(pdg, 1), utils.colors.get(pdg, 1))
 
             # Get the fraction of PDG
-            pdg_fraction = round((100. * len(pdg_filtered_array) / len(x_flat)), 2)
+            pdg_fraction = round((100. * len(pdg_filtered_dict[pdg]) / len(x_flat)), 2)
 
-            legend.AddEntry(hstack, utils.pdg2string.get(pdg, "other") + "  " + str(ak.count_nonzero(pdg_filtered_array)) + "/" + str(ak.count_nonzero(x_flat)) + " (" + str(pdg_fraction) + "%)")
+            legend.AddEntry(hstack, utils.pdg2string.get(pdg) + "  " + str(len(pdg_filtered_dict[pdg]))
+                            + "/" + str(len(x_flat)) + " (" + str(pdg_fraction) + "%)")
             # Only add the legend to one histogram so we don't have duplicates in the THStack
             if i == 0:
                 hstack.GetListOfFunctions().Add(legend)
 
             stack.Add(hstack)
+
+        ###################################################
 
         # Draw and tidy the THStack
         stack.Draw()
@@ -281,35 +287,48 @@ class Histogram:
             name = "postcut_proc_" + name
             title = "PostCut-" + title
 
-        for i, proc in enumerate(self.true_process_list):
+        # Invalid values default to -999 so mask out if it's less than -900
+        valid_mask = ak.flatten(x[variable], axis=None) > -900.
+        total_daughters = len(ak.flatten(x[variable], axis=None)[valid_mask])
+
+        process_dict = {}
+        process_lengths_dict = {}
+
+        for proc in self.true_process_list:
 
             # Filter and flatten the array
             proc_mask = x[proc]
-            xprox = x[proc_mask]
-            x_flat = ak.flatten(xprox[variable], axis=None)
+            xproc = x[proc_mask]
+            process_dict[proc] = ak.flatten(xproc[variable], axis=None)
+            process_lengths_dict[proc] = len(process_dict[proc])
+
+        # sorted() sorts the values in descending order
+        sorted_length = sorted(process_lengths_dict, key=process_lengths_dict.get, reverse=True)
+        for i, proc in enumerate(sorted_length):
 
             hstack = ROOT.TH1D(name + "_" + proc, title, bins, lower_lim, upper_lim)
 
             # Just a loop in c++ which does hist.FillN() (nullptr sets weights = 1)
             # FillN() only likes double* (python float64) so if array is another type, cast it to float64
-            if len(x_flat) > 0:
-                if isinstance(x_flat, ak.Array):
-                    if ak.type(x_flat.layout).dtype != 'float64':
-                        x_flat = ak.values_astype(x_flat, np.float64)
-                    hstack.FillN(len(x_flat), ak.to_numpy(x_flat), ROOT.nullptr)
-                elif isinstance(x_flat, np.ndarray):
-                    if x_flat.dtype != np.float64:
-                        x_flat = x_flat.astype('float64')
-                    hstack.FillN(len(x_flat), x_flat, ROOT.nullptr)
+            if len(process_dict[proc]) > 0:
+                if isinstance(process_dict[proc], ak.Array):
+                    if ak.type(process_dict[proc].layout).dtype != 'float64':
+                        process_dict[proc] = ak.values_astype(process_dict[proc], np.float64)
+                    hstack.FillN(len(process_dict[proc]), ak.to_numpy(process_dict[proc]), ROOT.nullptr)
+                elif isinstance(process_dict[proc], np.ndarray):
+                    if process_dict[proc].dtype != np.float64:
+                        process_dict[proc] = process_dict[proc].astype('float64')
+                    hstack.FillN(len(process_dict[proc]), process_dict[proc], ROOT.nullptr)
                 else:
                     print("Unknown array type!")
 
             utils.set_hist_colors(hstack, utils.proc_colors.get(proc, 1), utils.proc_colors.get(proc, 1))
 
             # Get the fraction of PDG
-            pdg_fraction = round((100. * len(x_flat) / len(proc_mask)), 2)
+            proc_fraction = round((100. * len(process_dict[proc][process_dict[proc] > -900.]) / total_daughters), 2)
 
-            legend.AddEntry(hstack, proc + "  " + str(ak.count_nonzero(x_flat)) + "/" + str(ak.count_nonzero(proc_mask)) + " (" + str(pdg_fraction) + "%)")
+            legend.AddEntry(hstack, proc + "  " + str(len(process_dict[proc][process_dict[proc] > -900.])) + "/" +
+                            str(total_daughters) + " (" + str(proc_fraction) + "%)")
             # Only add the legend to one histogram so we don't have duplicates in the THStack
             if i == 0:
                 hstack.GetListOfFunctions().Add(legend)

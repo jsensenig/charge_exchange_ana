@@ -44,6 +44,9 @@ def merge_hist_maps(config, hist_maps):
     :param hist_maps:
     :return:
     """
+    # Set to batch mode so no windows pop up
+    ROOT.gROOT.SetBatch(True)
+
     # Open file to which we write results
     f = ROOT.TFile("result_file.root", "RECREATE")
 
@@ -71,6 +74,9 @@ def merge_hist_maps(config, hist_maps):
                 print("Unknown histogram type! ", t)
             if merged_hist is not None:
                 merged_hist.Write(t + "_" + name)
+                c = ROOT.TCanvas()
+                merged_hist.Draw()
+                c.SaveAs("hist_figs/" + t + "_" + name + ".pdf")
 
     f.Close()
 
@@ -124,7 +130,7 @@ def collect_write_results(config, thread_results, flist, branches):
     calculate_efficiency(result_select_list, result_total_list, result_true_count_list)
 
     #all_events = uproot.concatenate(files=flist, expressions=branches)
-    all_events = uproot.concatenate(files={flist[0]:"pduneana/beamana;2"}, expressions=branches)
+    all_events = uproot.concatenate(files={flist[0]:"beamana;119"}, expressions=branches)
     xsec = CexDDCrossSection(None)
     xsec.extract_cross_section(all_events=all_events, selected_events=all_events, total_incident_pion=14000)
 
@@ -144,7 +150,7 @@ def thread_creator(flist, config, num_workers, branches):
     futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
         # Use iterations of the tree read operation to batch the data for each thread
-        for i, array in enumerate(uproot.iterate(files={flist[0]:"pduneana/beamana;2"}, expressions=branches, report=True, num_workers=num_workers)):
+        for i, array in enumerate(uproot.iterate(files={flist[0]:"beamana;119"}, expressions=branches, report=True, step_size='10000 MB', num_workers=num_workers)):
         #for i, array in enumerate(uproot.iterate(files=flist, expressions=branches, report=True, num_workers=num_workers)):
             print("---------- Starting thread", i, "----------")
             futures.append(executor.submit(event_selection, config, array[0]))
@@ -158,49 +164,68 @@ def configure(config_file):
     with open(config_file, "r") as cfg:
         return json.load(cfg)
 
-############################
+
+if __name__ == "__main__":
+
+    tree_name = "pionana/beamana;17"
+    branches = ["event", "reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
+                "reco_daughter_PFP_true_byHits_parPDG", "true_beam_daughter_startP", "true_beam_daughter_PDG",
+                "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
+                "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof", "beam_inst_TOF",
+                "true_daughter_nPiMinus", "true_daughter_nPiPlus", "true_daughter_nPi0", "true_daughter_nProton",
+                "true_daughter_nNeutron","true_beam_PDG","true_beam_endProcess","true_beam_endZ","true_beam_endP","true_beam_endPx",
+                "true_beam_endPy", "true_beam_endPz", "reco_daughter_PFP_michelScore_collection", "reco_beam_calo_startX",
+                "reco_beam_calo_startY", "reco_beam_calo_startZ", "reco_beam_calo_endX", "reco_beam_calo_endY",
+                "reco_beam_calo_endZ", "true_beam_daughter_startPx", "true_beam_daughter_startPy", "true_beam_daughter_startPz",
+                "reco_beam_true_byHits_endProcess", "reco_daughter_PFP_nHits", "beam_inst_P", "reco_beam_vertex_michel_score",
+                "reco_beam_vertex_nHits", "reco_daughter_allTrack_dEdX_SCE", "reco_beam_endX", "reco_beam_endY",
+                "reco_beam_endZ"]
+
+    # Space-point branches
+    branches += ["reco_daughter_PFP_shower_spacePts_X","reco_daughter_PFP_shower_spacePts_Y",
+                 "reco_daughter_PFP_shower_spacePts_Z", "reco_daughter_PFP_shower_spacePts_count",
+                 "reco_daughter_PFP_shower_spacePts_gmother_ID", "reco_daughter_PFP_shower_spacePts_mother_ID",
+                 "reco_daughter_PFP_shower_spacePts_gmother_PDG", "reco_daughter_PFP_shower_spacePts_E"]
+
+    branches += ["true_beam_Pi0_decay_startPx", "true_beam_Pi0_decay_startPy", "true_beam_Pi0_decay_startPz",
+                 "true_beam_Pi0_decay_PDG", "true_beam_Pi0_decay_ID", "true_beam_Pi0_decay_startP",
+                 "true_beam_Pi0_decay_startX", "true_beam_Pi0_decay_startY", "true_beam_Pi0_decay_startZ",
+                 "true_beam_endX", "true_beam_endY", "true_beam_endZ", "reco_beam_trackEndDirX",
+                 "reco_beam_trackEndDirY", "reco_beam_trackEndDirZ"]
+
+    # Provide a text file with one file per line
+    files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
+
+    with open(files) as f:
+        file_list = f.readlines()
+    file_list = [line.strip() for line in file_list]
+
+    # Full MC merged file
+    #file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/output.root"]
+    #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/pduneana_2gev_sub1_45972403_0_4_n500.root"]
+    #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/pduneana_full_mc_n500.root"]
+    #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/full_mc_shower_sample/pduneana_n1000.root"]
+    # file_list = ["/Users/jsen/tmp/tmp_pi0_shower/full_mc_shower_sample/full_mc_lar_v09_35_00_n13500/full_mc_shower_sp_merged_n7500.root"]
+
+    #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/full_mc_shower_sample/full_mc_lar_v09_35_00_n13500/full_mc_shower_sp_merged_n13300.root"]
+    #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_n9500/full_mc_shower_sp_noecut_merged_n9500.root"]
+    #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n3000/full_mc_shower_sp_merged_unique_3000.root"]
+    #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n14000/full_mc_shower_sp_merged_unique_n13500.root"]
+    file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n100k/full_mc_sp_merged_unique_n86k.root"]
 
 
-tree_name = "pionana/beamana;17"
-branches = ["event", "reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
-            "reco_daughter_PFP_true_byHits_parPDG", "true_beam_daughter_startP", "true_beam_daughter_PDG",
-            "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
-            "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof", "beam_inst_TOF",
-            "true_daughter_nPiMinus", "true_daughter_nPiPlus", "true_daughter_nPi0", "true_daughter_nProton",
-            "true_daughter_nNeutron", "true_beam_PDG", "true_beam_endProcess", "true_beam_endP", "true_beam_endPx",
-            "true_beam_endPy", "true_beam_endPz", "reco_daughter_PFP_michelScore_collection", "reco_beam_calo_startX",
-            "reco_beam_calo_startY", "reco_beam_calo_startZ", "reco_beam_calo_endX", "reco_beam_calo_endY",
-            "reco_beam_calo_endZ", "true_beam_daughter_startPx", "true_beam_daughter_startPy", "true_beam_daughter_startPz",
-            "reco_beam_true_byHits_endProcess"]
+    # Number of threads
+    num_workers = 1
+    num_workers = check_thread_count(num_workers)
 
-# Space-point branches
-branches += ["reco_daughter_PFP_shower_spacePts_X","reco_daughter_PFP_shower_spacePts_Y","reco_daughter_PFP_shower_spacePts_Z"]
+    # Get main configuration
+    cfg_file = "config/main.json"
+    config = configure(cfg_file)
 
-# Provide a text file with one file per line
-files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
+    # Start the analysis threads
+    print("Starting threads")
+    start = timer()
+    thread_creator(file_list, config, num_workers, branches)
 
-with open(files) as f:
-    file_list = f.readlines()
-file_list = [line.strip() for line in file_list]
-
-# Full MC merged file
-#file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/output.root"]
-#file_list = ["/Users/jsen/tmp/tmp_pi0_shower/pduneana_2gev_sub1_45972403_0_4_n500.root"]
-#file_list = ["/Users/jsen/tmp/tmp_pi0_shower/pduneana_full_mc_n500.root"]
-file_list = ["/Users/jsen/tmp/tmp_pi0_shower/full_mc_shower_sample/pduneana_n1000.root"]
-
-# Number of threads
-num_workers = 1
-num_workers = check_thread_count(num_workers)
-
-# Get main configuration
-cfg_file = "config/main.json"
-config = configure(cfg_file)
-
-# Start the analysis threads
-print("Starting threads")
-start = timer()
-thread_creator(file_list, config, num_workers, branches)
-
-end = timer()
-print("Completed Analysis! (", round((end - start), 4), "s)")
+    end = timer()
+    print("Completed Analysis! (", round((end - start), 4), "s)")

@@ -1,0 +1,10 @@
+{
+  "RecoShowerDirection": {
+  },
+  "histograms": [
+    { "daughter_pi0_ke": ["daughter_pi0_ke", "Reco Daughter #pi0 T_#pi0;T_#pi0 [MeV];Count", 25, 0, 1500] },
+    { "daughter_pi0_cos_theta": ["daughter_pi0_cos_theta", "Reco Daughter #pi0 cos#theta_#pi0;cos#theta_#pi0;Count", 25, -1, 1] },
+    { "true_daughter_pi0_ke": ["true_daughter_pi0_ke", "True Daughter #pi0 T_#pi0;T_#pi0 [MeV];Count", 25, 0, 1500] },
+    { "true_daughter_pi0_cos_theta": ["true_daughter_pi0_cos_theta", "True Daughter #pi0 cos#theta_#pi0;cos#theta_#pi0;Count", 25, -1, 1] }
+  ]
+}

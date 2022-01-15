@@ -1,4 +1,5 @@
 from cex_analysis.event_selection_base import EventSelectionBase
+import awkward as ak
 import numpy as np
 
 
@@ -9,7 +10,7 @@ class MichelCut(EventSelectionBase):
         self.cut_name = "MichelCut"
         self.config = config
         self.reco_beam_pdg = self.config["reco_daughter_pdg"]
-        self.chi2_ndof_var = "proton_chi2_ndof"
+        #self.chi2_ndof_var = "proton_chi2_ndof"
 
         # Configure class
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
@@ -22,6 +23,11 @@ class MichelCut(EventSelectionBase):
         # The variable on which we cut
         cut_variable = self.local_config["cut_variable"]
 
+        # events["beam_michel_score"] = np.where((events["reco_beam_vertex_nHits"] < 1), 0.,
+        #                                        (events["reco_beam_vertex_michel_score"] / events["reco_beam_vertex_nHits"]))
+
+        #events["beam_michel_score"] = (events["reco_beam_vertex_michel_score"] / events["reco_beam_vertex_nHits"])
+
         # Plot the variable before making cut
         self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdg], precut=True, hists=hists)
 
@@ -29,7 +35,13 @@ class MichelCut(EventSelectionBase):
 
         # We want to _reject_ events if there are daughter michel electrons (presumably from pions decays)
         # so negate the selection mask
-        selected_mask = ~np.any(daughter_michel_mask, axis=1)
+
+        # Take the logical OR of each daughter in the events
+        selected_mask = np.any(daughter_michel_mask, axis=1)
+        #selected_mask = ~daughter_michel_mask
+        # Take the logical NOT of the array and cast it back to an Awkward array.
+        # Casting into a Numpy array converts None to False (the negation then turns it True)
+        selected_mask = ak.Array(~ak.to_numpy(selected_mask).data)
 
         # Plot the variable after cut
         self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_beam_pdg, selected_mask],

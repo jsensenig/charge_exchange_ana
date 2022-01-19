@@ -66,7 +66,8 @@ class ShowerCut(EventSelectionBase):
 
         # Create the event mask, true if there are 2 candidate showers
         # return shower_count > 0
-        return shower_count < 3
+        #return shower_count < 3
+        return (shower_count == 2) | (shower_count == 1)
 
     def selection(self, events, hists):
         # First we configure the histograms we want to make
@@ -118,7 +119,9 @@ class ShowerCut(EventSelectionBase):
                 peak_angles.append(shower_dir)
                 peak_count = len(shower_dir)
                 pred_npi0 = self.ll.classify_npi0(coord[:, 3])
+                #shower_selection_mask.append(True)
                 if pred_npi0 == 1 or (pred_npi0 != 1 and peak_count == 2) or (pred_npi0 == 2 and peak_count == 1):
+                #if pred_npi0 == 1 or (pred_npi0 != 1 and peak_count == 2) or (pred_npi0 == 2 and peak_count == 1) or (pred_npi0 == 0 and peak_count > 2):
                     shower_selection_mask.append(True)
                     if events["single_charge_exchange", i]:
                         cex_npi0_list.append(1)
@@ -143,6 +146,7 @@ class ShowerCut(EventSelectionBase):
             selected_mask = np.where(ak.is_none(selected_mask), True, selected_mask)
 
             # 'AND' the Pandora selection with the Likelihood selection array
+            #selected_mask = ak.Array(shower_selection_mask) & selected_mask
             selected_mask = ak.Array(shower_selection_mask) & selected_mask
 
             print("nSP Hist:", np.histogram(cex_nsp_list, range=[0, 200], bins=20))

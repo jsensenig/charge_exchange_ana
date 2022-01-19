@@ -26,6 +26,9 @@ class ShowerDirection:
                 print('Input data is constant. No local peaks can be found.')
             return 0, None, None, None
 
+        # Uses scipy.ndimage.maximum_filter1d() function which implements the maximum finding algorithm
+        # described here: http://www.richardhartersworld.com/cri/2001/slidingmin.html
+        # Paper: Running Max/Min Calculation Using a Pruned Ordered List, Scott C. Douglas, 1996
         data_max = maximum_filter(data, size=box_size, mode='constant', cval=0.0)
 
         peak_goodmask = (data == data_max)  # good pixels are True

@@ -191,7 +191,7 @@ if __name__ == "__main__":
                  "true_beam_Pi0_decay_PDG", "true_beam_Pi0_decay_ID", "true_beam_Pi0_decay_startP",
                  "true_beam_Pi0_decay_startX", "true_beam_Pi0_decay_startY", "true_beam_Pi0_decay_startZ",
                  "true_beam_endX", "true_beam_endY", "true_beam_endZ", "reco_beam_trackEndDirX",
-                 "reco_beam_trackEndDirY", "reco_beam_trackEndDirZ"]
+                 "reco_beam_trackEndDirY", "reco_beam_trackEndDirZ", "true_beam_grand_daughter_PDG"]
 
     # Provide a text file with one file per line
     files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"

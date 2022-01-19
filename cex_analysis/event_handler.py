@@ -76,23 +76,21 @@ class EventHandler:
         events = classify_process.classify_event_process(events=events)
 
         # Get total number of true signal events
-        true_total_single_cex = ak.sum(events["single_charge_exchange"], axis=0)
+        true_total_single_cex = ak.count_nonzero(events["single_charge_exchange"], axis=0)
         self.efficiency.set_num_true_process(true_total_single_cex)
 
         for i, cut in enumerate(self.cut_map):
             print("******************************************************")
             print("Processing cut: [\033[34m", cut, "\033[0m] Num Events:", len(events))
-            # Combine the masks
-            if i == 0:
-                event_mask = self.cut_map[cut].selection(events, self.Hist_object)
-            else:
-                events = events[event_mask]
-                print("Post-Mask Num Events:", len(events))
-                event_mask = self.cut_map[cut].selection(events, self.Hist_object)
+            # Mask out events not selected
+            events = events[event_mask] if i > 0 else events
+            print("Post-Mask Num Events:", len(events))
+            # Perform the cut selection
+            event_mask = self.cut_map[cut].selection(events, self.Hist_object)
 
             # Keep track of selection efficiency
-            num_true_selected = ak.sum(events["single_charge_exchange", event_mask], axis=0)
-            num_total_selected = ak.sum(event_mask, axis=0)
+            num_true_selected = ak.count_nonzero(events["single_charge_exchange", event_mask], axis=0)
+            num_total_selected = ak.count_nonzero(event_mask, axis=0)
 
             self.efficiency.add_cut_selection(cut_name=cut,
                                               num_true_selected=num_true_selected,

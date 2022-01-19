@@ -28,7 +28,7 @@ class RecoShowerDirection(EventSelectionBase):
 
         self.pi0_mass = 134.98 # MeV
 
-        self.true_scex_only = False
+        self.true_scex_only = True
         self.plot_2d = False
         self.cluster_and_plot = False
         self.use_event_selection = False
@@ -383,6 +383,12 @@ class RecoShowerDirection(EventSelectionBase):
             if not i % 100:
                 print("Events Loop:", i)
 
+            selected_event, coord = self.select_reco_scex_event(event=events[i])
+                                                                                 
+            if coord is None:
+                none_coord += 1
+                continue
+
             scex = events["single_charge_exchange", i]
 
             process_dict = ak.to_list(events[self.interaction_process_list, i])
@@ -398,12 +404,6 @@ class RecoShowerDirection(EventSelectionBase):
             if not scex and self.true_scex_only:
             #if scex and self.true_scex_only:
             #if process != "pi0_production":
-                continue
-
-            selected_event, coord = self.select_reco_scex_event(event=events[i])
-
-            if coord is None:
-                none_coord += 1
                 continue
 
             # Remove (mask out) the Spacepoints with R > 100cm
@@ -621,8 +621,8 @@ class RecoShowerDirection(EventSelectionBase):
                 true_energy_product_list.append(np.prod(np.asarray(true_gamma_energy)/1000.))
                 print("TRUE PROD", np.prod(true_gamma_energy))
 
-                reco_inv_mass = np.sqrt(2. * reco_energies[0] * reco_energies[1] * (1 - np.cos(np.radians(reco_theta_gg))))
-                reco_invariant_mass_list.append(reco_inv_mass)
+                #reco_inv_mass = np.sqrt(2. * reco_energies[0] * reco_energies[1] * (1 - np.cos(np.radians(reco_theta_gg))))
+                #reco_invariant_mass_list.append(reco_inv_mass)
 
                 calc_energy = 135.**2 / (2. * reco_energies[-1] * (1. - np.cos(np.radians(reco_theta_gg))))
                 if reco_energies[-1]*reco_energies[0] > 0.:
@@ -635,7 +635,7 @@ class RecoShowerDirection(EventSelectionBase):
                     #print("THETA2 TRUE/CALC/MEAS", true_gamma_angle[0], "/", 0., "/", reco_angles[0])
 
                 print("SUB-LEADING SHOWER E MEAS/CALC =", reco_energies[0], "/", calc_energy)
-                reco_pi0_ke, reco_pi0_cos_theta = self.pi0_kinematics([calc_energy, reco_energies[-1]],
+                reco_pi0_ke, reco_pi0_cos_theta = self.pi0_kinematics([reco_energies[-2], reco_energies[-1]],
                                                                       reco_angles,
                                                                       #[calc_theta_2, reco_angles[-1]],
                                                                       reco_theta_gg)
@@ -655,8 +655,8 @@ class RecoShowerDirection(EventSelectionBase):
                 reco_alpha_list.append(reco_alpha)
 
                 if len(true_gamma_energy) > 1:
-                    #reco_inv_mass = np.sqrt(2. * true_gamma_energy[0] * true_gamma_energy[1] * (1 - np.cos(np.radians(reco_theta_gg))))
-                    #reco_invariant_mass_list.append(reco_inv_mass)
+                    reco_inv_mass = np.sqrt(2. * true_gamma_energy[0] * true_gamma_energy[1] * (1 - np.cos(np.radians(reco_theta_gg))))
+                    reco_invariant_mass_list.append(reco_inv_mass)
                     true_alpha = abs(true_gamma_energy[0] - true_gamma_energy[1]) / (true_gamma_energy[0] + true_gamma_energy[1])
                     inv_mass = np.sqrt(2. * true_gamma_energy[0] * true_gamma_energy[1] * (1 - np.cos(np.radians(true_theta_gg))))
                     true_invariant_mass_list.append(inv_mass)
@@ -672,8 +672,12 @@ class RecoShowerDirection(EventSelectionBase):
                     true_leading_angle_list.append(true_gamma_angle[-1])
                     true_subleading_angle_list.append(true_gamma_angle[0])
                     true_pi0_energy_sum_list.append(np.sum(true_gamma_energy) - self.pi0_mass)
+                    #reco_pi0_ke, reco_pi0_cos_theta = self.pi0_kinematics([true_gamma_energy[0], true_gamma_energy[0]],
+                    #                                                      reco_angles,
+                    #                                                      reco_theta_gg)
+                    #reco_pi0_cos_theta_list.append(reco_pi0_cos_theta)
                 else:
-                    #reco_invariant_mass_list.append(0.)
+                    reco_invariant_mass_list.append(0.)
                     true_invariant_mass_list.append(0.)
                     true_theta_gg_list.append(0)
                     true_energy_list.append(0.)
@@ -685,6 +689,10 @@ class RecoShowerDirection(EventSelectionBase):
                     true_leading_angle_list.append(0.)
                     true_subleading_angle_list.append(0.)
                     true_pi0_energy_sum_list.append(0.)
+                    #reco_pi0_ke, reco_pi0_cos_theta = self.pi0_kinematics([0., 0.], reco_angles, reco_theta_gg)
+                    #reco_pi0_cos_theta_list.append(reco_pi0_cos_theta)
+
+
 
                 if scex and len(true_gamma_energy) > 1:
                     true_scex_pi0_energy_list.append(true_pi0_ke)
@@ -711,9 +719,9 @@ class RecoShowerDirection(EventSelectionBase):
 
         reco_pi0_mass_counts, bins, _ = plt.hist(reco_invariant_mass_list, range=[0, 500], bins=50)
         plt.plot([135, 135], [0, max(reco_pi0_mass_counts)], color='red', linewidth=1, linestyle='--')
-        plt.xticks(bins, rotation=-90)
-        plt.xlabel('Reco $M_{\gamma\gamma}$ [MeV]')
-        plt.ylabel('Count')
+        #plt.xticks(bins, rotation=-90)
+        plt.xlabel('Reco $M_{\gamma\gamma}$ [MeV]', fontsize=15)
+        plt.ylabel('Count', fontsize=15)
         plt.savefig("/Users/jsen/tmp/pion_qe/cex_selection/macros/shower_direction_study/reco_pi0_mass.png")
         plt.close()
         print("RECO Pi0 MASS", np.sum(reco_pi0_mass_counts), "/", processed_event)
@@ -835,7 +843,7 @@ class RecoShowerDirection(EventSelectionBase):
 
         print("Reco Min Integral Meas/Calc: ", np.sum(cnt_min), "/", np.sum(calc_cnt))
 
-        cnt, _, _, _ = plt.hist2d(reco_energy_list, true_energy_list, range=[[0,500],[0,500]], bins=[25, 25], cmap='Blues')
+        cnt, _, _, _ = plt.hist2d(reco_energy_list, true_energy_list, range=[[0 ,500],[0,500]], bins=[25, 25], cmap='Blues')
         plt.colorbar()
         plt.plot([0, 500], [0, 500])
         plt.xlabel('Reco $E_{\gamma}$ [MeV]')
@@ -970,14 +978,14 @@ class RecoShowerDirection(EventSelectionBase):
         print("Events with None coordinates: ", none_coord)
         print("Integral of Reco Pi0 Mass:", np.sum(reco_pi0_mass_counts))
 
-        events["daughter_pi0_ke"] = np.asarray(reco_pi0_energy_sum_list)
-        events["true_daughter_pi0_ke"] = np.asarray(true_pi0_energy_list)
-        events["daughter_pi0_cos_theta"] = np.asarray(reco_pi0_cos_theta_list)
-        events["true_daughter_pi0_cos_theta"] = np.asarray(true_pi0_cos_theta_list)
+        #events["daughter_pi0_ke"] = np.asarray(reco_pi0_energy_sum_list)
+        #events["true_daughter_pi0_ke"] = np.asarray(true_pi0_energy_list)
+        #events["daughter_pi0_cos_theta"] = np.asarray(reco_pi0_cos_theta_list)
+        #events["true_daughter_pi0_cos_theta"] = np.asarray(true_pi0_cos_theta_list)
 
-        # Plot the variable before after cut
-        self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdf],
-                                 precut=False, hists=hists)
+        ## Plot the variable before after cut
+        #self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdf],
+        #                         precut=False, hists=hists)
 
         return np.asarray(reco_invariant_mass_list) < 3000.
 

@@ -16,10 +16,12 @@ class ShowerLikelihood:
         self.Rcut = 150.
         self.pi0_count = np.array([0, 1, 2])
 
-    def classify_npi0(self, r_spacepoints):
+    def classify_npi0(self, r_spacepoints, return_likelihood=False):
 
         r_mask = r_spacepoints < self.Rcut
         if len(r_spacepoints[r_mask]) < 1:
+            if return_likelihood:
+                return self.pi0_count[0], np.array([0.,0.,0.])
             return self.pi0_count[0]
 
         max_r = np.max(ak.to_numpy(r_spacepoints[r_mask]))
@@ -29,6 +31,9 @@ class ShowerLikelihood:
         one_pi0 = self.log_likelihood_shape_test(event_hist, self.one_pi0_template)
         n_pi0 = self.log_likelihood_shape_test(event_hist, self.n_pi0_template)
         likelihood_result = np.array([no_pi0, one_pi0, n_pi0])
+
+        if return_likelihood:
+            return (self.pi0_count[likelihood_result == np.min(likelihood_result)]), likelihood_result
 
         return self.pi0_count[likelihood_result == np.min(likelihood_result)]
 
@@ -95,7 +100,7 @@ class ShowerLikelihood:
         #                                 0.93929531, 1.02557941, 0.91144411, 0.98626008, 1.03595535, 1.07145198,
         #                                 1.18340287, 1.46082265])
 
-        # These 3 arrays are using reco_beam_end{X,Y,Z}, the UNcorrected beam vertex
+        # These 3 arrays are using reco_beam_end{X,Y,Z}, the UN-corrected beam vertex
         self.no_pi0_template = np.array([0.15040212, 0.36822588, 0.45880056, 0.51899846, 0.53363117, 0.54548553,
                                          0.56715677, 0.63587498, 0.64791456, 0.67884702, 0.68144016, 0.70885335,
                                          0.75645599, 0.78220217, 0.76960692, 0.78590665, 0.85295785, 0.89444809,

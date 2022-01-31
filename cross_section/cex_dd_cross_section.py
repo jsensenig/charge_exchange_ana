@@ -24,6 +24,18 @@ class CexDDCrossSection:
         #beam_ke_bins = np.array([950., 1050., 1150., 1250., 1350., 1450., 1550., 1650., 1750., 1850., 1950., 2050])
         self.beam_ke_hist = TH1D("beam_ke", "Beam KE [MeV/c];Count", len(beam_ke_bins)-1, beam_ke_bins)
 
+    @staticmethod
+    def sigma_factor():
+        avogadro_constant = 6.02214076e23  # 1 / mol
+        argon_molar_mass = 39.95  # g / mol
+        liquid_argon_density = 1.39  # g / cm^3
+        fiducial_thickness = 0.479  # cm
+
+        sigma_factor = argon_molar_mass / (avogadro_constant * liquid_argon_density * fiducial_thickness)
+        sigma_factor *= 1.e27  # Convert to milli-barn
+
+        return sigma_factor
+
     def extract_cross_section(self, all_events, selected_events, total_incident_pion):
         """
         Calculate the cross section from the selected events
@@ -41,10 +53,12 @@ class CexDDCrossSection:
         #reco_3d_hist = self.run_reco_cross_section(events=events, event_mask=event_mask)
         #self.calculate_double_differential_xsec(reco_3d_hist, total_incident_pion, False)
         valid_piplus = TrueProcess.mask_daughter_momentum(events=all_events,
-                momentum_threshold=0.0, pdg_select=211)
+                momentum_threshold=0.150, pdg_select=211)
         valid_piminus = TrueProcess.mask_daughter_momentum(events=all_events,
-                momentum_threshold=0.0, pdg_select=-211)
+                momentum_threshold=0.150, pdg_select=-211)
         true_scex_mask = TrueProcess.single_charge_exchange(all_events, valid_piplus, valid_piminus)
+        all_events["single_charge_exchange"] = true_scex_mask
+
         pion_inelastic = (all_events["true_beam_PDG"] == 211) & (all_events["true_beam_endProcess"] == "pi+Inelastic") \
                          & (all_events["true_beam_endZ"] < 222.)
         true_scex_mask = true_scex_mask & pion_inelastic
@@ -53,7 +67,7 @@ class CexDDCrossSection:
 
         #if self.config["run_truth_xsec"]:
         if True:
-            truth_3d_hist = self.run_truth_cross_section(events=all_events[true_scex_mask])
+            truth_3d_hist, total_xsec_hist, incident_hist = self.run_truth_cross_section(events=all_events)
             beam_pions = all_events["true_beam_PDG"] == 211
             incident_pions = np.count_nonzero(beam_pions)
             print("NUMBER OF INCIDENT PI+", incident_pions)
@@ -75,7 +89,7 @@ class CexDDCrossSection:
             self.bin_beam_interaction_ke(all_events[beam_pions])
             ########
 
-            self.calculate_double_differential_xsec(truth_3d_hist, incident_pions, True)
+            self.calculate_double_differential_xsec(truth_3d_hist, total_xsec_hist, incident_hist, True)
 
         # Close file and return
         self.close_file()
@@ -96,7 +110,8 @@ class CexDDCrossSection:
 
     def run_truth_cross_section(self, events):
         truth_xsec = TruthCrossSection(self.config)
-        return truth_xsec.extract_truth_xsec(events=events)
+        events, total_xsec_hist, incident_hist = truth_xsec.extract_cross_section_slice(events=events)
+        return truth_xsec.extract_truth_xsec(events=events), total_xsec_hist, incident_hist
 
     def run_reco_cross_section(self, events):
         reco_xsec = RecoCrossSection(self.config)
@@ -123,7 +138,7 @@ class CexDDCrossSection:
         beam_ke_fine.FillN(len(beam_end_ke), beam_end_ke, nullptr)
         beam_ke_fine.Write()
 
-    def calculate_double_differential_xsec(self, xsec_3d_hist, total_events, truth_vars):
+    def calculate_double_differential_xsec(self, xsec_3d_hist, total_xsec_hist, incident_hist, truth_vars):
         """
         Double differential cross section wrt angle
         X = pi0 KE
@@ -133,35 +148,39 @@ class CexDDCrossSection:
         """
         xsec_graphs = {}
 
-        avogadro_constant    = 6.02214076e23  # 1 / mol
-        argon_molar_mass     = 39.95          # g / mol
-        liquid_argon_density = 1.39           # g / cm^3
-        fiducial_thickness   = 230.5          # 222 cm
-
-        # N_tgt = Ar atomic mass / (Avagadro's number * LAr density) = 39.9624 / (6.022e23) * (1.3973) = 4.7492e-23
-        num_target = argon_molar_mass / (avogadro_constant * liquid_argon_density * fiducial_thickness)
-
         # Get the number of bins in energy and angle
         energy_bins = xsec_3d_hist.GetNbinsX()
         angle_bins  = xsec_3d_hist.GetNbinsY()
         beam_bins   = xsec_3d_hist.GetNbinsZ()
 
+        # Here we have the interacting count on the Z axis so project to
+        # that axis to get the total counts
+        interacting_hist = xsec_3d_hist.ProjectionZ()
+
         for beambin_i in range(1, beam_bins+1):  # beam KE
 
             beam_bin_center = xsec_3d_hist.GetZaxis().GetBinCenter(beambin_i)
 
-            # We use total events from the give beam KE bin
-            beam_flux = self.beam_ke_hist.GetBinContent(beambin_i)
+            # We use total events from the given beam KE bin
+            # beam_flux = beam_flux_hist.GetBinContent(beambin_i-1)
+            interacting_count = interacting_hist.GetBinContent(beambin_i)
+            #interacting_count = 0.
+            #for i in range(1, interacting_hist.GetNbinsX()+1):
+            #    interacting_count += interacting_hist.GetBinContent(i)
+            #interacting_count = incident_hist.GetBinContent(beambin_i)
+            total_xsec = total_xsec_hist.GetBinContent(beambin_i)
+
             print("**********************************************")
-            print("* \033[92m Beam pi+ KE:", beam_bin_center, " Flux:", beam_flux, "\033[0m")
+            print("* \033[92m Beam pi+ KE:", beam_bin_center, " Num. Interactions:", interacting_count,
+                  " Total CEX Cross Section:", round(total_xsec, 2), " [mb] \033[0m")
             print("**********************************************")
 
             # Cross section plotted wrt to pi0 KE
-            self.plot_xsec_energy(xsec_3d_hist, beambin_i, num_target, beam_bin_center, energy_bins, angle_bins,
-                                  beam_flux, xsec_graphs, truth_vars)
+            self.plot_xsec_energy(xsec_3d_hist, beambin_i, beam_bin_center, energy_bins, angle_bins,
+                                  interacting_count, total_xsec, xsec_graphs, truth_vars)
             # Cross section plotted wrt to pi0 cos(theta)
-            self.plot_xsec_angle(xsec_3d_hist, beambin_i, num_target, beam_bin_center, energy_bins, angle_bins,
-                                 beam_flux, xsec_graphs, truth_vars)
+            self.plot_xsec_angle(xsec_3d_hist, beambin_i, beam_bin_center, energy_bins, angle_bins,
+                                 interacting_count, total_xsec, xsec_graphs, truth_vars)
 
         self.write_graphs_to_file(xsec_graphs)
 
@@ -171,8 +190,8 @@ class CexDDCrossSection:
         for key in graph_dict:
             graph_dict[key].Write(key)
 
-    def plot_xsec_energy(self, xsec_3d_hist, beambin_i, num_target, beam_bin_center, energy_bins, angle_bins,
-                         total_events, xsec_graphs, truth_vars):
+    def plot_xsec_energy(self, xsec_3d_hist, beambin_i, beam_bin_center, energy_bins, angle_bins,
+                         interacting_count, total_xsec, xsec_graphs, truth_vars):
 
         for anglebin_i in range(1, angle_bins+1):  # angular xsec
             # Get the angular bin center and width
@@ -190,12 +209,14 @@ class CexDDCrossSection:
                 num_interactions = xsec_3d_hist.GetBinContent(energybin_i, anglebin_i, beambin_i)
 
                 # xsec calculation
-                xsec_calc = ((num_interactions * num_target) / (total_events * ebin_width * abin_width)) * 1.e30 
-                xsec.append(xsec_calc)  # [micro-barn (ub)]
+                xsec_calc = ((num_interactions * total_xsec) / (interacting_count * ebin_width * abin_width)) #* 1.e30
+                #xsec_calc = ((self.sigma_factor() * num_interactions) / (interacting_count * ebin_width * abin_width))  # * 1.e30
+                xsec.append(xsec_calc)  # [mb]
                 if num_interactions == 0:
                     xsec_yerr.append(0.)
                 else:
-                    xsec_yerr.append((xsec_calc / num_interactions) * h_xerr.GetBinError(energybin_i))
+                    # xsec_yerr.append((xsec_calc / num_interactions) * h_xerr.GetBinError(energybin_i))
+                    xsec_yerr.append((xsec_calc / num_interactions) * xsec_3d_hist.GetBinError(energybin_i, anglebin_i, beambin_i))
 
                 # True xsec
                 true_xsec.append(self.get_geant_cross_section(energy_center, angle_center, beam_bin_center))
@@ -221,8 +242,8 @@ class CexDDCrossSection:
 
         #return xsec_graphs
 
-    def plot_xsec_angle(self, xsec_3d_hist, beambin_i, num_target, beam_bin_center, energy_bins, angle_bins,
-                        total_events, xsec_graphs, truth_vars):
+    def plot_xsec_angle(self, xsec_3d_hist, beambin_i, beam_bin_center, energy_bins, angle_bins,
+                        interacting_count, total_xsec, xsec_graphs, truth_vars):
 
         for energybin_i in range(1, energy_bins+1):  # energy xsec
             # Get the energy bin center and width
@@ -240,12 +261,14 @@ class CexDDCrossSection:
                 num_interactions = xsec_3d_hist.GetBinContent(energybin_i, anglebin_i, beambin_i)
 
                 # xsec calculation
-                xsec_calc = ((num_interactions * num_target) / (total_events * ebin_width * abin_width)) * 1.e30
-                xsec.append(xsec_calc)  # [micro-barn (ub)]
+                xsec_calc = ((num_interactions * total_xsec) / (interacting_count * ebin_width * abin_width)) #* 1.e30
+                #xsec_calc = ((self.sigma_factor() * num_interactions) / (interacting_count * ebin_width * abin_width))
+                xsec.append(xsec_calc)  # [mb]
                 if num_interactions == 0:
                     xsec_yerr.append(0.)
                 else:
-                    xsec_yerr.append((xsec_calc / num_interactions) * h_xerr.GetBinError(anglebin_i))
+                    # xsec_yerr.append((xsec_calc / num_interactions) * h_xerr.GetBinError(anglebin_i))
+                    xsec_yerr.append((xsec_calc / num_interactions) * xsec_3d_hist.GetBinError(energybin_i, anglebin_i, beambin_i))
 
                 # True xsec
                 true_xsec.append(self.get_geant_cross_section(energy_center, angle_center, beam_bin_center))
@@ -295,7 +318,7 @@ class CexDDCrossSection:
             raise RuntimeError
 
         xsec_graph.SetLineWidth(1)
-        xsec_graph.SetMarkerStyle(8)
+        xsec_graph.SetMarkerStyle(21)
         xsec_graph.SetMarkerSize(0.5)
         if true_xsec:
             xsec_graph.SetLineColor(64)
@@ -320,21 +343,23 @@ class CexDDCrossSection:
         """
         global_bin = self.geant_xsec_dict[int(beam)].FindBin(energy, angle)
         """
-        # 3) get the content in that bin.bin content = coss section[mb]
+        # 3) get the content in that bin.bin content = cross section[mb]
         """
-        return self.geant_xsec_dict[beam].GetBinContent(global_bin) * 1.e3  # convert to micro-barn
+        return self.geant_xsec_dict[beam].GetBinContent(global_bin) * 10. #* 1.e3  # convert to micro-barn
 
     def configure(self, config_file):
         """
         Implement the configuration for the concrete cut class here.
         """
-        beam_bins = np.array([1000, 1500., 1800., 2100.])
+        beam_bins = np.array([1000., 1500., 1800., 2100.])
         #beam_bins = np.array([950.,1050.,1150.,1250.,1350.,1450.,1550.,1650.,1750.,1850.,1950.,2050])
         beam_energy_hist = TH1D("beam_energy", "Beam Pi+ Kinetic Energy;T_{#pi^{+}} [MeV/c];Count", len(beam_bins)-1, beam_bins)
 
         #geant_file = "/Users/jsen/tmp_fit/cross_section_cex_n1m_Textended.root"
         #geant_file = "/Users/jsen/tmp_fit/cross_section_out_1m_3ke.root" # 1.2,1.6,2.0 GeV
-        geant_file = "/Users/jsen/tmp_fit/cross_section_out_1m_3ke_x50.root" # 1.25,1.65,1.95 GeV
+        #geant_file = "/Users/jsen/tmp_fit/cross_section_out_1m_3ke_x50.root" # 1.25,1.65,1.95 GeV
+        #geant_file = "/Users/jsen/geant_xsec/cross_section_out_1m_3ke_new_cex_p150_picut.root"
+        geant_file = "/Users/jsen/geant_xsec/cross_section_out_1m_3ke_new_cex_p150_picut_xnucleon.root"
         geant_xsec_file = TFile(geant_file)
 
         # cd into the ROOT directory so we can clone the histograms from file

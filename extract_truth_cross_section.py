@@ -12,12 +12,17 @@ branches = ["event", "reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_
             "reco_beam_calo_startY", "reco_beam_calo_startZ", "reco_beam_calo_endX", "reco_beam_calo_endY",
             "reco_beam_calo_endZ", "true_beam_daughter_startPx", "true_beam_daughter_startPy", "true_beam_daughter_startPz",
             "reco_beam_true_byHits_endProcess", "reco_daughter_PFP_nHits", "reco_beam_vertex_michel_score",
-            "reco_beam_vertex_nHits"]
+            "reco_beam_vertex_nHits", "true_beam_interactingEnergy", "true_beam_incidentEnergies", "true_beam_slices",
+            "true_beam_traj_incidentEnergies", "true_beam_traj_interacting_Energy"]
 
 # Single beam pi+ events
-files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana*.root"
+#files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana*.root"
+#all_events = uproot.concatenate(files={files:"pduneana/beamana;1"}, expressions=branches)
 
-all_events = uproot.concatenate(files={files:"pduneana/beamana;1"}, expressions=branches)
+#files = "/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n100k/full_mc_sp_merged_unique_n86k.root"
+files = "/Users/jsen/tmp/pion_qe/cex_selection/macros/merge_files/full_mc_merged_n86k_new_inc_int_branch.root"
+all_events = uproot.concatenate(files={files:"beamana;121"}, expressions=branches)
+
 xsec = CexDDCrossSection(None)
 xsec.extract_cross_section(all_events=all_events, selected_events=all_events, total_incident_pion=14000)
 

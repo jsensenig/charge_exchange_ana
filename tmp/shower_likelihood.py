@@ -4,33 +4,127 @@ import awkward as ak
 
 class ShowerLikelihood:
 
-    def __init__(self):
+    def __init__(self, likelihood01, likelihood12):
         print("Initialized ShowerLikelihood class object!")
 
         self.no_pi0_template = np.array([])
         self.one_pi0_template = np.array([])
         self.n_pi0_template = np.array([])
+
+        self.no_pi0_2d_template = np.array([])
+        self.one_pi0_2d_template = np.array([])
+        self.n_pi0_2d_template = np.array([])
+
+        self.no_one_pi0_esum_template = np.array([])
+        self.n_pi0_esum_template = np.array([])
+
+        self.one_pi0_maxe_template = np.array([])
+        self.no_n_pi0_maxe_template = np.array([])
+
         # Load the 0,1,2 pi0 template histograms
         self.load_templates()
 
         self.Rcut = 150.
         self.pi0_count = np.array([0, 1, 2])
 
-    def classify_npi0(self, r_spacepoints):
+        self.likelihood_l10_cut = likelihood01
+        self.likelihood_l12_cut = likelihood12
 
-        r_mask = r_spacepoints < self.Rcut
-        if len(r_spacepoints[r_mask]) < 1:
-            return self.pi0_count[0]
+    def bin_spacepoints_1d(self, r_spacepoints):
 
-        max_r = np.max(ak.to_numpy(r_spacepoints[r_mask]))
-        event_hist, _ = np.histogram(ak.to_numpy(r_spacepoints[r_mask]) / max_r, range=[0, 1], bins=50, density=True)
+        max_r = np.max(ak.to_numpy(r_spacepoints))
+        event_hist, _ = np.histogram(ak.to_numpy(r_spacepoints) / max_r,
+                                     range=[0, 1], bins=50, density=False)
+        return event_hist.flatten()
 
-        no_pi0 = self.log_likelihood_shape_test(event_hist, self.no_pi0_template)
-        one_pi0 = self.log_likelihood_shape_test(event_hist, self.one_pi0_template)
-        n_pi0 = self.log_likelihood_shape_test(event_hist, self.n_pi0_template)
-        likelihood_result = np.array([no_pi0, one_pi0, n_pi0])
+    def bin_spacepoints_2d(self, spacepoints):
 
-        return self.pi0_count[likelihood_result == np.min(likelihood_result)]
+        max_r = np.max(ak.to_numpy(spacepoints[:, 0]))
+        max_theta = np.max(ak.to_numpy(spacepoints[:, 1]))
+
+        event_hist, _, _ = np.histogram2d(ak.to_numpy(spacepoints[:, 0]) / max_r,
+                                          ak.to_numpy(spacepoints[:, 1]) / max_theta,
+                                          range=[[0, 1], [0, 1]], bins=[50, 50], density=False)
+        return event_hist.flatten()
+
+    def classify_npi0(self, spacepoints, esum, classify_2d=False, return_likelihood=False):
+
+        r_mask = spacepoints[:, 0] < self.Rcut
+        if ak.count_nonzero(r_mask) < 1:
+            return False
+
+        if classify_2d:
+            event_hist = self.bin_spacepoints_2d(spacepoints[r_mask])
+            no_pi0_template = self.no_pi0_2d_template
+            one_pi0_template = self.one_pi0_2d_template
+            n_pi0_template = self.n_pi0_2d_template
+        else:
+            event_hist = self.bin_spacepoints_1d(spacepoints[r_mask])
+            no_pi0_template = self.no_pi0_template
+            one_pi0_template = self.one_pi0_template
+            n_pi0_template = self.n_pi0_template
+
+        no_pi0 = self.log_likelihood_shape_test(event_hist, no_pi0_template)
+        one_pi0 = self.log_likelihood_shape_test(event_hist, one_pi0_template)
+        n_pi0 = self.log_likelihood_shape_test(event_hist, n_pi0_template)
+
+        # New likelihood calculation
+        new_no_pi0 = self.new_likelihood(event_hist, no_pi0_template)
+        new_one_pi0 = self.new_likelihood(event_hist, one_pi0_template)
+        new_n_pi0 = self.new_likelihood(event_hist, n_pi0_template)
+
+        no_one_pi0_esum_likelihood = self.energy_likelihood(esum, self.no_one_pi0_esum_template)
+        n_pi0_esum_likelihood = self.energy_likelihood(esum, self.n_pi0_esum_template)
+
+        if n_pi0_esum_likelihood != 0.:
+            esum_likelihood = no_one_pi0_esum_likelihood / n_pi0_esum_likelihood
+        else:
+            esum_likelihood = 0.
+
+        no_pi0 += esum_likelihood
+        one_pi0 += esum_likelihood
+        n_pi0 += esum_likelihood
+
+        one_one_pi0_maxe_likelihood = self.max_energy_likelihood(esum, self.one_pi0_maxe_template)
+        no_n_pi0_maxe_likelihood = self.max_energy_likelihood(esum, self.no_n_pi0_maxe_template)
+
+        if no_n_pi0_maxe_likelihood != 0.:
+            maxe_likelihood = one_one_pi0_maxe_likelihood / no_n_pi0_maxe_likelihood
+        else:
+            maxe_likelihood = 0.
+
+        no_pi0 += maxe_likelihood
+        one_pi0 += maxe_likelihood
+        n_pi0 += maxe_likelihood
+
+        # likelihood_result = np.array([no_pi0, one_pi0, n_pi0])
+        new_likelihood = False
+        if new_likelihood:
+            likelihood_result = np.array([new_one_pi0/new_no_pi0, new_one_pi0/new_n_pi0])
+        else:
+            likelihood_result = np.array([one_pi0 / no_pi0, one_pi0 / n_pi0])
+
+        #return self.pi0_count[likelihood_result == np.min(likelihood_result)]
+        return likelihood_result[0] < self.likelihood_l10_cut or likelihood_result[1] < self.likelihood_l12_cut
+
+    def new_likelihood(self, event_hist, pdf):
+        # Sum ln(SP_i * PDF_i)
+        log_pdf = np.where(pdf > 0., np.log(pdf), 0.)
+        return -2. * np.sum(event_hist * log_pdf)
+
+    def max_energy_likelihood(self, max_e, pdf):
+        # Sum ln(SP_i * PDF_i)
+        if max_e > 500.:
+            return -10.
+        energy_bins, _ = np.histogram([max_e], range=[0, 500], bins=50, density=False)
+        return self.log_likelihood_shape_test(energy_bins, pdf)
+
+    def energy_likelihood(self, esum, pdf):
+        # Sum ln(SP_i * PDF_i)
+        if esum < 200.:
+            return 0.
+        energy_bins, _ = np.histogram([esum], range=[0, 1000], bins=12, density=False)
+        return self.log_likelihood_shape_test(energy_bins, pdf)
 
     def log_likelihood_shape_test(self, hist1, hist2):
         # Integral of each histogram
@@ -60,6 +154,11 @@ class ShowerLikelihood:
         The templates to predict the number of pi0 in an event. Extracted from a full MC sample of 9500 events.
         :return:
         """
+
+        self.no_pi0_2d_template = np.loadtxt('/Users/jsen/tmp/tmp_pi0_shower/no_pi0_2d_pdf.txt')
+        self.one_pi0_2d_template = np.loadtxt('/Users/jsen/tmp/tmp_pi0_shower/one_pi0_2d_pdf.txt')
+        self.n_pi0_2d_template = np.loadtxt('/Users/jsen/tmp/tmp_pi0_shower/n_pi0_2d_pdf.txt')
+
         # These 3 arrays are using reco_beam_calo_end{X,Y,Z} which is SCE-corrected while the SPs are not SCE-corrected
         # self.no_pi0_template = np.array([3.07312894e-03, 2.15119026e-02, 5.87735911e-02, 1.43284637e-01,
         #                                  2.30484671e-01, 2.78886452e-01, 3.56098816e-01, 3.91439799e-01,
@@ -125,3 +224,39 @@ class ShowerLikelihood:
                                         0.82664294, 0.79612233, 0.85457706, 0.77543039, 0.79405314, 0.75629035,
                                         0.73301192, 0.76767092, 0.75784224, 0.80439911, 0.94769078, 0.98855736,
                                         1.16081775, 1.3454933])
+
+        # Total energy no+one and n pi0
+        self.no_one_pi0_esum_template = np.array([0.,         0.,         0.00131507, 0.00254795, 0.00131507, 0.00180822,
+                                                  0.00139726, 0.00123288, 0.00106849, 0.00065753, 0.00041096, 0.00024658])
+
+        self.n_pi0_esum_template = np.array([0.,         0.,         0.00246263, 0.00321708, 0.00206406, 0.00138078,
+                                             0.00078292, 0.00074021, 0.00051246, 0.00025623, 0.00034164, 0.00024199])
+
+        # Max shower energy no+n and one pi0
+        self.one_pi0_maxe_template = np.array([9.06483016e-02, 2.27837614e-04, 2.58906379e-04, 4.34962717e-04,
+                                                 3.41756421e-04, 4.97100249e-04, 4.66031483e-04, 5.17812759e-04,
+                                                 3.21043911e-04, 4.03893952e-04, 3.21043911e-04, 2.48550124e-04,
+                                                 2.17481359e-04, 3.00331400e-04, 1.76056338e-04, 2.69262635e-04,
+                                                 1.86412593e-04, 1.96768848e-04, 1.65700083e-04, 1.44987572e-04,
+                                                 1.55343828e-04, 1.76056338e-04, 1.65700083e-04, 1.34631317e-04,
+                                                 1.86412593e-04, 1.34631317e-04, 1.65700083e-04, 2.17481359e-04,
+                                                 1.24275062e-04, 8.28500414e-05, 1.44987572e-04, 1.65700083e-04,
+                                                 8.28500414e-05, 1.13918807e-04, 1.44987572e-04, 7.24937862e-05,
+                                                 8.28500414e-05, 1.24275062e-04, 1.65700083e-04, 8.28500414e-05,
+                                                 9.32062966e-05, 9.32062966e-05, 7.24937862e-05, 9.32062966e-05,
+                                                 1.34631317e-04, 5.17812759e-05, 1.13918807e-04, 9.32062966e-05,
+                                                 1.13918807e-04, 7.24937862e-05])
+
+        self.no_n_pi0_maxe_template = np.array([9.14242910e-02, 1.06421450e-03, 1.02288578e-03, 9.04065713e-04,
+                                             5.88934236e-04, 4.70114171e-04, 4.44283722e-04, 3.56460195e-04,
+                                             3.09965387e-04, 2.27307951e-04, 2.63470579e-04, 2.06643591e-04,
+                                             2.32474040e-04, 1.70480963e-04, 1.44650514e-04, 1.60148783e-04,
+                                             1.18820065e-04, 1.34318334e-04, 9.81557059e-05, 8.78235264e-05,
+                                             1.03321796e-04, 1.13653975e-04, 6.19930774e-05, 6.19930774e-05,
+                                             7.23252570e-05, 9.81557059e-05, 6.19930774e-05, 8.26574366e-05,
+                                             6.71591672e-05, 5.16608979e-05, 5.16608979e-05, 5.16608979e-05,
+                                             3.61626285e-05, 4.13287183e-05, 4.13287183e-05, 3.09965387e-05,
+                                             6.71591672e-05, 2.58304489e-05, 5.16608979e-05, 2.06643591e-05,
+                                             4.64948081e-05, 5.16608979e-05, 3.09965387e-05, 3.09965387e-05,
+                                             3.61626285e-05, 3.61626285e-05, 5.68269877e-05, 3.09965387e-05,
+                                             2.06643591e-05, 3.61626285e-05])

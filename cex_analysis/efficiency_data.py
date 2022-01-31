@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import numpy as np
 
 
 @dataclass
@@ -45,6 +46,7 @@ def combine_efficiency(cut_efficiency_dict_list, cut_total_dict_list, process_tr
 
 def calculate_efficiency(cut_efficiency_dict, cut_total_dict, process_true_count):
 
+    fom_list = []
     purity_list = []
     cum_eff_list = []
     eff_list = []
@@ -61,10 +63,11 @@ def calculate_efficiency(cut_efficiency_dict, cut_total_dict, process_true_count
             eff_list.append(cut_efficiency_dict[cut] / prev_cut_eff)
 
         cum_eff_list.append(eff)
+        fom_list.append(cut_efficiency_dict[cut] / np.sqrt(cut_total_dict[cut]))
         purity_list.append(cut_efficiency_dict[cut] / cut_total_dict[cut])
         selection_list.append(str(cut_efficiency_dict[cut]) + "/" + str(cut_total_dict[cut]))
         prev_cut_eff = cut_efficiency_dict[cut]
 
-    return cum_eff_list, purity_list, eff_list, selection_list
+    return cum_eff_list, purity_list, eff_list, selection_list, fom_list
 
 

@@ -1,0 +1,14 @@
+{
+  "ShowerPreCut": {
+    "optimize_cut": false,
+    "cut_variable": "reco_daughter_allShower_energy",
+    "shower_energy_var": "reco_daughter_allShower_energy",
+    "track_like_cnn_var": "reco_daughter_PFP_trackScore_collection",
+    "cnn_shower_cut_param": 0.47,
+    "small_energy_shower_cut_param": 49.2
+  },
+  "histograms": [
+    { "reco_daughter_allShower_energy": ["shower_precut", "ShowerPreCut;Shower Energy [MeV];Count", 100, 0, 1500] },
+    { "reco_daughter_PFP_nHits": ["shower_precut_nhit", "ShowerPreCut nHit;nHit;Count", 100, 0, 3000] }
+  ]
+}

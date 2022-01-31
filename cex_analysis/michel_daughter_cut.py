@@ -3,11 +3,11 @@ import awkward as ak
 import numpy as np
 
 
-class MichelCut(EventSelectionBase):
+class MichelDaughterCut(EventSelectionBase):
     def __init__(self, config):
         super().__init__(config)
 
-        self.cut_name = "MichelCut"
+        self.cut_name = "MichelDaughterCut"
         self.config = config
         self.reco_beam_pdg = self.config["reco_daughter_pdg"]
         #self.chi2_ndof_var = "proton_chi2_ndof"

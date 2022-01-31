@@ -17,6 +17,7 @@ class RecoShowerDirection(EventSelectionBase):
 
         self.cut_name = "RecoShowerDirection"
         self.config = config
+        self.optimize = self.config["optimize_cut"]
         self.reco_beam_pdf = self.config["reco_beam_pdg"]
 
         # Configure class

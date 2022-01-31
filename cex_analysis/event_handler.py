@@ -63,6 +63,41 @@ class EventHandler:
             else:
                 print("Cut class", cut_class, "not found!")
 
+    def full_cut_likelihood(self, s, b):
+        return ak.numpy.sqrt(2. * (s + b) * ak.numpy.log(1 + s/b) - 2. * s)
+
+    def optimize_cut(self, events, cut):
+
+        total_true = ak.count_nonzero(events["single_charge_exchange"], axis=0)
+
+        cut_fom_list = []
+        cut_sig_bkd_list = []
+        cut_full_fom_list = []
+        cut_eff_times_purity_list = []
+        cut_eff_times_purity2_list = []
+        for point in range(0, self.cut_map[cut].num_optimizations):
+            self.cut_map[cut].cut_optimization()
+            selected = self.cut_map[cut].selection(events, self.Hist_object, optimizing=True)
+            num_true_selected = ak.count_nonzero(events["single_charge_exchange", selected], axis=0)
+            num_total_selected = ak.count_nonzero(selected, axis=0)
+            eff_purity = (num_true_selected / total_true) * (num_true_selected / num_total_selected)
+            eff_purity2 = eff_purity + ak.numpy.sqrt((num_true_selected / num_total_selected))
+            background = num_total_selected - num_true_selected
+            full_opt = self.full_cut_likelihood(num_true_selected, background)
+            sig_bkgd = num_true_selected / ak.numpy.sqrt(num_total_selected - num_true_selected)
+            print("S/sqrt(S+B) = [\033[92m", '{:.4f}'.format(num_true_selected / ak.numpy.sqrt(num_total_selected)),
+                  " e*p = ", '{:.4f}'.format(eff_purity), " Full LLR = ", '{:.4f}'.format(full_opt),
+                  " S/sqrt(B) = ", '{:.4f}'.format(sig_bkgd), "\033[0m]")
+            cut_fom_list.append(num_true_selected / ak.numpy.sqrt(num_total_selected))
+            cut_full_fom_list.append(full_opt)
+            cut_eff_times_purity_list.append(eff_purity)
+            cut_eff_times_purity2_list.append(eff_purity2)
+            cut_sig_bkd_list.append(sig_bkgd)
+
+        print(cut_full_fom_list)
+        print("--------------")
+        print(cut_sig_bkd_list)
+
     def run_selection(self, events):
         """
         Here we run the selection. This means we loop over each cut
@@ -87,6 +122,8 @@ class EventHandler:
             events = events[event_mask] if i > 0 else events
             print("Post-Mask Num Events:", len(events))
             # Perform the cut selection
+            if self.cut_map[cut].optimize:
+                self.optimize_cut(events, cut)
             event_mask = self.cut_map[cut].selection(events, self.Hist_object)
 
             # Keep track of selection efficiency

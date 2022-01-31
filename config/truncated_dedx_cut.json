@@ -1,8 +1,12 @@
 {
   "TruncatedDedxCut": {
-    "cut_variable": "reco_daughter_allTrack_dEdX_SCE"
+    "optimize_cut": false,
+    "cut_variable": "reco_daughter_allTrack_dEdX_SCE",
+    "cnn_track_cut_param": 0.42,
+    "lower_trunc_mean_param": 0.64,
+    "upper_trunc_mean_param": 2.2
   },
   "histograms": [
-    { "daughter_masked_dedx": ["truncated_dedx_cut", "Daughter Truncated dEdX Cut;dE/dx [MeV/cm];Count", 50, 0, 10] }
+    { "dEdX_truncated_mean": ["truncated_mean_dedx_cut", "Daughter Truncated Mean dEdX Cut;dE/dx [MeV/cm];Count", 50, 0, 10] }
   ]
 }

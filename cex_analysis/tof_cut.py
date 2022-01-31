@@ -13,17 +13,20 @@ class TOFCut(EventSelectionBase):
         # Configure class
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
+        self.optimize = self.local_config["optimize_cut"]
 
-    def selection(self, events, hists):
+    def selection(self, events, hists, optimizing=False):
 
         # First we configure the histograms we want to make
-        hists.configure_hists(self.local_hist_config)
+        if not optimizing:
+            hists.configure_hists(self.local_hist_config)
 
         # The variable on which we cut
         cut_variable = self.local_config["cut_variable"]
 
         # Plot the variable before making cut
-        self.plot_particles_base(events=events, pdg=events[self.reco_daughter_pdf], precut=True, hists=hists)
+        if not optimizing:
+            self.plot_particles_base(events=events, pdg=events[self.reco_daughter_pdf], precut=True, hists=hists)
 
         # Perform the actual cut on TOF
         # also cut out positrons since they are vetoed in the data
@@ -37,12 +40,13 @@ class TOFCut(EventSelectionBase):
         print("TOF Selected Events True nPi0: ", np.unique(events["true_daughter_nPi0", selected_mask], return_counts=True))
 
         # Plot the variable before after cut
-        self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_daughter_pdf, selected_mask],
-                                 precut=False, hists=hists)
+        if not optimizing:
+            self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_daughter_pdf, selected_mask],
+                                     precut=False, hists=hists)
 
         # Plot the efficiency
-        self.efficiency(total_events=events, passed_events=events[selected_mask],
-                        cut=self.cut_name, hists=hists)
+        if not optimizing:
+            self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)
 
         # Return event selection mask
         return selected_mask
@@ -57,6 +61,9 @@ class TOFCut(EventSelectionBase):
     def efficiency(self, total_events, passed_events, cut, hists):
         for idx, plot in enumerate(self.local_hist_config):
             hists.plot_efficiency(xtotal=total_events[plot], xpassed=passed_events[plot], idx=idx)
+
+    def cut_optimization(self):
+        pass
 
     def get_cut_doc(self):
         doc_string = "Cut on beamline TOF to select beam particles"

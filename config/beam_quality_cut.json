@@ -1,5 +1,6 @@
 {
   "BeamQualityCut": {
+    "optimize_cut": false,
     "cut_variable": "reco_beam_passes_beam_cuts",
     "beam_startX": "reco_beam_calo_startX",
     "beam_startY": "reco_beam_calo_startY",

@@ -1,11 +1,8 @@
 {
   "ShowerCut": {
-    "cut_variable": "reco_daughter_allShower_energy",
-    "shower_energy_var": "reco_daughter_allShower_energy",
-    "max_energy_cut": 175,
-    "track_like_cnn_var": "reco_daughter_PFP_trackScore_collection",
-    "cnn_shower_cut": 0.5,
-    "small_energy_shower_cut": 10
+    "optimize_cut": false,
+    "likelihood_l10_param": 1.38,
+    "likelihood_l12_param": 0.54
   },
   "histograms": [
     { "reco_daughter_allShower_energy": ["shower_cut", "ShowerCut;Shower Energy [MeV];Count", 100, 0, 1500] },

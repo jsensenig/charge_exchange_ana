@@ -12,10 +12,11 @@ class EventSelectionBase:
         self.config = config
 
     @abstractmethod
-    def selection(self, events, hists):
+    def selection(self, events, hists, optimizing=False):
         """
         Main function called from the EventHandler classto perform the
         function. Call the additional class specific functions from this function.
+        :param optimizing: bool Set to true when optimizing cut to disable plotting
         :param hists: Histogram class object
         :param events: Batch of events to be processed
         :return: bool array of selected events
@@ -43,6 +44,14 @@ class EventSelectionBase:
         :param events: Array The batch of events pre/post cut.
         :param pdg: Array Truth particle PDG allows the plotting of particles by PDG
         :param precut: Bool Specify if this is pre (True) or post (False) cut
+        :return:
+        """
+        pass
+
+    @abstractmethod
+    def cut_optimization(self):
+        """
+        Implement the cut specific details for a grid search optimization.
         :return:
         """
         pass

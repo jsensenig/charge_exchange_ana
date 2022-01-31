@@ -1,11 +1,13 @@
 {
   "APA3Cut": {
+    "optimize_cut": false,
     "cut_variable": "reco_beam_calo_endZ",
     "upper": 222,
     "lower": 0
   },
   "histograms": [
     { "reco_beam_calo_endZ": ["apa3_cut", "APA3Cut;EndZ [cm];Count", 50, 0, 600] },
-    { "reco_beam_calo_endZ": ["apa3_fine_cut", "APA3FineCut;EndZ [cm];Count", 400, 200, 600] }
+    { "reco_beam_calo_endZ": ["apa3_fine_cut", "APA3FineCut;EndZ [cm];Count", 400, 200, 600] },
+    { "beam_track_angle": ["beam_track_angle", "ShowerPreCut Beam Angle;Beam cos#theta;Count", 100, 0.5, 1.0] }
   ]
 }

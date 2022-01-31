@@ -1,5 +1,5 @@
 {
-  "cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MaxShowerEnergyCut", "ShowerCut", "DaughterPionCut", "MichelCut", "TruncatedDedxCut", "RecoShowerDirection"],
+  "cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut", "MaxShowerEnergyCut", "ShowerPreCut", "ShowerCut", "DaughterPionCut", "MichelDaughterCut", "TruncatedDedxCut"],
   "hist_list": ["TOF"],
   "reco_beam_pdg": "reco_beam_true_byHits_PDG",
   "reco_daughter_pdg": "reco_daughter_PFP_true_byHits_PDG",
@@ -13,22 +13,28 @@
   "APA3Cut": {
     "config_file": "config/apa3_cut.json"
   },
+  "MichelBeamCut": {
+    "config_file": "config/michel_beam_cut.json"
+  },
   "MaxShowerEnergyCut": {
     "config_file": "config/max_shower_energy_cut.json"
   },
-    "ShowerCut": {
+  "ShowerPreCut": {
+    "config_file": "config/shower_precut.json"
+  },
+  "ShowerCut": {
     "config_file": "config/shower_cut.json"
   },
-    "DaughterPionCut": {
+  "DaughterPionCut": {
     "config_file": "config/daughter_pion_cut.json"
   },
-    "MichelCut": {
-    "config_file": "config/michel_cut.json"
+  "MichelDaughterCut": {
+    "config_file": "config/michel_daughter_cut.json"
   },
-    "TruncatedDedxCut": {
+  "TruncatedDedxCut": {
     "config_file": "config/truncated_dedx_cut.json"
   },
-    "RecoShowerDirection": {
+  "RecoShowerDirection": {
     "config_file": "config/reco_shower_direction.json"
   }
 }

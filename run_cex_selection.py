@@ -86,13 +86,14 @@ def calculate_efficiency(selected_true, selected_total, true_count_list):
                                                                     cut_total_dict_list=selected_total,
                                                                     process_true_count_list=true_count_list)
 
-    cum_eff, purity, eff, sel = eff_data.calculate_efficiency(cut_efficiency_dict=total_eff,
-                                                              cut_total_dict=total_sel,
-                                                              process_true_count=total_count)
+    cum_eff, purity, eff, sel, fom = eff_data.calculate_efficiency(cut_efficiency_dict=total_eff,
+                                                                   cut_total_dict=total_sel,
+                                                                   process_true_count=total_count)
 
-    for ceff, f, p, cut, s in zip(cum_eff, eff, purity, total_eff, sel):
+    for ceff, f, p, cut, s, l in zip(cum_eff, eff, purity, total_eff, sel, fom):
         print("Cut: [\033[92m", '{:<18}'.format(cut), "\033[0m] Cumulative eff:", '{:.4f}'.format(ceff),
-              " Eff:", '{:.4f}'.format(f), "Purity:", '{:.4f}'.format(p), "Selection:", s, "True/Total")
+              " Eff:", '{:.4f}'.format(f), "Purity:", '{:.4f}'.format(p),
+              "S/sqrt(S+B):", '{:.4f}'.format(l), "Selection:", s, "True/Total")
 
 
 def collect_write_results(config, thread_results, flist, branches):
@@ -150,7 +151,7 @@ def thread_creator(flist, config, num_workers, branches):
     futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
         # Use iterations of the tree read operation to batch the data for each thread
-        for i, array in enumerate(uproot.iterate(files={flist[0]:"beamana;119"}, expressions=branches, report=True, step_size='10000 MB', num_workers=num_workers)):
+        for i, array in enumerate(uproot.iterate(files={flist[0]:"beamana;121"}, expressions=branches, report=True, step_size='10000 MB', num_workers=num_workers)):
         #for i, array in enumerate(uproot.iterate(files=flist, expressions=branches, report=True, num_workers=num_workers)):
             print("---------- Starting thread", i, "----------")
             futures.append(executor.submit(event_selection, config, array[0]))
@@ -191,7 +192,11 @@ if __name__ == "__main__":
                  "true_beam_Pi0_decay_PDG", "true_beam_Pi0_decay_ID", "true_beam_Pi0_decay_startP",
                  "true_beam_Pi0_decay_startX", "true_beam_Pi0_decay_startY", "true_beam_Pi0_decay_startZ",
                  "true_beam_endX", "true_beam_endY", "true_beam_endZ", "reco_beam_trackEndDirX",
-                 "reco_beam_trackEndDirY", "reco_beam_trackEndDirZ"]
+                 "reco_beam_trackEndDirY", "reco_beam_trackEndDirZ", "true_beam_interactingEnergy",
+                 "true_beam_incidentEnergies", "dEdX_truncated_mean"]
+
+    branches += ["reco_beam_calo_startDirX", "reco_beam_calo_startDirY", "reco_beam_calo_startDirZ",
+                 "reco_beam_calo_endDirX", "reco_beam_calo_endDirY", "reco_beam_calo_endDirZ"]
 
     # Provide a text file with one file per line
     files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
@@ -211,8 +216,8 @@ if __name__ == "__main__":
     #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_n9500/full_mc_shower_sp_noecut_merged_n9500.root"]
     #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n3000/full_mc_shower_sp_merged_unique_3000.root"]
     #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n14000/full_mc_shower_sp_merged_unique_n13500.root"]
-    file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n100k/full_mc_sp_merged_unique_n86k.root"]
-
+    #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n100k/full_mc_sp_merged_unique_n86k.root"]
+    file_list = ["/Users/jsen/tmp/pion_qe/cex_selection/macros/merge_files/full_mc_merged_n86k_new_inc_tmean_branch.root"]
 
     # Number of threads
     num_workers = 1

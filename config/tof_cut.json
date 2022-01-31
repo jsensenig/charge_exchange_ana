@@ -1,5 +1,6 @@
 {
   "TOFCut": {
+    "optimize_cut": false,
     "cut_variable": "beam_inst_TOF",
     "upper": 97.0,
     "lower": 95.0

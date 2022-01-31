@@ -11,7 +11,7 @@ class HistogramData:
 
 
 """
-Helper functions to sort and access the HistoramData dataclass
+Helper functions to sort and access the HistogramData dataclass
 """
 
 
@@ -35,6 +35,6 @@ def get_select_hist_name_list(hlist, select_name):
     return [h for h in hlist if h.hist_name == select_name]
 
 
-# Return a list of matching  unique hist_names
+# Return a list of matching unique hist_names
 def get_hist_name_list(hlist):
     return set([h.hist_name for h in hlist])

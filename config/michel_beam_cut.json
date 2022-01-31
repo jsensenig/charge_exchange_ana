@@ -1,0 +1,10 @@
+{
+  "MichelBeamCut": {
+    "optimize_cut": false,
+    "cnn_michel_cut": 0.7
+  },
+  "histograms": [
+    { "beam_michel_score": ["beam_michel_score_cut", "Beam MichelCut;Michel Score;Count", 25, 0, 1] },
+    { "reco_beam_calo_endZ": ["beam_michel_score_cut_endz", "Beam MichelCut EndZ;EndZ [cm];Count", 50, 0, 600] }
+  ]
+}

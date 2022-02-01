@@ -87,7 +87,10 @@ class OptimizationHandler:
         # Return S/sqrt(S+B)
         #return num_true_selected / ak.numpy.sqrt(num_total_selected)
         # Return e*p
-        return (num_true_selected / self._total_true_scex_events) * (num_true_selected / num_total_selected)
+        #return (num_true_selected / self._total_true_scex_events) * (num_true_selected / num_total_selected)
+        # Full FOM from likelihood
+        bkgd = num_total_selected - num_true_selected
+        return ak.numpy.sqrt(2.*(num_true_selected + bkgd)*ak.numpy.log(1+(num_true_selected/bkgd))-2.*num_true_selected)
 
     def load_data(self):
 
@@ -154,16 +157,12 @@ class OptimizationHandler:
          'MichelDaughterCut_cnn_michel_cut_param': (0.6, 0.95), 'TruncatedDedxCut_cnn_track_cut_param': (0.2, 0.6),
          'TruncatedDedxCut_lower_trunc_mean_param': (0.5, 1.5), 'TruncatedDedxCut_upper_trunc_mean_param': (2.0, 3.0)}
 
-        optimizer = BayesianOptimization(
-            f=self.run_selection_optimization,
-            pbounds=pbounds,
-            random_state=1,
-        )
+        optimizer = BayesianOptimization(f=self.run_selection_optimization,
+                                         pbounds=pbounds,
+                                         random_state=1)
 
-        optimizer.maximize(
-            init_points=4,
-            n_iter=5,
-        )
+        optimizer.maximize(init_points=4,
+                           n_iter=5)
 
         print("MAX RESULTS: ", optimizer.max)
 

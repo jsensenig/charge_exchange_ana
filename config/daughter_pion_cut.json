@@ -6,7 +6,7 @@
     "proton_ndof": "reco_daughter_allTrack_Chi2_ndof",
     "chi2_ndof_cut_param": 92,
     "track_like_cnn_var": "reco_daughter_PFP_trackScore_collection",
-    "cnn_track_cut_param": 0.54
+    "cnn_track_cut_param": 0.56
   },
   "histograms": [
     { "proton_chi2_ndof": ["daughter_pion_cut", "DaughterPionCut;#chi^2/ndof;Count", 100, 0, 1000] },

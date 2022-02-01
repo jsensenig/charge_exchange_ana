@@ -1,8 +1,8 @@
 {
   "ShowerCut": {
     "optimize_cut": false,
-    "likelihood_l10_param": 1.38,
-    "likelihood_l12_param": 0.54
+    "likelihood_l10_param": 1.23,
+    "likelihood_l12_param": 0.69
   },
   "histograms": [
     { "reco_daughter_allShower_energy": ["shower_cut", "ShowerCut;Shower Energy [MeV];Count", 100, 0, 1500] },

@@ -4,8 +4,8 @@
     "cut_variable": "reco_daughter_allShower_energy",
     "shower_energy_var": "reco_daughter_allShower_energy",
     "track_like_cnn_var": "reco_daughter_PFP_trackScore_collection",
-    "cnn_shower_cut_param": 0.47,
-    "small_energy_shower_cut_param": 49.2
+    "cnn_shower_cut_param": 0.49,
+    "small_energy_shower_cut_param": 50.2
   },
   "histograms": [
     { "reco_daughter_allShower_energy": ["shower_precut", "ShowerPreCut;Shower Energy [MeV];Count", 100, 0, 1500] },

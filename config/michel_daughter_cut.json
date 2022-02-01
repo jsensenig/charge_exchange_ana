@@ -2,7 +2,7 @@
   "MichelDaughterCut": {
     "optimize_cut": false,
     "cut_variable": "reco_daughter_PFP_michelScore_collection",
-    "cnn_michel_cut_param": 0.67
+    "cnn_michel_cut_param": 0.73
   },
   "histograms": [
     { "reco_daughter_PFP_michelScore_collection": ["michel_cut", "Daughter MichelCut;Michel Score;Count", 25, 0, 1] }

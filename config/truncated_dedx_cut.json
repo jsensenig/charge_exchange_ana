@@ -2,9 +2,9 @@
   "TruncatedDedxCut": {
     "optimize_cut": false,
     "cut_variable": "reco_daughter_allTrack_dEdX_SCE",
-    "cnn_track_cut_param": 0.42,
-    "lower_trunc_mean_param": 0.64,
-    "upper_trunc_mean_param": 2.2
+    "cnn_track_cut_param": 0.37,
+    "lower_trunc_mean_param": 0.82,
+    "upper_trunc_mean_param": 2.35
   },
   "histograms": [
     { "dEdX_truncated_mean": ["truncated_mean_dedx_cut", "Daughter Truncated Mean dEdX Cut;dE/dx [MeV/cm];Count", 50, 0, 10] }

@@ -10,7 +10,7 @@ class TruncatedDedxCut(EventSelectionBase):
 
         self.cut_name = "TruncatedDedxCut"
         self.config = config
-        self.reco_beam_pdg = self.config["reco_daughter_pdg"]
+        self.reco_daughter_pdg = self.config["reco_daughter_pdg"]
 
         # Optimization rules
         self.opt_dict = {"cnn_track_cut_param": [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65],
@@ -40,7 +40,7 @@ class TruncatedDedxCut(EventSelectionBase):
 
         # Plot the variable before making cut
         if not optimizing:
-            self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdg], precut=True, hists=hists)
+            self.plot_particles_base(events=events, pdg=events[self.reco_daughter_pdg], precut=True, hists=hists)
 
         # We want to _reject_ events if there are daughter michel electrons (presumably from pions decays)
         # so negate the selection mask
@@ -58,7 +58,8 @@ class TruncatedDedxCut(EventSelectionBase):
 
         if not optimizing:
             # Plot the variable after cut
-            self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_beam_pdg, selected_mask],
+            # Plot the nDaughters
+            self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_daughter_pdg, selected_mask],
                                      precut=False, hists=hists)
             # Plot the efficiency
             self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)

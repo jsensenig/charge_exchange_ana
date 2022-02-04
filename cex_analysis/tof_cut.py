@@ -43,9 +43,7 @@ class TOFCut(EventSelectionBase):
         if not optimizing:
             self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_daughter_pdf, selected_mask],
                                      precut=False, hists=hists)
-
-        # Plot the efficiency
-        if not optimizing:
+            # Plot the efficiency
             self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)
 
         # Return event selection mask

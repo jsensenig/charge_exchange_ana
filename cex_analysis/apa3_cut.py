@@ -42,14 +42,12 @@ class APA3Cut(EventSelectionBase):
     def selection(self, events, hists, optimizing=False):
 
         # Add beam angle to events
-        events["beam_track_angle"] = self.beam_angle(events)
+        # Was going to use this to discriminate against pi+ QE events but didn't work.
+        #events["beam_track_angle"] = self.beam_angle(events)
 
         # First we configure the histograms we want to make
         if not optimizing:
             hists.configure_hists(self.local_hist_config)
-
-        # FIXME just testing
-        events["test_column"] = events["event"]
 
         # The variable on which we cut
         cut_variable = self.local_config["cut_variable"]
@@ -67,9 +65,7 @@ class APA3Cut(EventSelectionBase):
         if not optimizing:
             self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_daughter_pdf, selected_mask],
                                      precut=False, hists=hists)
-
-        # Plot the efficiency
-        if not optimizing:
+            # Plot the efficiency
             self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)
 
         # Return event selection mask

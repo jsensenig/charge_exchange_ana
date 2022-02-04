@@ -9,7 +9,6 @@
   },
   "histograms": [
     { "reco_daughter_allShower_energy": ["max_shower_energy_cut", "MaxShowerEnergyCut;Shower Energy [MeV];Count", 100, 0, 1500] },
-    { "max_shower_energy": ["max_shower_energy", "MaxShowerEnergyCut;Max Shower Energy [MeV];Count", 100, 0, 1500] },
     { "reco_daughter_PFP_trackScore_collection": ["maxE_daughter_track_score", "MaxE DaughterPionCut;Track Score;Count", 50, 0.0, 1.0] }
   ]
 }

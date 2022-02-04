@@ -100,18 +100,13 @@ class BeamQualityCut(EventSelectionBase):
         selected_mask_old = events[cut_variable]
         selected_mask = self.beam_to_tpc_cut(events)
 
-        #FIXME
-        #selected_mask = selected_mask_old
-
         print("Selected new/old", np.sum(selected_mask), " ", np.sum(selected_mask_old))
 
         # Plot the variable after cut
         if not optimizing:
             self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_beam_pdg, selected_mask],
                                      precut=False, hists=hists)
-
-        # Plot the efficiency
-        if not optimizing:
+            # Plot the efficiency
             self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)
 
         # Return event selection mask

@@ -121,6 +121,12 @@ def collect_write_results(config, thread_results, flist, branches):
     # 5. The true selected events (to be used in efficiency plots)
     result_true_count_list = [eff[4] for eff in tuple_list]
 
+    # 6. The selected events
+    selected_events = [eff[5] for eff in tuple_list]
+
+    # 7. The selected beam events
+    selected_beam_events = [eff[6] for eff in tuple_list]
+
     print("Number of thread results", len(result_hist_list))
 
     if len(result_hist_list) < 1:
@@ -131,9 +137,9 @@ def collect_write_results(config, thread_results, flist, branches):
     calculate_efficiency(result_select_list, result_total_list, result_true_count_list)
 
     #all_events = uproot.concatenate(files=flist, expressions=branches)
-    all_events = uproot.concatenate(files={flist[0]:"beamana;119"}, expressions=branches)
+    #all_events = uproot.concatenate(files={flist[0]:"beamana;121"}, expressions=branches)
     xsec = CexDDCrossSection(None)
-    xsec.extract_cross_section(all_events=all_events, selected_events=all_events, total_incident_pion=14000)
+    xsec.extract_cross_section(beam_events=selected_beam_events[0], selected_events=selected_events[0], total_incident_pion=14000)
 
     #selected_events = sum([ak.sum(m, axis=0) for m in result_mask_list])
     print("Selected", selected_events_count, " events out of", sum(result_true_count_list), "true CEX events")
@@ -196,7 +202,8 @@ if __name__ == "__main__":
                  "true_beam_incidentEnergies", "dEdX_truncated_mean"]
 
     branches += ["reco_beam_calo_startDirX", "reco_beam_calo_startDirY", "reco_beam_calo_startDirZ",
-                 "reco_beam_calo_endDirX", "reco_beam_calo_endDirY", "reco_beam_calo_endDirZ"]
+                 "reco_beam_calo_endDirX", "reco_beam_calo_endDirY", "reco_beam_calo_endDirZ",
+                 "true_beam_slices", "true_beam_traj_incidentEnergies", "true_beam_traj_interacting_Energy"]
 
     # Provide a text file with one file per line
     files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"

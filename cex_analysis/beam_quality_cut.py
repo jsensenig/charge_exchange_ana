@@ -35,7 +35,8 @@ class BeamQualityCut(EventSelectionBase):
         # Convert to numpy array with shape (2,N) where N is number of events
         beam_xy = np.vstack(ak.to_numpy(beam_dx, beam_dy).T)
         # Get the length of the pairs in the xy plane
-        beam_dxy = np.linalg.norm(beam_xy, axis=1)
+        #beam_dxy = np.linalg.norm(beam_xy, axis=1)
+        beam_dxy = np.sqrt(np.sum(beam_xy*beam_xy, axis=1))
 
         """ 
         2. Calculate the dot product between beam particle direction and the average beam direction
@@ -48,7 +49,8 @@ class BeamQualityCut(EventSelectionBase):
         # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector
         beam_dir = np.vstack((ak.to_numpy(pointx), ak.to_numpy(pointy), ak.to_numpy(pointz))).T
         # Normalize the direction vector
-        norm = np.linalg.norm(beam_dir, axis=1)
+        #norm = np.linalg.norm(beam_dir, axis=1)
+        norm = np.sqrt(np.sum(beam_dir * beam_dir, axis=1))
         beam_dir_unit = beam_dir / np.stack((norm, norm, norm), axis=1)
 
         # Define the MC direction vector
@@ -56,7 +58,8 @@ class BeamQualityCut(EventSelectionBase):
                                                         self.local_config["beam_angley_deg_mc"],
                                                         self.local_config["beam_anglez_deg_mc"]])))
         # ...and normalize it
-        mc_direction_unit = mc_direction_unit / np.linalg.norm(mc_direction_unit)
+        #mc_direction_unit = mc_direction_unit / np.linalg.norm(mc_direction_unit)
+        mc_direction_unit = mc_direction_unit / np.sqrt(np.sum(mc_direction_unit * mc_direction_unit))
 
         # Create N copies of the MC unit vector so we can take dot product with the beam direction
         beam_dir_mc_unit = np.full_like(beam_dir_unit, mc_direction_unit)

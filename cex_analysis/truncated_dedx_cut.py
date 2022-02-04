@@ -54,7 +54,9 @@ class TruncatedDedxCut(EventSelectionBase):
 
         # Take the logical NOT of the array and cast it back to an Awkward array.
         # Casting into a Numpy array converts None to False (the negation then turns it True)
-        selected_mask = ak.Array(~ak.to_numpy(selected_mask).data)
+        #selected_mask = ak.Array(~ak.to_numpy(selected_mask).data)
+        selected_mask = ak.to_numpy(selected_mask)
+        selected_mask = ~selected_mask
 
         if not optimizing:
             # Plot the variable after cut

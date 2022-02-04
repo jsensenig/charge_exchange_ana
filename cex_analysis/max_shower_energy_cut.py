@@ -1,5 +1,6 @@
 from cex_analysis.event_selection_base import EventSelectionBase
 import awkward as ak
+import numpy as np
 
 
 class MaxShowerEnergyCut(EventSelectionBase):
@@ -31,26 +32,29 @@ class MaxShowerEnergyCut(EventSelectionBase):
             hists.configure_hists(self.local_hist_config)
 
         # Add a max shower energy column
-        events["max_shower_energy"] = self.max_shower_energy(events)
+        max_shower_energy = self.max_shower_energy(events)
 
         # Plot the variable before making cut
         if not optimizing:
             self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdg], precut=True, hists=hists)
 
         # Max shower energy mask to select only events with at least one large shower
-        selected_mask = events["max_shower_energy"] > self.local_config["max_energy_cut"]
+        selected_mask = max_shower_energy > self.local_config["max_energy_cut"]
 
         # Plot the variable after cut
         if not optimizing:
             self.plot_particles_base(events=events[selected_mask], pdg=events[self.reco_beam_pdg, selected_mask],
-                                 precut=False, hists=hists)
+                                     precut=False, hists=hists)
 
         # Plot the efficiency
         if not optimizing:
             self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)
 
         # Return event selection mask
-        return selected_mask
+        # FIXME should have None --> True
+        selected_mask = ak.to_numpy(selected_mask)
+        corrected_selected_mask = np.where(selected_mask is None, True, selected_mask)
+        return corrected_selected_mask
 
     def plot_particles_base(self, events, pdg, precut, hists):
         hists.plot_process(x=events, precut=precut)

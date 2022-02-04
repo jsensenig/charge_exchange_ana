@@ -68,7 +68,9 @@ class DaughterPionCut(EventSelectionBase):
         selected_mask = np.any((track_score_mask & daughter_pion_mask), axis=1)
         # Take the logical NOT of the array and cast it back to an Awkward array.
         # Casting into a Numpy array converts None to False (the subsequent negation turns it to True)
-        selected_mask = ak.Array(~ak.to_numpy(selected_mask).data)
+        # selected_mask = ak.Array(~ak.to_numpy(selected_mask))
+        selected_mask = ak.to_numpy(selected_mask)
+        selected_mask = ~selected_mask
 
         # Plot the variable after cut
         if not optimizing:

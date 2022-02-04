@@ -1,3 +1,4 @@
+from cex_analysis.true_process import TrueProcess
 import numpy as np
 import awkward as ak
 import ROOT
@@ -10,10 +11,20 @@ class TruthCrossSection:
     def __init__(self, config):
         self.config = config
 
-        self.beam_ke_bins = np.array([1000, 1500., 1800., 2100.])  # MeV/c
+        self.beam_ke_bins = np.array([1000., 1500., 1800., 2200.])  # MeV/c
 
         # Compile the c++ code
         self.compile_cpp_helpers()
+
+        avogadro_constant = 6.02214076e23  # 1 / mol
+        argon_molar_mass = 39.95           # g / mol
+        liquid_argon_density = 1.39        # g / cm^3
+        fiducial_thickness = 0.479         # cm
+
+        self.sigma_factor = argon_molar_mass / (avogadro_constant * liquid_argon_density * fiducial_thickness)
+        self.sigma_factor *= 1.e27 # Convert to milli-barn
+
+        self.true_process = TrueProcess
 
     @staticmethod
     def compile_cpp_helpers():
@@ -159,19 +170,11 @@ class TruthCrossSection:
 
         return incident_hist
 
-    def extract_cross_section_slice(self, events):
-
-        avogadro_constant = 6.02214076e23  # 1 / mol
-        argon_molar_mass = 39.95           # g / mol
-        liquid_argon_density = 1.39        # g / cm^3
-        fiducial_thickness = 0.479         # cm
-
-        sigma_factor = argon_molar_mass / (avogadro_constant * liquid_argon_density * fiducial_thickness)
-        sigma_factor *= 1.e27 # Convert to milli-barn
+    def truth_cross_section_slice(self, events):
 
         # Select only events with beam pions
-        pion_mask = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic")
-                    #& (events["true_beam_endZ"] < 222.) & (events["true_beam_endZ"] > 0.)
+        pion_mask = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic") \
+                    & (events["true_beam_endZ"] < 222.) & (events["true_beam_endZ"] > 0.)
 
         # Select only events with >0 incident energy arrays i.e. the event has a beam hit on at least 1 wire
         empty_event_mask = ak.count(events["true_beam_traj_incidentEnergies"], axis=1) > 0
@@ -181,17 +184,17 @@ class TruthCrossSection:
 
         # Get the max incident energy which is really the pion initial KE
         incident_array = events["true_beam_traj_incidentEnergies", (pion_mask & empty_event_mask)]
-        #incident_array = events["true_beam_traj_incidentEnergies", (pion_mask)]
+        # Get beam pion interacting energy
+        interacting_array = ak.to_numpy(events["true_beam_traj_interacting_Energy", (cex_mask & pion_mask & empty_event_mask)])
 
         # Save the start beam KE i.e. initial KE
         initial_ke_hist = ROOT.TH1D("initial_ke_hist", "Initial Beam #pi+ KE;Beam KE [MeV]; Count", 140, 800., 2200.)
         initial_energy_array = ak.to_numpy(events["true_beam_traj_incidentEnergies", (pion_mask & empty_event_mask)][:, 0])
-        #initial_energy_array = ak.to_numpy(events["true_beam_traj_incidentEnergies", (pion_mask)][:, 0])
+
         initial_ke_hist.FillN(len(initial_energy_array), initial_energy_array, ROOT.nullptr)
         initial_ke_hist.Write("initial_ke")
 
         # Define the incident and interacting histograms
-        print("Fine Bins/Lower/Upper ", int((self.beam_ke_bins[-1] - self.beam_ke_bins[0])/50), "/", self.beam_ke_bins[0], "/", self.beam_ke_bins[-1])
         incident_hist = ROOT.TH1D("incident_hist", "Incident Beam #pi+;Beam KE [MeV]; Count",
                                   int((self.beam_ke_bins[-1] - self.beam_ke_bins[0])/50),
                                   self.beam_ke_bins[0], self.beam_ke_bins[-1])
@@ -201,35 +204,138 @@ class TruthCrossSection:
 
         incident_coarse_hist = ROOT.TH1D("incident_coarse_hist", "Incident Beam #pi+;Beam KE [MeV]; Count",
                                          len(self.beam_ke_bins)-1, self.beam_ke_bins)
-        interacting_coarse_hist = ROOT.TH1D("interacting_coarse_hist", "Interacting Beam #pi+;Beam KE [MeV]; Count",
+        interacting_coarse_hist = ROOT.TH1D("sr_beam_interacting_course_signal_interacting_coarse_hist",
+                                            "Interacting Beam #pi+;Beam KE [MeV]; Count",
                                             len(self.beam_ke_bins)-1, self.beam_ke_bins)
+
+        interacting_coarse_sr_hist = ROOT.TH1D("sr_beam_interacting_course", "Interacting Beam #pi+;Beam KE [MeV]; Count",
+                                            len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+        interacting_coarse_sr_hist.Write("sr_beam_interacting_course")
 
         #Make sure to use these errors
         interacting_hist.Sumw2(True)
         interacting_coarse_hist.Sumw2(True)
 
+        # Fine binned cross section
+        self.calculate_total_cross_section(interacting_hist, incident_hist,
+                                           incident_array, interacting_array)
+        # Course binned cross section
+        self.calculate_total_cross_section(interacting_coarse_hist, incident_coarse_hist,
+                                           incident_array, interacting_array)
+
+        return events[cex_mask & pion_mask & empty_event_mask], interacting_coarse_hist, incident_coarse_hist
+
+    def selected_cross_section_slice(self, beam_events, selected_events):
+
+        sr = ROOT.TH1D("IncSR", "Signal Region Beam #pi+;Beam KE [MeV]; Count",
+                                         len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+        sr.Write("IncSR")
+        sr.Write("IntSR")
+
+        incident_mask_dict = {"data": np.ones_like(beam_events["single_charge_exchange"])}
+        interacting_mask_dict = {"data": np.ones_like(selected_events["single_charge_exchange"])}
+
+        # Signal is the CEX events
+        interacting_mask_dict["signal"] = selected_events["single_charge_exchange"] == 1
+        # Inelastic background has a beam pion but it interacts in another inelastic channel, e.g. Abs, QE, etc.
+        interacting_mask_dict["inel_bkgd"] = np.zeros_like(selected_events["single_charge_exchange"])
+        for proc in self.true_process.get_process_list():
+            interacting_mask_dict["inel_bkgd"] = (interacting_mask_dict["inel_bkgd"]) | ((selected_events[proc] == 1) & \
+                             (selected_events["single_charge_exchange"] == 0) & (selected_events["other"] == 0))
+        # Any event which did not come from a beam pi+
+        interacting_mask_dict["beam_bkgd"] = selected_events["true_beam_PDG"] != 211
+        # Any event which did not fall into the above categories
+        interacting_mask_dict["other_bkgd"] = ~(interacting_mask_dict["signal"] | interacting_mask_dict["inel_bkgd"] | \
+                                                interacting_mask_dict["beam_bkgd"])
+
+        # Signal is the CEX events
+        incident_mask_dict["signal"] = beam_events["single_charge_exchange"] == 1
+        # Inelastic background has a beam pion but it interacts in another inelastic channel, e.g. Abs, QE, etc.
+        incident_mask_dict["inel_bkgd"] = np.zeros_like(beam_events["single_charge_exchange"])
+        for proc in self.true_process.get_process_list():
+            incident_mask_dict["inel_bkgd"] = (incident_mask_dict["inel_bkgd"]) | ((beam_events[proc] == 1) & \
+                             (beam_events["single_charge_exchange"] == 0) & (beam_events["other"] == 0))
+        # Any event which did not come from a beam pi+
+        incident_mask_dict["beam_bkgd"] = beam_events["true_beam_PDG"] != 211
+        # Any event which did not fall into the above categories
+        incident_mask_dict["other_bkgd"] = ~(incident_mask_dict["signal"] | incident_mask_dict["inel_bkgd"] | \
+                                            incident_mask_dict["beam_bkgd"])
+
+        incident_hist_dict = {}
+        interacting_hist_dict = {}
+
+        # Define the incident and interacting histograms
+        incident_hist_dict["data"] = ROOT.TH1D("IncSR_data_incident_hist", "Data Incident Beam #pi+;Beam KE [MeV]; Count",
+                                               len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+        incident_hist_dict["signal"] = ROOT.TH1D("IncSR_signal_incident_hist", "Signal Incident Beam #pi+;Beam KE [MeV]; Count",
+                                                 len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+        incident_hist_dict["inel_bkgd"] = ROOT.TH1D("IncSR_inel_bkgd_incident_hist", "Inelastic Bkgd Incident Beam #pi+;Beam KE [MeV]; Count",
+                                                    len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+        incident_hist_dict["beam_bkgd"] = ROOT.TH1D("IncSR_beam_bkgd_incident_hist", "Beam Bkgd Incident Beam #pi+;Beam KE [MeV]; Count",
+                                                    len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+        incident_hist_dict["other_bkgd"] = ROOT.TH1D("IncSR_other_bkgd_incident_hist", "Other Bkgd Incident Beam #pi+;Beam KE [MeV]; Count",
+                                                     len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+
+        interacting_hist_dict["data"] = ROOT.TH1D("IntSR_data_interacting_hist", "Data Interacting Beam #pi+;Beam KE [MeV]; Count",
+                                                  len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+        interacting_hist_dict["signal"] = ROOT.TH1D("IntSR_signal_interacting_hist", "Signal Interacting Beam #pi+;Beam KE [MeV]; Count",
+                                                    len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+        interacting_hist_dict["inel_bkgd"] = ROOT.TH1D("IntSR_inel_bkgd_interacting_hist", "Inelastic Bkgd Interacting Beam #pi+;Beam KE [MeV]; Count",
+                                                       len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+        interacting_hist_dict["beam_bkgd"] = ROOT.TH1D("IntSR_beam_bkgd_interacting_hist", "Beam Bkgd Interacting Beam #pi+;Beam KE [MeV]; Count",
+                                                       len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+        interacting_hist_dict["other_bkgd"] = ROOT.TH1D("IntSR_other_bkgd_interacting_hist", "Other Bkgd Interacting Beam #pi+;Beam KE [MeV]; Count",
+                                                        len(self.beam_ke_bins) - 1, self.beam_ke_bins)
+
+        for hist in incident_hist_dict:
+            # Get the max incident energy which is really the pion initial KE
+            incident_array = beam_events["true_beam_traj_incidentEnergies", incident_mask_dict[hist]]
+            # Get beam pion interacting energy
+            interacting_array = ak.to_numpy(beam_events["true_beam_traj_interacting_Energy", interacting_mask_dict[hist]])
+            # Fine binned cross section
+            print("HIST", hist)
+            self.calculate_total_cross_section(interacting_hist_dict[hist], incident_hist_dict[hist],
+                                               incident_array, interacting_array)
+
+        return
+
+    def calculate_total_cross_section(self, interacting_hist, incident_hist, incident_array, interacting_array):
+        """
+        Now redo for the 3 bin histogram
+            - Fill 3D hist with interacting, pi0 KE, pi0 cos\theta
+        """
+
         # Here we create the beam pion incident histogram. Each pion contributes to its interacting
-        # bin *and* every preceding energy bin up to its maximum energy (initial energy)
+        # bin *and* every preceding energy bin up to its maximum energy, i.e. its initial energy
         for b in range(1, incident_hist.GetNbinsX() + 1):
             bin_low = incident_hist.GetBinLowEdge(b)
             bin_high = incident_hist.GetBinLowEdge(b) + incident_hist.GetBinWidth(b)
             bin_mask = (incident_array >= bin_low) & (incident_array < bin_high)
             incident_hist.SetBinContent(b, ak.count_nonzero(bin_mask))
 
-        interacting_array = ak.to_numpy(events["true_beam_traj_interacting_Energy", (cex_mask & pion_mask & empty_event_mask)])
-        #interacting_array = ak.to_numpy(events["true_beam_interactingEnergy", (cex_mask & pion_mask & empty_event_mask)])
-        #interacting_array = ak.to_numpy(events["true_beam_interactingEnergy", (cex_mask & pion_mask)])
-
         # Now fill the interacting histogram with the interacting CEX events interaction energy
-        interacting_hist.FillN(len(interacting_array), interacting_array, ROOT.nullptr)
+        if len(interacting_array) > 0:
+            interacting_array = ak.to_numpy(interacting_array)
+            interacting_hist.FillN(len(interacting_array), interacting_array, ROOT.nullptr)
 
-        # Save them to file
-        incident_hist.Write("incident_hist")
-        interacting_hist.Write("interacting_hist")
+        # Also save to file
+        incident_hist.Write()
+        interacting_hist.Write("sr_beam_interacting_course_data_interacting_coarse_hist")
+        interacting_hist.Write()
 
+        # Also calculate this for 3 binned cross section
         # Now we calculate the cross section! F * (N_int / N_inc)  (F = sigma_factor)
         interacting_hist.Divide(incident_hist)
-        interacting_hist.Scale(sigma_factor)
+        interacting_hist.Scale(self.sigma_factor)
 
         # Tidy it up a bit and write to file
         ROOT.gStyle.SetEndErrorSize(3)
@@ -238,42 +344,7 @@ class TruthCrossSection:
 
         interacting_hist.GetYaxis().SetRangeUser(0, 200)
         interacting_hist.GetYaxis().SetTitle("MCTruth #sigma_{CEX} [mb]")
-        interacting_hist.Write("total_cex_xsec")
-
-        """
-        Now redo for the 3 bin histogram
-            - Fill 3D hist with interacting, pi0 KE, pi0 cos\theta
-        """
-
-        for b in range(1, incident_coarse_hist.GetNbinsX() + 1):
-            bin_low = incident_coarse_hist.GetBinLowEdge(b)
-            bin_high = incident_coarse_hist.GetBinLowEdge(b) + incident_coarse_hist.GetBinWidth(b)
-            bin_mask = (incident_array >= bin_low) & (incident_array < bin_high)
-            incident_coarse_hist.SetBinContent(b, ak.count_nonzero(bin_mask))
-
-        # Now fill the interacting histogram with the interacting CEX events interaction energy
-        interacting_coarse_hist.FillN(len(interacting_array), interacting_array, ROOT.nullptr)
-
-        # Also save to file
-        incident_coarse_hist.Write("incident_coarse_hist")
-        interacting_coarse_hist.Write("interacting_coarse_hist")
-
-        # Also calculate this for 3 binned cross section
-        # Now we calculate the cross section! F * (N_int / N_inc)  (F = sigma_factor)
-        interacting_coarse_hist.Divide(incident_coarse_hist)
-        interacting_coarse_hist.Scale(sigma_factor)
-
-        # Tidy it up a bit and write to file
-        ROOT.gStyle.SetEndErrorSize(3)
-        interacting_coarse_hist.SetLineColor(1)
-        interacting_coarse_hist.SetMarkerStyle(21)
-
-        interacting_coarse_hist.GetYaxis().SetRangeUser(0, 200)
-        interacting_coarse_hist.GetYaxis().SetTitle("MCTruth #sigma_{CEX} [mb]")
-        interacting_coarse_hist.Write("total_cex_coarse_xsec")
-
-        return events[cex_mask & pion_mask & empty_event_mask], interacting_coarse_hist, incident_coarse_hist
-        #return events[cex_mask & pion_mask], interacting_coarse_hist, incident_coarse_hist
+        interacting_hist.Write("total_cex_coarse_xsec")
 
     def bin_cross_section_variables(self, beam_ke, pi0_ke, pi0_angle):
 

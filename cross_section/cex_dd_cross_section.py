@@ -20,7 +20,7 @@ class CexDDCrossSection:
         # File to write the cross sections
         self.outfile = None
 
-        beam_ke_bins = np.array([1000, 1500., 1800., 2100.])  # MeV/c
+        beam_ke_bins = np.array([1000., 1500., 1800., 2200.])  # MeV/c
         #beam_ke_bins = np.array([950., 1050., 1150., 1250., 1350., 1450., 1550., 1650., 1750., 1850., 1950., 2050])
         self.beam_ke_hist = TH1D("beam_ke", "Beam KE [MeV/c];Count", len(beam_ke_bins)-1, beam_ke_bins)
 
@@ -36,7 +36,7 @@ class CexDDCrossSection:
 
         return sigma_factor
 
-    def extract_cross_section(self, all_events, selected_events, total_incident_pion):
+    def extract_cross_section(self, beam_events, selected_events, total_incident_pion):
         """
         Calculate the cross section from the selected events
         Main callable function to the class
@@ -52,41 +52,35 @@ class CexDDCrossSection:
         # Now extract and plot cross section
         #reco_3d_hist = self.run_reco_cross_section(events=events, event_mask=event_mask)
         #self.calculate_double_differential_xsec(reco_3d_hist, total_incident_pion, False)
-        valid_piplus = TrueProcess.mask_daughter_momentum(events=all_events,
-                momentum_threshold=0.150, pdg_select=211)
-        valid_piminus = TrueProcess.mask_daughter_momentum(events=all_events,
-                momentum_threshold=0.150, pdg_select=-211)
-        true_scex_mask = TrueProcess.single_charge_exchange(all_events, valid_piplus, valid_piminus)
-        all_events["single_charge_exchange"] = true_scex_mask
 
-        pion_inelastic = (all_events["true_beam_PDG"] == 211) & (all_events["true_beam_endProcess"] == "pi+Inelastic") \
-                         & (all_events["true_beam_endZ"] < 222.)
-        true_scex_mask = true_scex_mask & pion_inelastic
-
-        print("TRUE NUMBER OF sCEX EVENTS", np.count_nonzero(true_scex_mask))
+        # valid_piplus = TrueProcess.mask_daughter_momentum(events=all_events, momentum_threshold=0.150, pdg_select=211)
+        # valid_piminus = TrueProcess.mask_daughter_momentum(events=all_events, momentum_threshold=0.150, pdg_select=-211)
+        # true_scex_mask = TrueProcess.single_charge_exchange(all_events, valid_piplus, valid_piminus)
+        # all_events["single_charge_exchange"] = true_scex_mask
 
         #if self.config["run_truth_xsec"]:
         if True:
-            truth_3d_hist, total_xsec_hist, incident_hist = self.run_truth_cross_section(events=all_events)
-            beam_pions = all_events["true_beam_PDG"] == 211
+            truth_3d_hist, total_xsec_hist, incident_hist = self.run_truth_cross_section(beam_events=beam_events,
+                                                                                         selected_events=selected_events)
+            beam_pions = beam_events["true_beam_PDG"] == 211
             incident_pions = np.count_nonzero(beam_pions)
             print("NUMBER OF INCIDENT PI+", incident_pions)
 
-            beam_pions = beam_pions & (all_events["true_beam_endProcess"] == "pi+Inelastic")
+            beam_pions = beam_pions & (beam_events["true_beam_endProcess"] == "pi+Inelastic")
             incident_pions = np.count_nonzero(beam_pions)
             print("NUMBER OF INCIDENT PI+", incident_pions)
 
-            beam_pions = beam_pions & (all_events["true_beam_endZ"] > 0.)
+            beam_pions = beam_pions & (beam_events["true_beam_endZ"] > 0.)
             incident_pions = np.count_nonzero(beam_pions)
             print("NUMBER OF INCIDENT PI+", incident_pions)
 
-            decay_pions = (all_events["true_beam_PDG"] == 211) & (all_events["true_beam_endProcess"] == "Decay")
+            decay_pions = (beam_events["true_beam_PDG"] == 211) & (beam_events["true_beam_endProcess"] == "Decay")
             incident_decay_pions = np.count_nonzero(decay_pions)
             print("NUMBER OF INCIDENT PI+ Decays", incident_decay_pions)
 
             #########
             # Bin the incident beam pions here
-            self.bin_beam_interaction_ke(all_events[beam_pions])
+            self.bin_beam_interaction_ke(beam_events[beam_pions])
             ########
 
             self.calculate_double_differential_xsec(truth_3d_hist, total_xsec_hist, incident_hist, True)
@@ -108,9 +102,10 @@ class CexDDCrossSection:
         if self.outfile.IsOpen():
             print("Failed to close file", self.outfile, " :(")
 
-    def run_truth_cross_section(self, events):
+    def run_truth_cross_section(self, beam_events, selected_events):
         truth_xsec = TruthCrossSection(self.config)
-        events, total_xsec_hist, incident_hist = truth_xsec.extract_cross_section_slice(events=events)
+        truth_xsec.selected_cross_section_slice(beam_events=beam_events, selected_events=selected_events)
+        events, total_xsec_hist, incident_hist = truth_xsec.truth_cross_section_slice(events=beam_events)
         return truth_xsec.extract_truth_xsec(events=events), total_xsec_hist, incident_hist
 
     def run_reco_cross_section(self, events):
@@ -335,7 +330,8 @@ class CexDDCrossSection:
         # If the beam KE does not exist we should know, throw error
         if int(beam) not in self.geant_xsec_dict.keys():
             print("No match for beam", int(beam), "in dictionary", self.geant_xsec_dict.keys())
-            raise RuntimeError
+            #raise RuntimeError
+            return 1.
 
         """
         1) Select the correct 2D plot for the incident pion energy

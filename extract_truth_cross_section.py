@@ -24,5 +24,5 @@ files = "/Users/jsen/tmp/pion_qe/cex_selection/macros/merge_files/full_mc_merged
 all_events = uproot.concatenate(files={files:"beamana;121"}, expressions=branches)
 
 xsec = CexDDCrossSection(None)
-xsec.extract_cross_section(all_events=all_events, selected_events=all_events, total_incident_pion=14000)
+xsec.extract_cross_section(all_events=all_events[0:10000], selected_events=all_events, total_incident_pion=14000)
 

@@ -1,0 +1,107 @@
+{
+  "General": {
+    "Measurement": "test_fitting",
+    "POI": "Signal_norm",
+    "InputPath": "inputs/xsec_file.root:{RegionPath}_{SamplePath}",
+    "HistogramFolder": "histograms/"
+  },
+  "Regions": [
+    {
+      "Name": "InteractingBeamKE",
+      "RegionPath": "IntSR",
+      "Binning": [1000, 1500, 1800, 2200],
+      "Variable": "Beam KE [MeV]"
+    },
+    {
+      "Name": "IncidentBeamKE",
+      "RegionPath": "IncSR",
+      "Binning": [1000, 1500, 1800, 2200],
+      "Variable": "Beam KE [MeV]"
+    }
+  ],
+  "Samples": [
+    {
+      "Name": "Data",
+      "SamplePath": "data_incident_hist",
+      "Regions": "IncidentBeamKE",
+      "Data": true
+    },
+    {
+      "Name": "Signal",
+      "SamplePath": "signal_interacting_hist",
+      "Regions": "InteractingBeamKE"
+    },
+    {
+      "Name": "Inelastic Background",
+      "SamplePath": "inel_bkgd_interacting_hist",
+      "Regions": "InteractingBeamKE"
+    },
+    {
+      "Name": "Other Background",
+      "SamplePath": "other_bkgd_interacting_hist",
+      "Regions": "InteractingBeamKE"
+    },
+    {
+      "Name": "Signal Inc",
+      "SamplePath": "signal_incident_hist",
+      "Regions": "IncidentBeamKE"
+    },
+    {
+      "Name": "Inelastic Background Inc",
+      "SamplePath": "inel_bkgd_incident_hist",
+      "Regions": "IncidentBeamKE"
+    },
+    {
+      "Name": "Beam Background Inc",
+      "SamplePath": "beam_bkgd_incident_hist",
+      "Regions": "IncidentBeamKE"
+    },
+    {
+      "Name": "Other Background Inc",
+      "SamplePath": "other_bkgd_incident_hist",
+      "Regions": "IncidentBeamKE"
+    }
+  ],
+  "Systematics": [
+    {
+      "Name": "Inelastic_Bkgd_Norm_Int",
+      "Up": { "Normalization": 0.1 },
+      "Down": { "Normalization": -0.1 },
+      "Samples": "Inelastic Background",
+      "Regions": "InteractingBeamKE",
+      "Type": "Normalization"
+    },
+    {
+      "Name": "Other_Bkgd_Norm_Int",
+      "Up": { "Normalization": 0.1 },
+      "Down": { "Normalization": -0.1 },
+      "Samples": "Other Background",
+      "Regions": "InteractingBeamKE",
+      "Type": "Normalization"
+    },
+    {
+      "Name": "Inelastic_Bkgd_Norm_Inc",
+      "Up": { "Normalization": 0.1 },
+      "Down": { "Normalization": -0.1 },
+      "Samples": "Inelastic Background Inc",
+      "Regions": "IncidentBeamKE",
+      "Type": "Normalization"
+    },
+    {
+      "Name": "Other_Bkgd_Norm_Inc",
+      "Up": { "Normalization": 0.1 },
+      "Down": { "Normalization": -0.1 },
+      "Samples": "Other Background Inc",
+      "Regions": "IncidentBeamKE",
+      "Type": "Normalization"
+    }
+  ],
+  "NormFactors": [
+    {
+      "Name": "Signal_norm",
+      "Samples": "Signal",
+      "Nominal": 1,
+      "Bounds": [-5, 10]
+    }
+  ]
+}

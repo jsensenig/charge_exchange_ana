@@ -1,0 +1,225 @@
+{
+    "channels": [
+        {
+            "name": "InteractingBeamKE",
+            "samples": [
+                {
+                    "data": [
+                        143.0,
+                        536.0,
+                        246.0
+                    ],
+                    "modifiers": [
+                        {
+                            "data": [
+                                11.958260743101398,
+                                23.15167380558045,
+                                15.684387141358123
+                            ],
+                            "name": "staterror_InteractingBeamKE",
+                            "type": "staterror"
+                        },
+                        {
+                            "data": null,
+                            "name": "Signal_norm",
+                            "type": "normfactor"
+                        }
+                    ],
+                    "name": "Signal"
+                },
+                {
+                    "data": [
+                        244.0,
+                        890.0,
+                        384.0
+                    ],
+                    "modifiers": [
+                        {
+                            "data": [
+                                15.620499351813308,
+                                29.832867780352597,
+                                19.595917942265423
+                            ],
+                            "name": "staterror_InteractingBeamKE",
+                            "type": "staterror"
+                        },
+                        {
+                            "data": {
+                                "hi": 1.1,
+                                "lo": 0.9
+                            },
+                            "name": "Inelastic_Bkgd_Norm_Int",
+                            "type": "normsys"
+                        }
+                    ],
+                    "name": "Inelastic Background"
+                },
+                {
+                    "data": [
+                        21.0,
+                        103.0,
+                        44.0
+                    ],
+                    "modifiers": [
+                        {
+                            "data": [
+                                4.58257569495584,
+                                10.14889156509222,
+                                6.6332495807108
+                            ],
+                            "name": "staterror_InteractingBeamKE",
+                            "type": "staterror"
+                        },
+                        {
+                            "data": {
+                                "hi": 1.1,
+                                "lo": 0.9
+                            },
+                            "name": "Other_Bkgd_Norm_Int",
+                            "type": "normsys"
+                        }
+                    ],
+                    "name": "Other Background"
+                }
+            ]
+        },
+        {
+            "name": "IncidentBeamKE",
+            "samples": [
+                {
+                    "data": [
+                        47916.0,
+                        233442.0,
+                        114931.0
+                    ],
+                    "modifiers": [
+                        {
+                            "data": [
+                                218.8972361634564,
+                                483.15835913290374,
+                                339.0147489416943
+                            ],
+                            "name": "staterror_IncidentBeamKE",
+                            "type": "staterror"
+                        }
+                    ],
+                    "name": "Signal Inc"
+                },
+                {
+                    "data": [
+                        267332.0,
+                        1545903.0,
+                        882002.0
+                    ],
+                    "modifiers": [
+                        {
+                            "data": [
+                                517.0415844011002,
+                                1243.3434762767688,
+                                939.149615343583
+                            ],
+                            "name": "staterror_IncidentBeamKE",
+                            "type": "staterror"
+                        },
+                        {
+                            "data": {
+                                "hi": 1.1,
+                                "lo": 0.9
+                            },
+                            "name": "Inelastic_Bkgd_Norm_Inc",
+                            "type": "normsys"
+                        }
+                    ],
+                    "name": "Inelastic Background Inc"
+                },
+                {
+                    "data": [
+                        249163.0,
+                        154692.0,
+                        49454.0
+                    ],
+                    "modifiers": [
+                        {
+                            "data": [
+                                499.16229825578773,
+                                393.3090387977373,
+                                222.38255327250832
+                            ],
+                            "name": "staterror_IncidentBeamKE",
+                            "type": "staterror"
+                        }
+                    ],
+                    "name": "Beam Background Inc"
+                },
+                {
+                    "data": [
+                        18164.0,
+                        111725.0,
+                        79175.0
+                    ],
+                    "modifiers": [
+                        {
+                            "data": [
+                                134.77388471065157,
+                                334.2528982671654,
+                                281.38052526783014
+                            ],
+                            "name": "staterror_IncidentBeamKE",
+                            "type": "staterror"
+                        },
+                        {
+                            "data": {
+                                "hi": 1.1,
+                                "lo": 0.9
+                            },
+                            "name": "Other_Bkgd_Norm_Inc",
+                            "type": "normsys"
+                        }
+                    ],
+                    "name": "Other Background Inc"
+                }
+            ]
+        }
+    ],
+    "measurements": [
+        {
+            "config": {
+                "parameters": [
+                    {
+                        "bounds": [
+                            [
+                                -5,
+                                10
+                            ]
+                        ],
+                        "inits": [
+                            1
+                        ],
+                        "name": "Signal_norm"
+                    }
+                ],
+                "poi": "Signal_norm"
+            },
+            "name": "test_fitting"
+        }
+    ],
+    "observations": [
+        {
+            "data": [
+                409.0,
+                1533.0,
+                675.0
+            ],
+            "name": "InteractingBeamKE"
+        },
+        {
+            "data": [
+                582575.0,
+                2045762.0,
+                1125562.0
+            ],
+            "name": "IncidentBeamKE"
+        }
+    ],
+    "version": "1.0.0"
+}

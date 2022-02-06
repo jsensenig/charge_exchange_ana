@@ -33,6 +33,31 @@ class ShowerCut(EventSelectionBase):
         self.ll = sll.ShowerLikelihood(likelihood01=self.local_config["likelihood_l10_param"],
                                        likelihood12=self.local_config["likelihood_l12_param"])
 
+    def transform_point_to_spherical(self, events):
+        # Column names
+        tmp_x = "reco_daughter_PFP_shower_spacePts_tmpX"
+        tmp_y = "reco_daughter_PFP_shower_spacePts_tmpY"
+        tmp_z = "reco_daughter_PFP_shower_spacePts_tmpZ"
+
+        # Make a temp column we can operate on
+        events[tmp_x] = events["reco_daughter_PFP_shower_spacePts_X"]
+        events[tmp_y] = events["reco_daughter_PFP_shower_spacePts_Y"]
+        events[tmp_z] = events["reco_daughter_PFP_shower_spacePts_Z"]
+
+        # Shift origin to beam interaction vertex
+        events[tmp_x] = events[tmp_x] - events["reco_beam_endX"]
+        events[tmp_y] = events[tmp_y] - events["reco_beam_endY"]
+        events[tmp_z] = events[tmp_z] - events["reco_beam_endZ"]
+
+        # rho
+        xy = events[tmp_x] ** 2 + events[tmp_z] ** 2
+        # R
+        events["reco_daughter_PFP_shower_spacePts_R"] = np.sqrt(xy + events[tmp_z] ** 2)
+        # Theta
+        events["reco_daughter_PFP_shower_spacePts_Theta"] = np.arctan2(np.sqrt(xy), -events[tmp_y]) * (360. / (2 * np.pi))
+        # Phi
+        events["reco_daughter_PFP_shower_spacePts_Phi"] = np.arctan2(events[tmp_z],events[tmp_x]) * (360. / (2 * np.pi))
+
     def selection(self, events, hists, optimizing=False):
         # First we configure the histograms we want to make
         if not optimizing:

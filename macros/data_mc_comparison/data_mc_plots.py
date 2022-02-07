@@ -11,18 +11,19 @@ def scale_and_plot(mc_hist_dict, data_hist_dict, mc_evts, data_evts, outdir):
     :param data_evts: int Number of Data events
     :return:
     """
-    for hmc, hdata in zip(mc_hist_dict, data_hist_dict):
+    for hmc in mc_hist_dict:
         c = ROOT.TCanvas()
+        # Get each of the MC histograms in the THStack and scale them
         stack_hists = mc_hist_dict[hmc].GetHists()
         for h in stack_hists:
             h.Scale(data_evts / mc_evts)
         mc_hist_dict[hmc].Modified()
-
+        # Draw and save everything
         mc_hist_dict[hmc].Draw("HIST")
-        data_hist_dict[hdata].SetMarkerColor(1)
-        data_hist_dict[hdata].SetMarkerStyle(20)
-        data_hist_dict[hdata].SetMarkerSize(0.6)
-        data_hist_dict[hdata].Draw("SAME;E0")
+        data_hist_dict[hmc].SetMarkerColor(1)
+        data_hist_dict[hmc].SetMarkerStyle(20)
+        data_hist_dict[hmc].SetMarkerSize(0.6)
+        data_hist_dict[hmc].Draw("SAME;E0")
         c.Draw()
         c.Write(hmc)
         c.SaveAs(outdir + "/" + hmc + ".png")
@@ -43,10 +44,11 @@ def get_mc_data_histograms(mcfile, datafile):
 
     for hist in hist_list:
         h_name = hist.GetName()
-        # Only compare the stacked by PDG
+        # Only compare the stacked by PDG histograms
         if h_name[0:5] != "stack" or h_name[13:17] == "proc" or h_name[14:18] == "proc":
             continue
         mc_hist_name_dict[h_name] = mcfile.Get(h_name)
+        # Obviously Data doesn't have stacked histograms as this relies on truth info
         data_name = "hist" + h_name[5:]
         data_hist_name_dict[h_name] = datafile.Get(data_name)
 

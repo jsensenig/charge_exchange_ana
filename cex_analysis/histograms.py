@@ -108,7 +108,7 @@ class Histogram:
         # Just a loop in c++ which does hist.FillN() (nullptr sets weights = 1)
         # FillN() only likes double* (python float64) so if array is another type, cast it to float64
         if isinstance(xtotal, ak.Array):
-            if ak.type(xtotal.layout).dtype != 'float64' or ak.type(xpassed.layout).dtype != 'float64':
+            if ak.type(xtotal.layout) != 'float64' or ak.type(xpassed.layout) != 'float64':
                 xtotal = ak.values_astype(xtotal, np.float64)
                 xpassed = ak.values_astype(xpassed, np.float64)
             hist_total.FillN(len(xtotal), ak.to_numpy(xtotal), ROOT.nullptr)
@@ -150,7 +150,7 @@ class Histogram:
         # Just a loop in c++ which does hist.FillN() (nullptr sets weights = 1)
         # FillN() only likes double* (python float64) so if array is another type, cast it to float64
         if isinstance(x, ak.Array):
-            if ak.type(x.layout).dtype != 'float64':
+            if ak.type(x.layout) != 'float64':
                 x = ak.values_astype(x, np.float64)
             hist.FillN(len(x), ak.to_numpy(x), ROOT.nullptr)
         elif isinstance(x, np.ndarray):
@@ -257,7 +257,7 @@ class Histogram:
         hist = ROOT.TH1I(name, title, len(self.true_process_list)+1, 0, len(self.true_process_list)+1)
 
         for proc in self.true_process_list:
-            ROOT.fill_hist_th1i_string(proc, hist, np.int(ak.count_nonzero(x[proc])))
+            ROOT.fill_hist_th1i_string(proc, hist, int(ak.count_nonzero(x[proc])))
 
         legend.AddEntry(hist, name)
         hist.GetListOfFunctions().Add(legend)
@@ -312,7 +312,7 @@ class Histogram:
             # FillN() only likes double* (python float64) so if array is another type, cast it to float64
             if len(process_dict[proc]) > 0:
                 if isinstance(process_dict[proc], ak.Array):
-                    if ak.type(process_dict[proc].layout).dtype != 'float64':
+                    if ak.type(process_dict[proc].layout) != 'float64':
                         process_dict[proc] = ak.values_astype(process_dict[proc], np.float64)
                     hstack.FillN(len(process_dict[proc]), ak.to_numpy(process_dict[proc]), ROOT.nullptr)
                 elif isinstance(process_dict[proc], np.ndarray):

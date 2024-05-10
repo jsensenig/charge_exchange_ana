@@ -138,8 +138,9 @@ def collect_write_results(config, thread_results, flist, branches):
 
     #all_events = uproot.concatenate(files=flist, expressions=branches)
     #all_events = uproot.concatenate(files={flist[0]:"beamana;121"}, expressions=branches)
-    xsec = CexDDCrossSection(None)
-    xsec.extract_cross_section(beam_events=selected_beam_events[0], selected_events=selected_events[0], total_incident_pion=14000)
+
+    #xsec = CexDDCrossSection(None)
+    #xsec.extract_cross_section(beam_events=selected_beam_events[0], selected_events=selected_events[0], total_incident_pion=14000)
 
     #selected_events = sum([ak.sum(m, axis=0) for m in result_mask_list])
     print("Selected", selected_events_count, " events out of", sum(result_true_count_list), "true CEX events")
@@ -157,12 +158,14 @@ def thread_creator(flist, config, num_workers, branches):
     futures = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
         # Use iterations of the tree read operation to batch the data for each thread
-        for i, array in enumerate(uproot.iterate(files={flist[0]:"beamana;121"}, expressions=branches, report=True, step_size='10000 MB', num_workers=num_workers)):
-        #for i, array in enumerate(uproot.iterate(files=flist, expressions=branches, report=True, num_workers=num_workers)):
-            print("---------- Starting thread", i, "----------")
-            futures.append(executor.submit(event_selection, config, array[0]))
-            print(array[1])  # The report part of the array tuple from the tree iterator
-            time.sleep(0.2)
+        #for i, array in enumerate(uproot.iterate(files=flist, expressions=branches, report=True, step_size='10000 MB', num_workers=num_workers)):
+        ##for i, array in enumerate(uproot.iterate(files=flist, expressions=branches, report=True, num_workers=num_workers)):
+        #    print("---------- Starting thread", i, "----------")
+        #    futures.append(executor.submit(event_selection, config, array[0]))
+        #    print(array[1])  # The report part of the array tuple from the tree iterator
+        #    time.sleep(0.2)
+        data = uproot.concatenate(files={flist}, expressions=branches)
+        futures.append(executor.submit(event_selection, config, data))
         collect_write_results(config, concurrent.futures.as_completed(futures), flist, branches)
 
 
@@ -189,28 +192,30 @@ if __name__ == "__main__":
                 "reco_beam_endZ"]
 
     # Space-point branches
-    branches += ["reco_daughter_PFP_shower_spacePts_X","reco_daughter_PFP_shower_spacePts_Y",
-                 "reco_daughter_PFP_shower_spacePts_Z", "reco_daughter_PFP_shower_spacePts_count",
-                 "reco_daughter_PFP_shower_spacePts_gmother_ID", "reco_daughter_PFP_shower_spacePts_mother_ID",
-                 "reco_daughter_PFP_shower_spacePts_gmother_PDG", "reco_daughter_PFP_shower_spacePts_E"]
+    #branches += ["reco_daughter_PFP_shower_spacePts_X","reco_daughter_PFP_shower_spacePts_Y",
+    #             "reco_daughter_PFP_shower_spacePts_Z", "reco_daughter_PFP_shower_spacePts_count",
+    #             "reco_daughter_PFP_shower_spacePts_gmother_ID", "reco_daughter_PFP_shower_spacePts_mother_ID",
+    #             "reco_daughter_PFP_shower_spacePts_gmother_PDG", "reco_daughter_PFP_shower_spacePts_E"]
 
     branches += ["true_beam_Pi0_decay_startPx", "true_beam_Pi0_decay_startPy", "true_beam_Pi0_decay_startPz",
                  "true_beam_Pi0_decay_PDG", "true_beam_Pi0_decay_ID", "true_beam_Pi0_decay_startP",
                  "true_beam_Pi0_decay_startX", "true_beam_Pi0_decay_startY", "true_beam_Pi0_decay_startZ",
                  "true_beam_endX", "true_beam_endY", "true_beam_endZ", "reco_beam_trackEndDirX",
                  "reco_beam_trackEndDirY", "reco_beam_trackEndDirZ", "true_beam_interactingEnergy",
-                 "true_beam_incidentEnergies", "dEdX_truncated_mean"]
+                 "true_beam_incidentEnergies"]#, "dEdX_truncated_mean"]
 
     branches += ["reco_beam_calo_startDirX", "reco_beam_calo_startDirY", "reco_beam_calo_startDirZ",
                  "reco_beam_calo_endDirX", "reco_beam_calo_endDirY", "reco_beam_calo_endDirZ",
-                 "true_beam_slices", "true_beam_traj_incidentEnergies", "true_beam_traj_interacting_Energy"]
+                 "true_beam_slices"]#, "true_beam_traj_incidentEnergies", "true_beam_traj_interacting_Energy"]
+
+    branches += ["reco_all_spacePts_X", "reco_all_spacePts_Y", "reco_all_spacePts_Z", "reco_all_spacePts_Integral"]
 
     # Provide a text file with one file per line
     files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
 
-    with open(files) as f:
-        file_list = f.readlines()
-    file_list = [line.strip() for line in file_list]
+    #with open(files) as f:
+    #    file_list = f.readlines()
+    #file_list = [line.strip() for line in file_list]
 
     # Full MC merged file
     #file_list = ["/Users/jsen/tmp/pion_qe/ana_scripts/merge_files/output.root"]
@@ -224,7 +229,16 @@ if __name__ == "__main__":
     #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n3000/full_mc_shower_sp_merged_unique_3000.root"]
     #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n14000/full_mc_shower_sp_merged_unique_n13500.root"]
     #file_list = ["/Users/jsen/tmp/tmp_pi0_shower/tmp_no_ecut_unique_sample_n100k/full_mc_sp_merged_unique_n86k.root"]
-    file_list = ["/Users/jsen/tmp/pion_qe/cex_selection/macros/merge_files/full_mc_merged_n86k_new_inc_tmean_branch.root"]
+    #file_list = ["/Users/jsen/tmp/pion_qe/cex_selection/macros/merge_files/full_mc_merged_n86k_new_inc_tmean_branch.root"]
+    file_list = ["/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana_0.root:pduneana/beamana",
+                "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana_1.root:pduneana/beamana",
+                "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana_2.root:pduneana/beamana",
+                "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana_3.root:pduneana/beamana",
+                "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana_4.root:pduneana/beamana",
+                "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana_5.root:pduneana/beamana",
+                "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana_6.root:pduneana/beamana",
+                "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana_7.root:pduneana/beamana"]
+    file_list = "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset*/pduneana_*.root:pduneana/beamana"
 
     # Number of threads
     num_workers = 1
@@ -241,3 +255,4 @@ if __name__ == "__main__":
 
     end = timer()
     print("Completed Analysis! (", round((end - start), 4), "s)")
+

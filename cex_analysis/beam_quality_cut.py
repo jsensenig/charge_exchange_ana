@@ -33,7 +33,7 @@ class BeamQualityCut(EventSelectionBase):
                   / self.local_config["beam_startZ_rms_MC"]
 
         # Convert to numpy array with shape (2,N) where N is number of events
-        beam_xy = np.vstack(ak.to_numpy(beam_dx, beam_dy).T)
+        beam_xy = np.vstack((ak.to_numpy(beam_dx), ak.to_numpy(beam_dy))).T
         # Get the length of the pairs in the xy plane
         #beam_dxy = np.linalg.norm(beam_xy, axis=1)
         beam_dxy = np.sqrt(np.sum(beam_xy*beam_xy, axis=1))

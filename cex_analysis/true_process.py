@@ -63,7 +63,7 @@ class TrueProcess:
         # other (fill "other" column with all zeroes)
         events["other"] = np.zeros_like(events["pion_inelastic"])
         # if event not already in a category, classify as "other"
-        events["other"] = ~np.any(events[self.get_process_list()])
+        #events["other"] = ~np.any(events[self.get_process_list()])
 
         return events
 

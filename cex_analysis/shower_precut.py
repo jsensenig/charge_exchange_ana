@@ -46,7 +46,7 @@ class ShowerPreCut(EventSelectionBase):
         nhit_mask = events["reco_daughter_PFP_nHits"] > 80.
 
         # Shower selection mask
-        shower_mask = cnn_shower_mask & min_shower_energy & nhit_mask
+        shower_mask = cnn_shower_mask & nhit_mask #&  min_shower_energy
 
         # We want to count the number of potential showers in each event
         shower_count = np.count_nonzero(events[self.local_config["shower_energy_var"], shower_mask], axis=1)
@@ -70,7 +70,7 @@ class ShowerPreCut(EventSelectionBase):
               ak.sum(shower_print_pi0_prod == 5))
 
         # Create the event mask, true if there are 2 candidate showers
-        return (shower_count > 0) & (shower_count < 3)
+        return (shower_count > 0) #& (shower_count < 3)
 
     def selection(self, events, hists, optimizing=False):
 

@@ -58,8 +58,8 @@ class APA3Cut(EventSelectionBase):
 
         # Perform the cut on the beam particle endpoint
         selected_mask = (self.local_config["lower"] < events[cut_variable]) & \
-                        (events[cut_variable] < self.local_config["upper"]) & \
-                        (events["beam_track_angle"] > 0.2)
+                        (events[cut_variable] < self.local_config["upper"])
+                        #(events["beam_track_angle"] > 0.2)
 
         # Plot the variable before after cut
         if not optimizing:

@@ -1,5 +1,5 @@
 {
-  "cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut", "ShowerPreCut", "ShowerCut", "DaughterPionCut", "MichelDaughterCut", "TruncatedDedxCut"],
+  "cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut", "MaxShowerEnergyCut", "ShowerPreCut", "DaughterPionCut", "MichelDaughterCut"],
   "beam_cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut"],
   "hist_list": ["TOF"],
   "reco_beam_pdg": "reco_beam_true_byHits_PDG",

@@ -119,11 +119,11 @@ class CMakeBuild(build_ext):
 # The information here can also be placed in setup.cfg - better separation of
 # logic and declaration, and simpler if you include description/version in a file.
 setup(
-    name="plotting_utils",
+    name="pybind_utils",
     version="0.1",
-    description="A project for fast plotting utils using pybind11 and CMake",
+    description="A project for fast utils using pybind11 and CMake",
     long_description="",
-    ext_modules=[CMakeExtension("plotting_utils")],
+    ext_modules=[CMakeExtension("plotting_utils"), CMakeExtension("cross_section_utils")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest"]},

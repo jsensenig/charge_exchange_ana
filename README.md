@@ -17,7 +17,7 @@ git submodule update --init
 ```
 build and install the python bindings with
 ```
-python setup.py install
+cd extern && python setup.py install
 ```
 
 The expected input is a flat ROOT

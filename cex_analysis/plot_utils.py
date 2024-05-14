@@ -1,4 +1,5 @@
 import ROOT
+import numpy as np
 
 color_text = '\033[31mpositron : light_red ' \
              '\033[0m, \033[34m electron : blue ' \
@@ -73,3 +74,17 @@ def legend_init_left():
     legend.SetTextSize(0.030)
 
     return legend
+
+
+def histogram_constructor(title, bin_arrays, ndim):
+
+    if ndim == 1:
+        return ROOT.TH1D(title + "_hist", title, bin_arrays)
+    elif ndim == 2:
+        return ROOT.TH2D(title + "_hist", title, bin_arrays[0], bin_arrays[1])
+    elif ndim == 3:
+        return ROOT.TH3D(title + "_hist", title, bin_arrays[0], bin_arrays[1], bin_arrays[2])
+    else:
+        print("Unsupported number of dimensions! Only ndim 1-3 supported.")
+        print("Requested ndim =", ndim)
+        raise ValueError

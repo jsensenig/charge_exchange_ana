@@ -79,7 +79,7 @@ def legend_init_left():
 def histogram_constructor(title, bin_arrays, ndim):
 
     if ndim == 1:
-        return ROOT.TH1D(title + "_hist", title, bin_arrays)
+        return ROOT.TH1D(title + "_hist", title, len(bin_arrays[0])-1, bin_arrays[0])
     elif ndim == 2:
         return ROOT.TH2D(title + "_hist", title, bin_arrays[0], bin_arrays[1])
     elif ndim == 3:

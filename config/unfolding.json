@@ -3,11 +3,12 @@
   "bayes_niter": 4,
   "use_bin_array":  false,
   "train_bins": {
-    "nbins": [10, 10],
-    "limits": [[0, 10],[0, 10]]
+    "nbins": [10],
+    "limits": [[0, 10]]
   },
     "data_bins": {
-    "nbins": [10, 10],
-    "limits": [[0, 10],[0, 10]]
-  }
+    "nbins": [10],
+    "limits": [[0, 10]]
+  },
+  "figure_path": "/Users/jsen/work/Protodune/analysis/cex_event_selection/figs"
 }

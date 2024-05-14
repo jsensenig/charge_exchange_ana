@@ -43,21 +43,7 @@ class Unfold:
             }
         """)
 
-    def get_bin_config(self):
-        if self.config["use_bin_array"]:
-            train_array = self.config["train_bins"]
-            data_array = self.config["data_bins"]
-        else:
-            nbins, bin_range = self.config["train_bins"]["nbins"], self.config["train_bins"]["limits"]
-            self.train_ndim = len(nbins)
-            train_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
-            nbins, bin_range = self.config["data_bins"]["nbins"], self.config["data_bins"]["limits"]
-            self.data_ndim = len(nbins)
-            data_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
-
-        return train_array, data_array
-
-    def run_unfold(self, event_record, data_mask, train_mask):
+    def run_unfold(self, event_record, data_mask, train_mask, return_np=False):
 
         if self.is_training:
             self.create_hists_numpy(data_events=event_record[data_mask], reco_events=event_record[train_mask],
@@ -70,7 +56,14 @@ class Unfold:
 
         unfolded_data_hist, unfolded_data_cov = self.unfold_bayes()
 
-        return unfolded_data_hist, unfolded_data_cov
+        unfolded_data_hist_np, unfolded_data_cov_np, true_hist_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
+                                                                                       cov_matrix=unfolded_data_cov)
+        unfolded_data_corr_np = self.correlation_from_covariance(unfolded_cov=unfolded_data_cov_np)
+
+        if return_np:
+            return unfolded_data_hist_np, unfolded_data_cov_np, unfolded_data_corr_np, true_hist_np
+        else:
+            return unfolded_data_hist, unfolded_data_cov, unfolded_data_corr_np, self.truth_hist
 
     def create_response_matrix(self, reco_events, true_events):
 
@@ -105,7 +98,7 @@ class Unfold:
 
     def create_hists(self, data_events, reco_events, true_events=None):
         """
-        The *events should have shape (nsample, ndim)
+        The events should have shape (nsample, ndim)
         """
         if self.is_training:
             self.truth_hist = histogram_constructor("truth", bin_arrays=self.train_bin_array, ndim=self.train_ndim)
@@ -132,6 +125,26 @@ class Unfold:
             print("Unsupported dim:", self.train_ndim)
             raise ValueError
 
+    @staticmethod
+    def correlation_from_covariance(unfolded_cov):
+        v = np.sqrt(np.diag(unfolded_cov))
+        unfolded_corr = unfolded_cov / np.outer(v, v)
+        unfolded_corr[unfolded_cov == 0] = 0
+        return unfolded_corr
+
+    def root_to_numpy(self, unfolded_hist, cov_matrix):
+        cov_matrix_np = np.empty(shape=(cov_matrix.GetNrows(), cov_matrix.GetNcols()))
+        unfolded_data_hist_np = np.empty(shape=(unfolded_hist.GetNbinsX()))
+        true_hist_np = np.empty(shape=(self.truth_hist.GetNbinsX()))
+
+        for i in range(cov_matrix.GetNrows()):
+            unfolded_data_hist_np[i] = unfolded_hist.GetBinContent(i + 1)
+            true_hist_np[i] = self.truth_hist.GetBinContent(i + 1)
+            for j in range(cov_matrix.GetNcols()):
+                cov_matrix_np[i, j] = cov_matrix[i, j]
+
+        return unfolded_data_hist_np, cov_matrix_np, true_hist_np
+
     def plot_response_matrix(self, response_matrix):
         response_matrix_np = np.empty(shape=(response_matrix.Hresponse().GetNbinsX(), response_matrix.Hresponse().GetNbinsY()))
         for i in range(response_matrix.Hresponse().GetNbinsX()):
@@ -143,34 +156,39 @@ class Unfold:
         plt.savefig(self.figs_path + "/response_matrix.pdf")
         plt.show()
 
-    def plot_unfolded_results(self, meas_hist, cov_matrix):
-        cov_matrix_np = np.empty(shape=(cov_matrix.GetNrows(), cov_matrix.GetNcols()))
-        data_hist_np = np.empty(shape=(meas_hist.GetNbinsX()))
-        true_hist_np = np.empty(shape=(self.truth_hist.GetNbinsX()))
-
-        for i in range(cov_matrix.GetNrows()):
-            data_hist_np[i] = meas_hist.GetBinContent(i + 1)
-            true_hist_np[i] = self.truth_hist.GetBinContent(i + 1)
-            for j in range(cov_matrix.GetNcols()):
-                cov_matrix_np[i, j] = cov_matrix[i, j]
+    def plot_unfolded_results(self, unfolded_data_hist_np, corr_matrix_np, true_hist_np):
 
         _, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-        f = ax1.imshow(cov_matrix_np, origin='lower', cmap=plt.cm.RdBu_r)
+        f = ax1.imshow(corr_matrix_np, origin='lower', cmap=plt.cm.RdBu_r)
         plt.colorbar(f)
-        # plt.savefig(self.figs_path + "/data_unfolded_cov_matrix.pdf")
-        # plt.show()
 
         # Get the truth histogram edges
         bin_edges = np.asarray([self.truth_hist.GetBinLowEdge(b + 1) for b in range(self.truth_hist.GetNbinsX() + 1)])
         bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.
         xerr = (bin_edges[1] - bin_edges[0]) / 2.
-        yerr = np.sqrt(data_hist_np)
+        yerr = np.sqrt(unfolded_data_hist_np)
 
         ax2.hist(bin_edges[:-1], bins=bin_edges, weights=true_hist_np, edgecolor='black', color='indianred', label='Truth')
-        ax2.errorbar(bin_centers, data_hist_np, yerr, xerr, marker='.', color='black', linestyle='None', label='Unfolded Data')
+        ax2.errorbar(bin_centers, unfolded_data_hist_np, yerr, xerr, marker='.', color='black', linestyle='None', label='Unfolded Data')
         plt.legend()
         plt.savefig(self.figs_path + "/data_unfolded_hist_cov.pdf")
         plt.show()
+
+    def get_bin_config(self):
+        if self.config["use_bin_array"]:
+            train_array = np.asarray(self.config["train_bins"], dtype=np.dtype('d'))
+            data_array = np.asarray(self.config["data_bins"], dtype=np.dtype('d'))
+            self.train_ndim = len(train_array)
+            self.data_ndim = len(data_array)
+        else:
+            nbins, bin_range = self.config["train_bins"]["nbins"], self.config["train_bins"]["limits"]
+            self.train_ndim = len(nbins)
+            train_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
+            nbins, bin_range = self.config["data_bins"]["nbins"], self.config["data_bins"]["limits"]
+            self.data_ndim = len(nbins)
+            data_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
+
+        return train_array, data_array
 
     def load_response(self):
         with open(self.config["response_file"], 'rb') as f:

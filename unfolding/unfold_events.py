@@ -150,26 +150,27 @@ class Unfold:
         for i in range(response_matrix.Hresponse().GetNbinsX()):
             for j in range(response_matrix.Hresponse().GetNbinsY()):
                 response_matrix_np[i, j] = response_matrix.Hresponse().GetBinContent(i + 1, j + 1)
-
-        plt.imshow(response_matrix_np, origin='lower', cmap=plt.cm.jet)
+   
+        # Transpose response so we have truth vs reco
+        plt.imshow(response_matrix_np.T, origin='lower', cmap=plt.cm.jet)
         plt.colorbar()
         plt.savefig(self.figs_path + "/response_matrix.pdf")
         plt.show()
 
-    def plot_unfolded_results(self, unfolded_data_hist_np, corr_matrix_np, true_hist_np):
+    def plot_unfolded_results(self, unfolded_data_hist_np, unfolded_cov_np, true_hist_np):
 
-        _, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
-        f = ax1.imshow(corr_matrix_np, origin='lower', cmap=plt.cm.RdBu_r)
+        corr_matrix_np = self.correlation_from_covariance(unfolded_cov=unfolded_cov_np)
+
+        _, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 5))
+        f = ax1.imshow(corr_matrix_np, origin='lower', cmap=plt.cm.RdBu_r, vmin=-1, vmax=1)
         plt.colorbar(f)
 
         # Get the truth histogram edges
-        bin_edges = np.asarray([self.truth_hist.GetBinLowEdge(b + 1) for b in range(self.truth_hist.GetNbinsX() + 1)])
-        bin_centers = (bin_edges[1:] + bin_edges[:-1]) / 2.
-        xerr = (bin_edges[1] - bin_edges[0]) / 2.
-        yerr = np.sqrt(unfolded_data_hist_np)
+        true_bin_edges = np.asarray([self.truth_hist.GetBinLowEdge(b + 1) for b in range(self.truth_hist.GetNbinsX()+1)])
+        true_bin_centers = (true_bin_edges[1:] + true_bin_edges[:-1]) / 2.
 
-        ax2.hist(bin_edges[:-1], bins=bin_edges, weights=true_hist_np, edgecolor='black', color='indianred', label='Truth')
-        ax2.errorbar(bin_centers, unfolded_data_hist_np, yerr, xerr, marker='.', color='black', linestyle='None', label='Unfolded Data')
+        ax2.hist(true_bin_centers, bins=true_bin_edges, weights=true_hist_np, edgecolor='black', color='indianred', label='Truth')
+        ax2.errorbar(true_bin_centers, unfolded_data_hist_np, np.sqrt(np.diag(unfolded_cov_np)), marker='.', color='black', linestyle='None', label='Unfolded Data')
         plt.legend()
         plt.savefig(self.figs_path + "/data_unfolded_hist_cov.pdf")
         plt.show()

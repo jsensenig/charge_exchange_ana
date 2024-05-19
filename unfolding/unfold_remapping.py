@@ -5,6 +5,7 @@ class Remapping:
     """
     Class heavily inspired by Yinrui Liu's implementation
     https://github.com/Yinrui-Liu/hadron-Ar_XS/blob/main/hadron-Ar_XS.ipynb
+    I generalized the concept from 3d to Nd with more vectorized operations
     """
     def __init__(self):
         self.true_nd_to_1d_map = None

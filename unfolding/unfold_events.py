@@ -6,6 +6,7 @@ import ROOT
 import RooUnfold
 
 from cex_analysis.plot_utils import histogram_constructor
+from unfolding.unfold_remapping import Remapping
 
 
 class Unfold:
@@ -23,6 +24,8 @@ class Unfold:
         self.response = None
         if not self.is_training:
             self.load_response()
+
+        self.remap_evts = Remapping(var_names=self.config["var_names"])
 
     @staticmethod
     def compile_cpp_helpers():

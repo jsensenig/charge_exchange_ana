@@ -10,8 +10,8 @@ class Remapping:
     """
     def __init__(self, var_names):
 
-        self.true_nd_to_1d_map = None
-        self.reco_nd_to_1d_map = None
+        self.true_map = None
+        self.reco_map = None
         self.var_names = var_names
         self.debug = False
 
@@ -39,15 +39,15 @@ class Remapping:
         print("Meas number Nd:", np.unique(reco_num_nd).shape)
 
         # Create map between 3D and 1D
-        self.true_nd_to_1d_map, true_n1d_sparse, true_n1d_err_sparse = self.map_nd_to_1d(num_nd=true_num_nd,
+        self.true_map, true_n1d_sparse, true_n1d_err_sparse = self.map_nd_to_1d(num_nd=true_num_nd,
                                                                                          num_nd_err=true_num_nd_err,
                                                                                          total_bins=total_bins)
-        self.reco_nd_to_1d_map, reco_n1d_sparse, reco_n1d_err_sparse = self.map_nd_to_1d(num_nd=reco_num_nd,
+        self.reco_map, reco_n1d_sparse, reco_n1d_err_sparse = self.map_nd_to_1d(num_nd=reco_num_nd,
                                                                                          num_nd_err=reco_num_nd_err,
                                                                                          total_bins=total_bins)
 
-        print("True Map:", np.count_nonzero(self.true_nd_to_1d_map))
-        print("Meas Map:", np.count_nonzero(self.reco_nd_to_1d_map))
+        print("True Map:", np.count_nonzero(self.true_map))
+        print("Meas Map:", np.count_nonzero(self.reco_map))
 
         return (true_num_nd_bin, reco_num_nd_bin), (true_num_nd, reco_num_nd), (true_num_nd_cov, reco_num_nd_cov), \
                (true_n1d_sparse, reco_n1d_sparse)
@@ -65,7 +65,7 @@ class Remapping:
 
         # Data mapping to 1D
         data_n1d_sparse, data_n1d_err_sparse = self.map_data_to_1d_bins(num_nd=data_num_nd, num_nd_err=data_num_nd_err,
-                                                                        map_nd1d=self.reco_nd_to_1d_map)
+                                                                        map_nd1d=self.reco_map)
         print("Sparse Data nbins:", len(data_n1d_sparse))
 
         return data_num_nd_bin, data_num_nd, data_num_nd_cov, data_n1d_sparse, data_n1d_err_sparse
@@ -136,12 +136,38 @@ class Remapping:
 
         return n1d_sparse, n1d_err_sparse
 
+    def map_1d_to_nd(self, unfolded_hist_np, unfolded_cov_np, true_nd_hist, true_cov_nd, true_nbins_1d_sparse, nbins):
+        """
+        Convert 1D back to ND
+        """
+        unfold_nd_hist = np.zeros(nbins)
+        unfold_nd_cov = np.zeros([nbins, nbins])
+        eff_1d = np.ones(true_nbins_1d_sparse)
+        data_mc_scale = 1
+
+        for i in range(nbins):
+            if self.true_map[i] <= 0:
+                continue
+            if unfolded_hist_np[self.true_map[i] - 1] > 0:
+                unfold_nd_hist[i] = unfolded_hist_np[self.true_map[i] - 1] / eff_1d[self.true_map[i] - 1]
+                for j in range(nbins):
+                    if self.true_map[j] > 0 and unfolded_hist_np[self.true_map[j] - 1] > 0:
+                        eff_denom = eff_1d[self.true_map[i] - 1] * eff_1d[self.true_map[j] - 1]
+                        unfold_nd_cov[i, j] = unfolded_cov_np[self.true_map[i] - 1, self.true_map[j] - 1] / eff_denom
+            elif eff_1d[self.true_map[i] - 1] == 0:
+                unfold_nd_hist[i] = true_nd_hist[i] * data_mc_scale
+                unfold_nd_cov[i, i] = true_cov_nd[i, i] * data_mc_scale * data_mc_scale
+
+        unfold_nd_err = np.sqrt(np.diag(unfold_nd_cov))
+
+        return unfold_nd_hist, unfold_nd_cov, unfold_nd_err
+
     def plot_variables(self, var_list, nbin_list):
 
-        nvars = len(var_list)
-        _, axes = plt.subplots(1, nvars, figsize=(16, 4))
+        num_vars = len(var_list)
+        _, axes = plt.subplots(1, num_vars, figsize=(16, 4))
 
-        for p in range(nvars):
+        for p in range(num_vars):
             ax = axes[p] if type(axes) is list else axes
             ax.hist(var_list[p], bins=nbin_list[p], edgecolor='black', range=[np.min(var_list[p]), np.max(var_list[p])])
             ax.set_title("Variable: " + self.var_names[p])

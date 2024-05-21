@@ -1,15 +1,17 @@
 {
-  "var_names": ["Var0"],
+  "var_names": ["Var0", "Var1"],
+  "true_record_var": ["ke_pi0", "cos_theta_pi0"],
+  "reco_record_var": ["ke_pi0", "cos_theta_pi0"],
   "is_training": true,
   "bayes_niter": 4,
   "use_bin_array":  false,
-  "train_bins": { 
-     "nbins": [15,15,15],
-     "limits": [[0,10],[0,10],[0,10]]
+  "truth_bins": {
+     "nbins": [15,15],
+     "limits": [[0,10],[0,10]]
   },
-  "data_bins": {
-     "nbins": [15,15,15],
-     "limits": [[0,10],[0,10],[0,10]]
+  "reco_bins": {
+     "nbins": [15,15],
+     "limits": [[0,10],[0,10]]
     },
   "figure_path": "/Users/jsen/work/Protodune/analysis/cex_event_selection/figs"
 }

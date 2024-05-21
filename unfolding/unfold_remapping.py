@@ -12,73 +12,76 @@ class Remapping:
 
         self.true_map = None
         self.reco_map = None
+        self.true_total_bins, self.reco_total_bins = 0, 0
         self.var_names = var_names
         self.debug = False
 
-    def remap_training_events(self, true_list, reco_list, bin_list, nbin_list, ndim):
+    def remap_training_events(self, true_list, reco_list, bin_list, ndim):
 
-        total_bins = sum([nbin_list[d-1]**d for d in range(1, ndim+1)])
+        # total_bins = sum([nbin_list[d-1]**d for d in range(1, ndim+1)])
+        self.true_total_bins = sum([(len(bin_list[d - 1]) - 1) ** d for d in range(1, ndim + 1)])
 
         true_event_weights = [np.ones(arr.shape) for arr in true_list]
         reco_event_weights = [np.ones(arr.shape) for arr in reco_list]
 
-        true_num_nd_bin, true_num_nd, true_num_nd_err, true_num_nd_cov = self.map_meas_to_bin_space(corr_var_list=true_list,
-                                                                                               nbin_list=bin_list,
-                                                                                               total_bins=total_bins,
+        true_nd_binned, true_nd_hist, true_nd_hist_err, true_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=true_list,
+                                                                                               bin_list=bin_list,
+                                                                                               total_bins=self.true_total_bins,
                                                                                                evt_weights=true_event_weights,
                                                                                                debug=self.debug)
 
-        reco_num_nd_bin, reco_num_nd, reco_num_nd_err, reco_num_nd_cov = self.map_meas_to_bin_space(corr_var_list=reco_list,
-                                                                                               nbin_list=bin_list,
-                                                                                               total_bins=total_bins,
+        reco_nd_binned, reco_nd_hist, reco_nd_hist_err, reco_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=reco_list,
+                                                                                               bin_list=bin_list,
+                                                                                               total_bins=self.true_total_bins,
                                                                                                evt_weights=reco_event_weights,
                                                                                                debug=self.debug)
 
-        print("Total Bins:", total_bins)
-        print("True number Nd:", np.unique(true_num_nd).shape)
-        print("Meas number Nd:", np.unique(reco_num_nd).shape)
+        print("Total Bins:", self.true_total_bins)
+        print("True number Nd:", np.unique(true_nd_hist).shape)
+        print("Meas number Nd:", np.unique(reco_nd_hist).shape)
 
         # Create map between 3D and 1D
-        self.true_map, true_n1d_sparse, true_n1d_err_sparse = self.map_nd_to_1d(num_nd=true_num_nd,
-                                                                                         num_nd_err=true_num_nd_err,
-                                                                                         total_bins=total_bins)
-        self.reco_map, reco_n1d_sparse, reco_n1d_err_sparse = self.map_nd_to_1d(num_nd=reco_num_nd,
-                                                                                         num_nd_err=reco_num_nd_err,
-                                                                                         total_bins=total_bins)
+        self.true_map, true_hist_sparse, true_hist_err_sparse = self.map_nd_to_1d(num_nd=true_nd_hist,
+                                                                                  num_nd_err=true_nd_hist_err,
+                                                                                  total_bins=self.true_total_bins)
+
+        self.reco_map, reco_hist_sparse, reco_hist_err_sparse = self.map_nd_to_1d(num_nd=reco_nd_hist,
+                                                                                  num_nd_err=reco_nd_hist_err,
+                                                                                  total_bins=self.true_total_bins)
 
         print("True Map:", np.count_nonzero(self.true_map))
         print("Meas Map:", np.count_nonzero(self.reco_map))
 
-        return (true_num_nd_bin, reco_num_nd_bin), (true_num_nd, reco_num_nd), (true_num_nd_cov, reco_num_nd_cov), \
-               (true_n1d_sparse, reco_n1d_sparse)
+        return (true_nd_binned, reco_nd_binned), (true_nd_hist, reco_nd_hist), (true_nd_hist_cov, reco_nd_hist_cov), \
+               (true_hist_sparse, reco_hist_err_sparse)
 
     def remap_data_events(self, data_list, bin_list, nbin_list, ndim):
 
-        total_bins = sum([nbin_list[d-1]**d for d in range(1, ndim+1)])
+        self.reco_total_bins = sum([nbin_list[d - 1]**d for d in range(1, ndim + 1)])
         data_event_weights = [np.ones(arr.shape) for arr in data_list]
 
-        data_num_nd_bin, data_num_nd, data_num_nd_err, data_num_nd_cov = self.map_meas_to_bin_space(corr_var_list=data_list,
-                                                                                               nbin_list=bin_list,
-                                                                                               total_bins=total_bins,
+        data_nd_binned, data_nd_hist, data_nd_hist_err, data_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=data_list,
+                                                                                               bin_list=bin_list,
+                                                                                               total_bins=self.reco_total_bins,
                                                                                                evt_weights=data_event_weights,
                                                                                                debug=self.debug)
 
         # Data mapping to 1D
-        data_n1d_sparse, data_n1d_err_sparse = self.map_data_to_1d_bins(num_nd=data_num_nd, num_nd_err=data_num_nd_err,
-                                                                        map_nd1d=self.reco_map)
-        print("Sparse Data nbins:", len(data_n1d_sparse))
+        data_hist_sparse, data_hist_err_sparse = self.map_data_to_1d_bins(num_nd=data_nd_hist, num_nd_err=data_nd_hist_err,
+                                                                          map_nd1d=self.reco_map)
+        print("Sparse Data nbins:", len(data_hist_sparse))
 
-        return data_num_nd_bin, data_num_nd, data_num_nd_cov, data_n1d_sparse, data_n1d_err_sparse
+        return data_nd_binned, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse
 
     @staticmethod
-    def map_meas_to_bin_space(corr_var_list, nbin_list, total_bins, evt_weights, debug=False):
+    def map_meas_to_bin_space(corr_var_list, bin_list, total_bins, evt_weights, debug=False):
         """
         Convert list of correlated varibles to single ndim variable
         """
         bin_cnt = 1
         nnd_bin_array = None
         weight_array = None
-        for i, arr_bin in enumerate(zip(corr_var_list, nbin_list, evt_weights)):
+        for i, arr_bin in enumerate(zip(corr_var_list, bin_list, evt_weights)):
             arr, bins, weight = arr_bin
             nbins = len(bins) - 1
             # Mapping from measured space (usually energy) to bin space

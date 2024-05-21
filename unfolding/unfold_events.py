@@ -16,9 +16,10 @@ class Unfold:
         self.figs_path = self.config["figure_path"]
         self.bayes_niter = self.config["bayes_niter"]
         self.is_training = self.config["is_training"]
-        self.train_ndim, self.data_ndim = 0, 0
-        self.truth_hist, self.reco_hist, self.data_hist = None, None, None
-        self.train_bin_array, self.data_bin_array = self.get_bin_config()
+        self.truth_ndim, self.reco_ndim = 0, 0
+        self.truth_hist, self.reco_hist = None, None
+        self.truth_nbins_sparse, self.reco_nbins_sparse = 0, 0
+        self.truth_bin_array, self.reco_bin_array = self.get_bin_config()
         self.compile_cpp_helpers()
 
         self.response = None
@@ -26,6 +27,9 @@ class Unfold:
             self.load_response()
 
         self.remap_evts = Remapping(var_names=self.config["var_names"])
+
+        self.true_record_var = self.config["true_record_var"]
+        self.reco_record_var = self.config["reco_record_var"]
 
     @staticmethod
     def compile_cpp_helpers():
@@ -54,24 +58,58 @@ class Unfold:
         else:
             self.create_hists_numpy(data_events=event_record[data_mask], reco_events=None, true_events=None)
 
+        true_var_list, reco_var_list = self.get_unfold_variables(event_record=event_record, true_mask=train_mask,
+                                                                 reco_mask=data_mask)
+
+        #(true_nd_binned, reco_nd_binned), (true_nd_hist, reco_nd_hist), (true_nd_hist_cov, reco_nd_hist_cov), \
+        #(true_hist_sparse, reco_hist_err_sparse) = \
+
+        nd_binned_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
+            self.remap_evts.remap_training_events(true_list=true_var_list, reco_list=reco_var_list,
+                                                  bin_list=self.truth_bin_array, ndim=self.truth_ndim)
+
+        self.truth_nbins_sparse, self.reco_nbins_sparse = len(sparse_tuple[0]) - 1, len(sparse_tuple[1]) - 1
+
         if self.is_training:
-            self.create_response_matrix(reco_events=event_record[train_mask], true_events=event_record[train_mask])
+            self.create_response_matrix(reco_events=nd_binned_tuple[1], true_events=nd_binned_tuple[0])
 
         unfolded_data_hist, unfolded_data_cov = self.unfold_bayes()
 
         unfolded_data_hist_np, unfolded_data_cov_np, true_hist_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
                                                                                        cov_matrix=unfolded_data_cov)
-        unfolded_data_corr_np = self.correlation_from_covariance(unfolded_cov=unfolded_data_cov_np)
+
+        # map_1d_to_nd(self, unfolded_hist_np, unfolded_cov_np, true_nd_hist, true_cov_nd, true_nbins_1d_sparse, nbins)
+        total_bins = self.remap_evts.true_total_bins if self.is_training else self.remap_evts.reco_total_bins
+        unfold_nd_hist_np, unfold_nd_cov_np, unfold_nd_err_np = self.remap_evts.map_1d_to_nd(unfolded_hist_np=unfolded_data_hist_np,
+                                                                                    unfolded_cov_np=unfolded_data_cov_np,
+                                                                                    true_nd_hist=nd_hist_tuple[0],
+                                                                                    true_cov_nd=nd_cov_tuple[0],
+                                                                                    true_nbins_1d_sparse=sparse_tuple[0],
+                                                                                    nbins=total_bins)
+
+        unfolded_corr_np = self.correlation_from_covariance(unfolded_cov=unfold_nd_cov_np)
 
         if return_np:
-            return unfolded_data_hist_np, unfolded_data_cov_np, unfolded_data_corr_np, true_hist_np
+            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, true_hist_np
         else:
-            return unfolded_data_hist, unfolded_data_cov, unfolded_data_corr_np, self.truth_hist
+            pass
+            #return unfolded_data_hist, unfolded_data_cov, unfolded_data_corr_np, self.truth_hist
+
+    def get_unfold_variables(self, event_record, true_mask, reco_mask):
+
+        true_var_list = None
+        if self.is_training:
+            true_var_list = [event_record[var][true_mask] for var in self.true_record_var]
+
+        reco_var_list = [event_record[var][reco_mask] for var in self.reco_record_var]
+
+        return true_var_list, reco_var_list
 
     def create_response_matrix(self, reco_events, true_events):
 
-        self.response = RooUnfold.RooUnfoldResponse(len(self.train_bin_array[0])-1, self.train_bin_array[0][0],
-                                                    self.train_bin_array[0][-1])
+        # self.response = RooUnfold.RooUnfoldResponse(len(self.truth_bin_array[0])-1, self.truth_bin_array[0][0], self.truth_bin_array[0][-1])
+        self.response = RooUnfold.RooUnfoldResponse(self.reco_nbins_sparse, 1, self.reco_nbins_sparse + 1,
+                                                    self.truth_nbins_sparse, 1, self.truth_nbins_sparse + 1)
         ROOT.fill_response_1d(len(reco_events), reco_events, true_events, np.ones_like(reco_events), self.response)
 
     def unfold_bayes(self):
@@ -94,39 +132,24 @@ class Unfold:
 
     def create_hists_numpy(self, data_events, reco_events=None, true_events=None):
         if self.is_training:
-            self.truth_hist, _ = np.histogramdd(true_events, self.train_bin_array)
-            self.reco_hist, _ = np.histogramdd(reco_events, self.train_bin_array)
-        bin_array = self.train_bin_array if self.is_training else self.data_bin_array
-        self.data_hist, _ = np.histogramdd(data_events, bin_array)
+            self.truth_hist, _ = np.histogramdd(true_events, self.truth_bin_array)
+            self.reco_hist, _ = np.histogramdd(reco_events, self.truth_bin_array)
+        bin_array = self.truth_bin_array if self.is_training else self.reco_bin_array
+        self.reco_hist, _ = np.histogramdd(data_events, bin_array)
 
     def create_hists(self, data_events, reco_events, true_events=None):
         """
         The events should have shape (nsample, ndim)
         """
         if self.is_training:
-            self.truth_hist = histogram_constructor("truth", bin_arrays=self.train_bin_array, ndim=self.train_ndim)
-            self.reco_hist = histogram_constructor("reco", bin_arrays=self.train_bin_array, ndim=self.train_ndim)
-        bin_array = self.train_bin_array if self.is_training else self.data_bin_array
-        self.data_hist = histogram_constructor("data", bin_arrays=bin_array, ndim=self.data_ndim)
+            self.truth_hist = histogram_constructor("truth", bin_arrays=self.truth_bin_array, ndim=self.truth_ndim)
+        bin_array = self.reco_bin_array
+        self.reco_hist = histogram_constructor("data", bin_arrays=bin_array, ndim=self.reco_ndim)
 
-        if self.train_ndim == 3:
-            if self.is_training:
-                ROOT.fill_hist_th3d(len(true_events), true_events[:, 0], true_events[:, 1], true_events[:, 2], self.truth_hist)
-                ROOT.fill_hist_th3d(len(reco_events), reco_events[:, 0], reco_events[:, 1], reco_events[:, 2], self.reco_hist)
-            ROOT.fill_hist_th3d(len(data_events), data_events[:, 0], data_events[:, 1], data_events[:, 2], self.data_hist)
-        elif self.train_ndim == 2:
-            if self.is_training:
-                self.truth_hist.FillN(len(true_events), true_events[:, 0], true_events[:, 1], ROOT.nullptr)
-                self.reco_hist.FillN(len(reco_events), reco_events[:, 0], reco_events[:, 1], ROOT.nullptr)
-            self.data_hist.FillN(len(data_events), data_events[:, 0], data_events[:, 1], ROOT.nullptr)
-        elif self.train_ndim == 1:
-            if self.is_training:
-                self.truth_hist.FillN(len(true_events), true_events[:, 0], ROOT.nullptr)
-                self.reco_hist.FillN(len(reco_events), reco_events[:, 0], ROOT.nullptr)
-            self.data_hist.FillN(len(data_events), data_events[:, 0], ROOT.nullptr)
-        else:
-            print("Unsupported dim:", self.train_ndim)
-            raise ValueError
+        if self.is_training:
+            self.truth_hist.FillN(len(true_events), true_events[:, 0], ROOT.nullptr)
+            self.reco_hist.FillN(len(reco_events), reco_events[:, 0], ROOT.nullptr)
+        self.reco_hist.FillN(len(data_events), data_events[:, 0], ROOT.nullptr)
 
     @staticmethod
     def correlation_from_covariance(unfolded_cov):
@@ -180,19 +203,19 @@ class Unfold:
 
     def get_bin_config(self):
         if self.config["use_bin_array"]:
-            train_array = np.asarray(self.config["train_bins"], dtype=np.dtype('d'))
-            data_array = np.asarray(self.config["data_bins"], dtype=np.dtype('d'))
-            self.train_ndim = len(train_array)
-            self.data_ndim = len(data_array)
+            true_array = np.asarray(self.config["truth_bins"], dtype=np.dtype('d'))
+            reco_array = np.asarray(self.config["reco_bins"], dtype=np.dtype('d'))
+            self.truth_ndim = len(true_array)
+            self.reco_ndim = len(reco_array)
         else:
-            nbins, bin_range = self.config["train_bins"]["nbins"], self.config["train_bins"]["limits"]
-            self.train_ndim = len(nbins)
-            train_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
-            nbins, bin_range = self.config["data_bins"]["nbins"], self.config["data_bins"]["limits"]
-            self.data_ndim = len(nbins)
-            data_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
+            nbins, bin_range = self.config["truth_bins"]["nbins"], self.config["truth_bins"]["limits"]
+            self.truth_ndim = len(nbins)
+            true_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
+            nbins, bin_range = self.config["reco_bins"]["nbins"], self.config["reco_bins"]["limits"]
+            self.reco_ndim = len(nbins)
+            reco_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
 
-        return train_array, data_array
+        return true_array, reco_array
 
     def load_response(self):
         with open(self.config["response_file"], 'rb') as f:

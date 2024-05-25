@@ -4,8 +4,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import ROOT
 import RooUnfold
+import awkward as ak
 
-from cex_analysis.plot_utils import histogram_constructor
+from cex_analysis.plot_utils import histogram_constructor, bin_centers_np, bin_width_np
 from unfolding.unfold_remapping import Remapping
 
 
@@ -13,6 +14,7 @@ class Unfold:
 
     def __init__(self, config_file):
         self.config = self.configure(config_file=config_file)
+        self.show_plots = self.config["show_plots"]
         self.figs_path = self.config["figure_path"]
         self.bayes_niter = self.config["bayes_niter"]
         self.is_training = self.config["is_training"]
@@ -50,74 +52,118 @@ class Unfold:
             }
         """)
 
-    def run_unfold(self, event_record, data_mask, train_mask, return_np=False):
+    def run_unfold(self, event_record, data_mask, train_mask, return_np=False, test_func=False,
+                   true_var_list=None, reco_var_list=None):
 
-        if self.is_training:
-            self.create_hists_numpy(data_events=event_record[data_mask], reco_events=event_record[train_mask],
-                                    true_events=event_record[train_mask])
-        else:
-            self.create_hists_numpy(data_events=event_record[data_mask], reco_events=None, true_events=None)
+        # if not test_func:
+        #     if self.is_training:
+        #         self.create_hists_numpy(data_events=event_record[data_mask], reco_events=event_record[train_mask],
+        #                                 true_events=event_record[train_mask])
+        #     else:
+        #         self.create_hists_numpy(data_events=event_record[data_mask], reco_events=None, true_events=None)
+        if not test_func:
+            true_var_list, reco_var_list = self.get_unfold_variables(event_record=event_record, true_mask=train_mask,
+                                                                     reco_mask=data_mask)
 
-        true_var_list, reco_var_list = self.get_unfold_variables(event_record=event_record, true_mask=train_mask,
-                                                                 reco_mask=data_mask)
-
-        #(true_nd_binned, reco_nd_binned), (true_nd_hist, reco_nd_hist), (true_nd_hist_cov, reco_nd_hist_cov), \
-        #(true_hist_sparse, reco_hist_err_sparse) = \
+        # (true_nd_binned, reco_nd_binned), (true_nd_hist, reco_nd_hist), (true_nd_hist_cov, reco_nd_hist_cov), \
+        # (true_hist_sparse, reco_hist_err_sparse) =
 
         nd_binned_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
             self.remap_evts.remap_training_events(true_list=true_var_list, reco_list=reco_var_list,
                                                   bin_list=self.truth_bin_array, ndim=self.truth_ndim)
 
-        self.truth_nbins_sparse, self.reco_nbins_sparse = len(sparse_tuple[0]) - 1, len(sparse_tuple[1]) - 1
+        self.truth_nbins_sparse, self.reco_nbins_sparse = len(sparse_tuple[0]), len(sparse_tuple[1])
 
         if self.is_training:
-            self.create_response_matrix(reco_events=nd_binned_tuple[1], true_events=nd_binned_tuple[0])
+            self.create_response_matrix(reco_events=self.remap_evts.reco_map[nd_binned_tuple[1]].astype('d'),
+                                        true_events=self.remap_evts.true_map[nd_binned_tuple[0]].astype('d'))
 
+        if self.show_plots:
+            self.plot_response_matrix(response_matrix=self.response)
+
+        # Set data
+        # data_nd_binned, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse =
+        _, _, _, data_hist_sparse, data_hist_err_sparse = self.remap_evts.remap_data_events(data_list=reco_var_list,
+                                                                                            bin_list=self.reco_bin_array,
+                                                                                            ndim=self.reco_ndim)
+
+        self.fill_data_hist(sparse_data_hist=data_hist_sparse)
+
+        # Unfold data
         unfolded_data_hist, unfolded_data_cov = self.unfold_bayes()
 
+        # Convert to numpy
+        self.truth_hist = ROOT.TH1D("truth", "Truth", self.truth_nbins_sparse, 0, self.truth_nbins_sparse)
         unfolded_data_hist_np, unfolded_data_cov_np, true_hist_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
                                                                                        cov_matrix=unfolded_data_cov)
+        print("unfolded_data_hist_np", unfolded_data_hist_np)
+        # Plot sparse unfolded results
+        if self.show_plots:
+            self.plot_unfolded_results(unfolded_data_hist_np=unfolded_data_hist_np, unfolded_cov_np=unfolded_data_cov_np,
+                                       true_hist_np=sparse_tuple[0])
 
-        # map_1d_to_nd(self, unfolded_hist_np, unfolded_cov_np, true_nd_hist, true_cov_nd, true_nbins_1d_sparse, nbins)
+        # Map 1D back to ND space
         total_bins = self.remap_evts.true_total_bins if self.is_training else self.remap_evts.reco_total_bins
-        unfold_nd_hist_np, unfold_nd_cov_np, unfold_nd_err_np = self.remap_evts.map_1d_to_nd(unfolded_hist_np=unfolded_data_hist_np,
-                                                                                    unfolded_cov_np=unfolded_data_cov_np,
-                                                                                    true_nd_hist=nd_hist_tuple[0],
-                                                                                    true_cov_nd=nd_cov_tuple[0],
-                                                                                    true_nbins_1d_sparse=sparse_tuple[0],
-                                                                                    nbins=total_bins)
+        unfold_nd_hist_np, unfold_nd_cov_np, _ = self.remap_evts.map_1d_to_nd(unfolded_hist_np=unfolded_data_hist_np,
+                                                                              unfolded_cov_np=unfolded_data_cov_np,
+                                                                              true_nd_hist=nd_hist_tuple[0],
+                                                                              true_cov_nd=nd_cov_tuple[0],
+                                                                              true_nbins_1d_sparse=self.truth_nbins_sparse,
+                                                                              nbins=total_bins)
+
+        if self.show_plots:
+            self.truth_hist = ROOT.TH1D("truth", "Truth", int(total_bins), 0, float(total_bins))
+            self.plot_unfolded_results(unfolded_data_hist_np=unfold_nd_hist_np, unfolded_cov_np=unfold_nd_cov_np,
+                                       true_hist_np=nd_hist_tuple[0])
 
         unfolded_corr_np = self.correlation_from_covariance(unfolded_cov=unfold_nd_cov_np)
 
+        unfold_var_hist, unfold_var_err = self.remap_evts.map_bin_to_variable_space(unfold_nd_hist_np=unfold_nd_hist_np,
+                                                                                    unfold_nd_cov_np=unfold_nd_cov_np,
+                                                                                    truth_bin_list=self.truth_bin_array)
+
+        if self.show_plots:
+            bin_lens = [len(b) - 1 for b in self.truth_bin_array]
+            self.plot_unfolded_results_var_space(unfold_var_hist=unfold_var_hist, unfold_var_err=unfold_var_err,
+                                                 true_var_list=true_var_list, bin_lens=bin_lens,
+                                                 var_label_list=self.config["var_names"])
+
         if return_np:
-            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, true_hist_np
+            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfold_var_err, true_hist_np
         else:
             pass
             #return unfolded_data_hist, unfolded_data_cov, unfolded_data_corr_np, self.truth_hist
+
+    def fill_data_hist(self, sparse_data_hist):
+        if self.reco_hist is not None:
+            self.reco_hist.Delete()
+
+        self.reco_hist = ROOT.TH1D("data", "Data", self.reco_nbins_sparse, 0, self.reco_nbins_sparse-2)
+        _ = [self.reco_hist.SetBinContent(i + 1, sparse_data_hist[i]) for i in range(self.reco_nbins_sparse)]
 
     def get_unfold_variables(self, event_record, true_mask, reco_mask):
 
         true_var_list = None
         if self.is_training:
-            true_var_list = [event_record[var][true_mask] for var in self.true_record_var]
+            true_var_list = [ak.to_numpy(event_record[var][true_mask]) for var in self.true_record_var]
 
-        reco_var_list = [event_record[var][reco_mask] for var in self.reco_record_var]
+        reco_var_list = [ak.to_numpy(event_record[var][reco_mask]) for var in self.reco_record_var]
 
         return true_var_list, reco_var_list
 
     def create_response_matrix(self, reco_events, true_events):
 
-        # self.response = RooUnfold.RooUnfoldResponse(len(self.truth_bin_array[0])-1, self.truth_bin_array[0][0], self.truth_bin_array[0][-1])
         self.response = RooUnfold.RooUnfoldResponse(self.reco_nbins_sparse, 1, self.reco_nbins_sparse + 1,
                                                     self.truth_nbins_sparse, 1, self.truth_nbins_sparse + 1)
+
         ROOT.fill_response_1d(len(reco_events), reco_events, true_events, np.ones_like(reco_events), self.response)
 
     def unfold_bayes(self):
 
-        unfold = RooUnfold.RooUnfoldBayes(self.response, self.data_hist, self.bayes_niter)
+        unfold = RooUnfold.RooUnfoldBayes(self.response, self.reco_hist, self.bayes_niter)
 
         # Get statistical uncorrelated bin errors
-        data_error = np.diag([self.data_hist.GetBinError(b) for b in range(self.data_hist.GetNbinsX())])
+        data_error = np.diag([self.reco_hist.GetBinError(b) for b in range(self.reco_hist.GetNbinsX())])
         data_diag_error = ROOT.TMatrix(data_error.shape[0], data_error.shape[1])
         for i in range(data_error.shape[0]):
             for j in range(data_error.shape[1]):
@@ -200,6 +246,62 @@ class Unfold:
         plt.legend()
         plt.savefig(self.figs_path + "/data_unfolded_hist_cov.pdf")
         plt.show()
+
+    def plot_unfolded_results_var_space(self, unfold_var_hist, unfold_var_err, true_var_list, bin_lens, var_label_list=None):
+
+        if var_label_list is None:
+            var_label_list = ["Var_0", "Var_1"]
+
+        if self.truth_ndim == 2:
+            _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+            binsx, binsy = bin_lens
+            min_max_var0 = (np.min(self.truth_bin_array[0]), np.max(self.truth_bin_array[0]))
+            min_max_var1 = (np.min(self.truth_bin_array[1]), np.max(self.truth_bin_array[1]))
+            h, bx, by, f = ax1.hist2d(true_var_list[0], true_var_list[1], bins=bin_lens, range=[min_max_var0, min_max_var1])
+            ax1.set_title('True Distribution')
+            plt.colorbar(f)
+            f = ax2.imshow(unfold_var_hist, origin='lower')
+            ax2.set_title('Unfolded Distribution')
+            plt.colorbar(f)
+            f = ax3.imshow(np.sqrt(unfold_var_err), origin='lower')
+            ax3.set_title('Unfolded Errors')
+            plt.colorbar(f)
+            plt.show()
+
+            _, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+
+            y_err = unfold_var_hist.sum(axis=0) / np.sqrt(unfold_var_err.sum(axis=0))
+            ax1.hist(true_var_list[0], bins=binsx, range=min_max_var0, edgecolor='black', color='indianred', alpha=0.9, label='True')
+            ax1.errorbar(bin_centers_np(bx), unfold_var_hist.sum(axis=0), y_err, bin_width_np(bx), marker='.', color='black', linestyle='None', label='Unfolded')
+            ax1.set_xlabel(var_label_list[0], fontsize=12)
+            ax1.set_xticks(np.arange(200, 1900, 200))
+            ax1.set_xlim(min_max_var0)
+            ax1.legend()
+
+            y_err = unfold_var_hist.sum(axis=1) / np.sqrt(unfold_var_err.sum(axis=1))
+            ax2.hist(true_var_list[1], bins=binsy, range=min_max_var1, edgecolor='black', color='indianred', alpha=0.9, label='True')
+            ax2.errorbar(bin_centers_np(by), unfold_var_hist.sum(axis=1), y_err, bin_width_np(by), marker='.', color='black', linestyle='None', label='Unfolded')
+            ax2.set_xlabel(var_label_list[1], fontsize=12)
+            ax2.set_xlim(min_max_var1)
+            ax2.legend()
+            plt.show()
+        elif self.truth_ndim == 1:
+            plt.figure(figsize=(8, 5))
+            binsx = bin_lens[0]
+            min_max_var0 = (np.min(self.truth_bin_array[0]), np.max(self.truth_bin_array[0]))
+            y_err = unfold_var_hist / np.sqrt(unfold_var_err)
+            _, bx, _ = plt.hist(true_var_list[0], bins=binsx, range=min_max_var0, edgecolor='black', color='indianred',
+                                alpha=0.9, label='True')
+            plt.errorbar(bin_centers_np(bx), unfold_var_hist, y_err, bin_width_np(bx)/2., marker='.',
+                         color='black', linestyle='None', label='Unfolded')
+            plt.xlim(min_max_var0)
+            plt.xlabel(var_label_list[0], fontsize=12)
+            plt.legend()
+            plt.show()
+        else:
+            print(">2 dimensions not supported. Ndim=", self.truth_ndim)
+
+        return unfold_var_hist, unfold_var_err
 
     def get_bin_config(self):
         if self.config["use_bin_array"]:

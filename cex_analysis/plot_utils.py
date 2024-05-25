@@ -88,3 +88,11 @@ def histogram_constructor(title, bin_arrays, ndim):
         print("Unsupported number of dimensions! Only ndim 1-3 supported.")
         print("Requested ndim =", ndim)
         raise ValueError
+
+
+def bin_centers_np(bins):
+    return (bins[:-1] + bins[1:]) / 2.
+
+
+def bin_width_np(bins):
+    return (bins[1] - bins[0])

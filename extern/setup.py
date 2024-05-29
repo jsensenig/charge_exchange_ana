@@ -122,9 +122,12 @@ setup(
     name="pybind_utils",
     version="0.1",
     description="A project for fast utils using pybind11 and CMake",
+    ext_modules=[CMakeExtension("plotting_utils"),
+        CMakeExtension("cross_section_utils"), CMakeExtension("bethe_bloch_utils")],
     long_description="",
-    ext_modules=[CMakeExtension("plotting_utils"), CMakeExtension("cross_section_utils")],
     cmdclass={"build_ext": CMakeBuild},
     zip_safe=False,
     extras_require={"test": ["pytest"]},
 )
+
+    #ext_modules=[CMakeExtension("plotting_utils"), CMakeExtension("cross_section_utils")],

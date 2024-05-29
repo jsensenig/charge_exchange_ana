@@ -9,8 +9,6 @@
 
 namespace py = pybind11;
 
-
-
 py::array_t<double> make_true_incident_energies(const py::array_t<double> &true_beam_traj_Z,
                                                 const py::array_t<double> &true_beam_traj_KE) {
 
@@ -92,6 +90,7 @@ PYBIND11_MODULE(cross_section_utils, m) {
     m.def("make_true_incident_energies", &make_true_incident_energies, R"pbdoc(
        Create the true incident energy of the beam particle from the true trajectory points input=(<1D numpy.ndarray true_beam_traj_Z>, <1D numpy.ndarray true_beam_traj_KE>)
     )pbdoc");
+
 
 
 #ifdef VERSION_INFO

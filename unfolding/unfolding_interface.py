@@ -21,7 +21,7 @@ class XSecVariables:
         self.make_beam_incident(event_record=event_record)
         self.make_beam_end_and_int_ke(event_record=event_record, reco_mask=reco_mask)
 
-        # mask out the upstream intercacting events
+        # mask out the upstream interacting events
 
     def make_beam_incident(self, event_record):
         """

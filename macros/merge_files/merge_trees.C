@@ -21,7 +21,7 @@ std::vector<std::string> LoadFileList( const std::string& file_list ) {
 
 }
 
-double MakeTrueIncidentEnergies(std::vector<double> *true_beam_traj_Z,
+double MakeIncidentEnergies(std::vector<double> *true_beam_traj_Z,
                               std::vector<double> *true_beam_traj_KE,
                               std::vector<double> *true_beam_new_incidentEnergies) {
 
@@ -107,6 +107,21 @@ void truncatedMean( std::vector<std::vector<double>> *vecs_dEdX, std::vector<dou
    }
 }
 
+void GetRecoTrackLength( std::vector<double> *reco_beam_calo_X, std::vector<double> *reco_beam_calo_Y, std::vector<double> *reco_beam_calo_Z, std::vector<double> *reco_track_cumlen ) {
+
+  double reco_trklen = -999;
+
+  for ( size_t i = 1; i < reco_beam_calo_Z->size(); i++ ) {
+    if (i == 1) reco_trklen = 0;
+    reco_trklen += sqrt( pow( (*reco_beam_calo_X)[i] - (*reco_beam_calo_X)[i-1], 2)
+                        + pow( (*reco_beam_calo_Y)[i] - (*reco_beam_calo_Y)[i-1], 2)
+                        + pow( (*reco_beam_calo_Z)[i] - (*reco_beam_calo_Z)[i-1], 2));
+    reco_track_cumlen->push_back(reco_trklen);
+  }
+
+}
+////////////////////////////////
+
 void AddIncidentEnergyBranch(TFile * file) {
 
     TTree *tree = (TTree*)file->Get("pduneana/beamana");
@@ -116,29 +131,40 @@ void AddIncidentEnergyBranch(TFile * file) {
     std::vector<double> *true_beam_traj_Z = new std::vector<double>;
     std::vector<double> *true_beam_traj_KE = new std::vector<double>;
     std::vector<double> *true_beam_traj_incidentEnergies = new std::vector<double>;
+    std::vector<double> *reco_beam_calo_X = new std::vector<double>;
+    std::vector<double> *reco_beam_calo_Y = new std::vector<double>;
+    std::vector<double> *reco_beam_calo_Z = new std::vector<double>;
+    std::vector<double> *reco_track_cumlen = new std::vector<double>;
     double true_beam_traj_interacting_Energy;
 
     TBranch *new_inc_energy = tree->Branch("true_beam_traj_incidentEnergies", &true_beam_traj_incidentEnergies);
     TBranch *new_int_energy = tree->Branch("true_beam_traj_interacting_Energy", &true_beam_traj_interacting_Energy);
     TBranch *new_truncated_mean = tree->Branch("dEdX_truncated_mean", &dEdX_truncated_mean);
+    TBranch *new_reco_track_cumlen = tree->Branch("reco_track_cumlen", &reco_track_cumlen);
     tree->SetBranchAddress("true_beam_traj_Z", &true_beam_traj_Z);
     tree->SetBranchAddress("true_beam_traj_KE", &true_beam_traj_KE);
     tree->SetBranchAddress("reco_daughter_allTrack_calibrated_dEdX_SCE", &reco_daughter_allTrack_calibrated_dEdX_SCE);
+    tree->SetBranchAddress("reco_beam_calo_X", &reco_beam_calo_X);
+    tree->SetBranchAddress("reco_beam_calo_Y", &reco_beam_calo_Y);
+    tree->SetBranchAddress("reco_beam_calo_Z", &reco_beam_calo_Z);
 
     size_t nentries = tree->GetEntries();
     for( size_t i = 0; i < nentries; i++ ) {
         tree->GetEntry(i);
 
-        true_beam_traj_interacting_Energy = MakeTrueIncidentEnergies(true_beam_traj_Z, true_beam_traj_KE, \
-                                 true_beam_traj_incidentEnergies);
+        true_beam_traj_interacting_Energy = MakeIncidentEnergies(true_beam_traj_Z, true_beam_traj_KE, true_beam_traj_incidentEnergies);
         truncatedMean(reco_daughter_allTrack_calibrated_dEdX_SCE, dEdX_truncated_mean);
+
+        GetRecoTrackLength( reco_beam_calo_X, reco_beam_calo_Y, reco_beam_calo_Z, reco_track_cumlen );
 
         new_inc_energy->Fill();
         new_int_energy->Fill();
         new_truncated_mean->Fill();
+        new_reco_track_cumlen->Fill();
 
         dEdX_truncated_mean->clear();
         true_beam_traj_incidentEnergies->clear();
+        reco_track_cumlen->clear();
     }
 
     tree->Write();
@@ -147,11 +173,15 @@ void AddIncidentEnergyBranch(TFile * file) {
     delete true_beam_traj_Z;
     delete true_beam_traj_KE;
     delete true_beam_traj_incidentEnergies;
+    delete reco_beam_calo_X;
+    delete reco_beam_calo_Y;
+    delete reco_beam_calo_Z;
+    delete reco_track_cumlen;
 }
 
 void merge_trees() {
 
-  std::string files = "/Users/jsen/tmp/pion_qe/cex_selection/macros/merge_files/files.txt";
+  std::string files = "/Users/jsen/work/Protodune/analysis/cex_event_selection/macros/merge_files/files.txt";
   std::vector<std::string> flist = LoadFileList(files);
   TList *list = new TList;
 
@@ -169,7 +199,7 @@ void merge_trees() {
   for (auto &f : flist) {
     std::cout << "Adding file: " << f << std::endl;
     TFile *file_adress = TFile::Open(f.c_str());
-    TTree *tree_adress = (TTree*)file_adress->Get("beamana");
+    TTree *tree_adress = (TTree*)file_adress->Get("pduneana/beamana");
     list->Add(tree_adress);
   }
   

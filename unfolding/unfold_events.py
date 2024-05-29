@@ -8,6 +8,7 @@ import awkward as ak
 
 from cex_analysis.plot_utils import histogram_constructor, bin_centers_np, bin_width_np
 from unfolding.unfold_remapping import Remapping
+from unfolding.unfolding_interface import XSecVariablesBase
 
 
 class Unfold:
@@ -33,6 +34,10 @@ class Unfold:
         self.true_record_var = self.config["true_record_var"]
         self.reco_record_var = self.config["reco_record_var"]
 
+        # Get the classes to interface teh data to the unfolding
+        var_cls = {cls.__name__: cls for cls in XSecVariablesBase.__subclasses__()}
+        self.vars = var_cls[self.config["xsec_vars"]](config_file=self.config["interface_config"], is_mc=self.is_training)
+
     @staticmethod
     def compile_cpp_helpers():
 
@@ -55,18 +60,10 @@ class Unfold:
     def run_unfold(self, event_record, data_mask, train_mask, return_np=False, test_func=False,
                    true_var_list=None, reco_var_list=None):
 
-        # if not test_func:
-        #     if self.is_training:
-        #         self.create_hists_numpy(data_events=event_record[data_mask], reco_events=event_record[train_mask],
-        #                                 true_events=event_record[train_mask])
-        #     else:
-        #         self.create_hists_numpy(data_events=event_record[data_mask], reco_events=None, true_events=None)
         if not test_func:
+            # self.vars.get_xsec_variable(event_record=event_record, reco_mask=data_mask)
             true_var_list, reco_var_list = self.get_unfold_variables(event_record=event_record, true_mask=train_mask,
                                                                      reco_mask=data_mask)
-
-        # (true_nd_binned, reco_nd_binned), (true_nd_hist, reco_nd_hist), (true_nd_hist_cov, reco_nd_hist_cov), \
-        # (true_hist_sparse, reco_hist_err_sparse) =
 
         nd_binned_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
             self.remap_evts.remap_training_events(true_list=true_var_list, reco_list=reco_var_list,
@@ -143,11 +140,15 @@ class Unfold:
 
     def get_unfold_variables(self, event_record, true_mask, reco_mask):
 
+        # Get the variables of interest
+        var_dict = self.vars.get_xsec_variable(event_record=event_record, reco_mask=reco_mask)
+        print("Loaded variables:", list(var_dict))
+
         true_var_list = None
         if self.is_training:
-            true_var_list = [ak.to_numpy(event_record[var][true_mask]) for var in self.true_record_var]
+            true_var_list = [var_dict[var] for var in self.true_record_var]
 
-        reco_var_list = [ak.to_numpy(event_record[var][reco_mask]) for var in self.reco_record_var]
+        reco_var_list = [var_dict[var] for var in self.reco_record_var]
 
         return true_var_list, reco_var_list
 
@@ -300,8 +301,6 @@ class Unfold:
             plt.show()
         else:
             print(">2 dimensions not supported. Ndim=", self.truth_ndim)
-
-        return unfold_var_hist, unfold_var_err
 
     def get_bin_config(self):
         if self.config["use_bin_array"]:

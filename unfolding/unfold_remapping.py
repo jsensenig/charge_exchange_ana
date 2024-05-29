@@ -185,6 +185,7 @@ class Remapping:
         final_shift = sum(np.flip(np.cumprod(np.flip(bin_lens[1:]))))
 
         # Cast into nth-order tensor containing bins corresponding to the original measured physics variable
+        # shifting the variable since we are ignoring bin 0
         unfold_var_hist = unfold_nd_hist_np[final_shift:].reshape(bin_lens).T
         unfold_var_err = np.diag(unfold_nd_cov_np)[final_shift:].reshape(bin_lens).T
 

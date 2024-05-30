@@ -181,29 +181,29 @@ class BeamPionVariables(XSecVariablesBase):
         N_end = -1 if incomplete first eslice
         N_int = -1 if past fiducial volume z_high < end_ke OR incomplete first eslice
         """
-        neg_ones = np.ones(len(event_record)) * -1.
         true_all_int, true_int = None, None
         if self.is_mc:
             # All pion inelastic interactions
             true_all_int_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["true_downstream_mask"]
-            true_all_int = neg_ones
+            true_all_int = np.ones(len(event_record)) * -1.
             true_all_int[true_all_int_mask] = self.xsec_vars["true_beam_new_end_energy"][true_all_int_mask]
             # Exclusive interaction
             true_int_mask = ak.to_numpy(event_record[self.signal_proc]) & true_all_int_mask
-            true_int = neg_ones
+            true_int = np.ones(len(event_record)) * -1.
             true_all_int[true_int_mask] = self.xsec_vars["true_beam_new_end_energy"][true_int_mask]
 
         # All pion inelastic interactions
         reco_all_int_mask = ~self.xsec_vars["reco_upstream_mask"] & ~self.xsec_vars["reco_downstream_mask"]
-        reco_all_int = neg_ones
+        reco_all_int = np.ones(len(event_record)) * -1.
         reco_all_int[reco_all_int_mask] = self.xsec_vars["reco_beam_new_end_energy"][reco_all_int_mask]
         # Exclusive interactions
         # For interacting just apply mask to end KE to extract the interacting
         reco_int_mask = reco_mask & reco_all_int_mask
-        reco_int = neg_ones
+        reco_int = np.ones(len(event_record)) * -1.
         reco_int[reco_int_mask] = self.xsec_vars["reco_beam_new_end_energy"][reco_int_mask]
 
         return true_all_int, true_int, reco_all_int, reco_int
+
 
 class Pi0Variables(XSecVariablesBase):
     def __init__(self, is_mc):

@@ -22,7 +22,7 @@ class Unfold:
         self.truth_ndim, self.reco_ndim = 0, 0
         self.truth_hist, self.reco_hist = None, None
         self.truth_nbins_sparse, self.reco_nbins_sparse = 0, 0
-        self.truth_bin_array, self.reco_bin_array = self.get_bin_config()
+        self.true_bin_array, self.reco_bin_array = self.get_bin_config()
         self.compile_cpp_helpers()
 
         self.response = None
@@ -62,16 +62,16 @@ class Unfold:
 
         if not test_func:
             # self.vars.get_xsec_variable(event_record=event_record, reco_mask=data_mask)
-            true_var_list, reco_var_list = self.get_unfold_variables(event_record=event_record, true_mask=train_mask,
-                                                                     reco_mask=data_mask)
-
-        nd_binned_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
-            self.remap_evts.remap_training_events(true_list=true_var_list, reco_list=reco_var_list,
-                                                  bin_list=self.truth_bin_array, ndim=self.truth_ndim)
-
-        self.truth_nbins_sparse, self.reco_nbins_sparse = len(sparse_tuple[0]), len(sparse_tuple[1])
+            true_var_list, reco_var_list = self.get_unfold_variables(event_record=event_record,
+                                                                     true_mask=train_mask, reco_mask=data_mask)
 
         if self.is_training:
+            nd_binned_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
+                self.remap_evts.remap_training_events(true_list=true_var_list, reco_list=reco_var_list,
+                                                      bin_list=self.true_bin_array, ndim=self.truth_ndim)
+
+            self.truth_nbins_sparse, self.reco_nbins_sparse = len(sparse_tuple[0]), len(sparse_tuple[1])
+
             self.create_response_matrix(reco_events=self.remap_evts.reco_map[nd_binned_tuple[1]].astype('d'),
                                         true_events=self.remap_evts.true_map[nd_binned_tuple[0]].astype('d'))
 
@@ -91,11 +91,11 @@ class Unfold:
 
         # Convert to numpy
         self.truth_hist = ROOT.TH1D("truth", "Truth", self.truth_nbins_sparse, 0, self.truth_nbins_sparse)
-        unfolded_data_hist_np, unfolded_data_cov_np, true_hist_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
-                                                                                       cov_matrix=unfolded_data_cov)
+        unfolded_data_hist_np, unfolded_data_cov_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
+                                                                         cov_matrix=unfolded_data_cov)
         print("unfolded_data_hist_np", unfolded_data_hist_np)
         # Plot sparse unfolded results
-        if self.show_plots:
+        if self.show_plots and self.is_training:
             self.plot_unfolded_results(unfolded_data_hist_np=unfolded_data_hist_np, unfolded_cov_np=unfolded_data_cov_np,
                                        true_hist_np=sparse_tuple[0])
 
@@ -103,12 +103,9 @@ class Unfold:
         total_bins = self.remap_evts.true_total_bins if self.is_training else self.remap_evts.reco_total_bins
         unfold_nd_hist_np, unfold_nd_cov_np, _ = self.remap_evts.map_1d_to_nd(unfolded_hist_np=unfolded_data_hist_np,
                                                                               unfolded_cov_np=unfolded_data_cov_np,
-                                                                              true_nd_hist=nd_hist_tuple[0],
-                                                                              true_cov_nd=nd_cov_tuple[0],
-                                                                              true_nbins_1d_sparse=self.truth_nbins_sparse,
                                                                               nbins=total_bins)
 
-        if self.show_plots:
+        if self.show_plots and self.is_training:
             self.truth_hist = ROOT.TH1D("truth", "Truth", int(total_bins), 0, float(total_bins))
             self.plot_unfolded_results(unfolded_data_hist_np=unfold_nd_hist_np, unfolded_cov_np=unfold_nd_cov_np,
                                        true_hist_np=nd_hist_tuple[0])
@@ -117,16 +114,16 @@ class Unfold:
 
         unfold_var_hist, unfold_var_err = self.remap_evts.map_bin_to_variable_space(unfold_nd_hist_np=unfold_nd_hist_np,
                                                                                     unfold_nd_cov_np=unfold_nd_cov_np,
-                                                                                    truth_bin_list=self.truth_bin_array)
+                                                                                    truth_bin_list=self.true_bin_array)
 
-        if self.show_plots:
-            bin_lens = [len(b) - 1 for b in self.truth_bin_array]
+        if self.show_plots and self.is_training:
+            bin_lens = [len(b) - 1 for b in self.true_bin_array]
             self.plot_unfolded_results_var_space(unfold_var_hist=unfold_var_hist, unfold_var_err=unfold_var_err,
                                                  true_var_list=true_var_list, bin_lens=bin_lens,
                                                  var_label_list=self.config["var_names"])
 
         if return_np:
-            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfold_var_err, true_hist_np
+            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfold_var_err
         else:
             pass
             #return unfolded_data_hist, unfolded_data_cov, unfolded_data_corr_np, self.truth_hist
@@ -179,9 +176,9 @@ class Unfold:
 
     def create_hists_numpy(self, data_events, reco_events=None, true_events=None):
         if self.is_training:
-            self.truth_hist, _ = np.histogramdd(true_events, self.truth_bin_array)
-            self.reco_hist, _ = np.histogramdd(reco_events, self.truth_bin_array)
-        bin_array = self.truth_bin_array if self.is_training else self.reco_bin_array
+            self.truth_hist, _ = np.histogramdd(true_events, self.true_bin_array)
+            self.reco_hist, _ = np.histogramdd(reco_events, self.true_bin_array)
+        bin_array = self.true_bin_array if self.is_training else self.reco_bin_array
         self.reco_hist, _ = np.histogramdd(data_events, bin_array)
 
     def create_hists(self, data_events, reco_events, true_events=None):
@@ -189,7 +186,7 @@ class Unfold:
         The events should have shape (nsample, ndim)
         """
         if self.is_training:
-            self.truth_hist = histogram_constructor("truth", bin_arrays=self.truth_bin_array, ndim=self.truth_ndim)
+            self.truth_hist = histogram_constructor("truth", bin_arrays=self.true_bin_array, ndim=self.truth_ndim)
         bin_array = self.reco_bin_array
         self.reco_hist = histogram_constructor("data", bin_arrays=bin_array, ndim=self.reco_ndim)
 
@@ -205,28 +202,38 @@ class Unfold:
         unfolded_corr[unfolded_cov == 0] = 0
         return unfolded_corr
 
-    def root_to_numpy(self, unfolded_hist, cov_matrix):
+    @staticmethod
+    def root_to_numpy(unfolded_hist, cov_matrix):
         cov_matrix_np = np.empty(shape=(cov_matrix.GetNrows(), cov_matrix.GetNcols()))
         unfolded_data_hist_np = np.empty(shape=(unfolded_hist.GetNbinsX()))
-        true_hist_np = np.empty(shape=(self.truth_hist.GetNbinsX()))
 
         for i in range(cov_matrix.GetNrows()):
             unfolded_data_hist_np[i] = unfolded_hist.GetBinContent(i + 1)
-            true_hist_np[i] = self.truth_hist.GetBinContent(i + 1)
             for j in range(cov_matrix.GetNcols()):
                 cov_matrix_np[i, j] = cov_matrix[i, j]
 
-        return unfolded_data_hist_np, cov_matrix_np, true_hist_np
+        return unfolded_data_hist_np, cov_matrix_np
 
     def plot_response_matrix(self, response_matrix):
         response_matrix_np = np.empty(shape=(response_matrix.Hresponse().GetNbinsX(), response_matrix.Hresponse().GetNbinsY()))
         for i in range(response_matrix.Hresponse().GetNbinsX()):
             for j in range(response_matrix.Hresponse().GetNbinsY()):
                 response_matrix_np[i, j] = response_matrix.Hresponse().GetBinContent(i + 1, j + 1)
-   
+
+        norm_factor = 1. / response_matrix_np.sum(axis=0)
+
         # Transpose response so we have truth vs reco
-        plt.imshow(response_matrix_np.T, origin='lower', cmap=plt.cm.jet)
-        plt.colorbar()
+        _, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,5))
+        f = ax1.imshow(response_matrix_np.T, origin='lower', cmap=plt.cm.jet)
+        ax1.set_title("Response Matrix", fontsize=14)
+        ax1.set_xlabel("Reco Bins", fontsize=12)
+        ax1.set_ylabel("True Bins", fontsize=12)
+        plt.colorbar(f)
+        f = ax2.imshow((response_matrix_np * norm_factor).T, origin='lower', cmap=plt.cm.jet)
+        ax2.set_title("Response Matrix: $P(Reco | True)$", fontsize=14)
+        ax2.set_xlabel("Reco Bins", fontsize=12)
+        ax2.set_ylabel("True Bins", fontsize=12)
+        plt.colorbar(f)
         plt.savefig(self.figs_path + "/response_matrix.pdf")
         plt.show()
 
@@ -244,6 +251,7 @@ class Unfold:
 
         ax2.hist(true_bin_centers, bins=true_bin_edges, weights=true_hist_np, edgecolor='black', color='indianred', label='Truth')
         ax2.errorbar(true_bin_centers, unfolded_data_hist_np, np.sqrt(np.diag(unfolded_cov_np)), marker='.', color='black', linestyle='None', label='Unfolded Data')
+        ax2.set_ylim(bottom=0)
         plt.legend()
         plt.savefig(self.figs_path + "/data_unfolded_hist_cov.pdf")
         plt.show()
@@ -256,8 +264,8 @@ class Unfold:
         if self.truth_ndim == 2:
             _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
             binsx, binsy = bin_lens
-            min_max_var0 = (np.min(self.truth_bin_array[0]), np.max(self.truth_bin_array[0]))
-            min_max_var1 = (np.min(self.truth_bin_array[1]), np.max(self.truth_bin_array[1]))
+            min_max_var0 = (np.min(self.true_bin_array[0]), np.max(self.true_bin_array[0]))
+            min_max_var1 = (np.min(self.true_bin_array[1]), np.max(self.true_bin_array[1]))
             h, bx, by, f = ax1.hist2d(true_var_list[0], true_var_list[1], bins=bin_lens, range=[min_max_var0, min_max_var1])
             ax1.set_title('True Distribution')
             plt.colorbar(f)
@@ -277,6 +285,7 @@ class Unfold:
             ax1.set_xlabel(var_label_list[0], fontsize=12)
             ax1.set_xticks(np.arange(200, 1900, 200))
             ax1.set_xlim(min_max_var0)
+            ax1.set_ylim(bottom=0)
             ax1.legend()
 
             y_err = unfold_var_hist.sum(axis=1) / np.sqrt(unfold_var_err.sum(axis=1))
@@ -284,18 +293,20 @@ class Unfold:
             ax2.errorbar(bin_centers_np(by), unfold_var_hist.sum(axis=1), y_err, bin_width_np(by), marker='.', color='black', linestyle='None', label='Unfolded')
             ax2.set_xlabel(var_label_list[1], fontsize=12)
             ax2.set_xlim(min_max_var1)
+            ax2.set_ylim(bottom=0)
             ax2.legend()
             plt.show()
         elif self.truth_ndim == 1:
             plt.figure(figsize=(8, 5))
             binsx = bin_lens[0]
-            min_max_var0 = (np.min(self.truth_bin_array[0]), np.max(self.truth_bin_array[0]))
+            min_max_var0 = (np.min(self.true_bin_array[0]), np.max(self.true_bin_array[0]))
             y_err = unfold_var_hist / np.sqrt(unfold_var_err)
             _, bx, _ = plt.hist(true_var_list[0], bins=binsx, range=min_max_var0, edgecolor='black', color='indianred',
                                 alpha=0.9, label='True')
             plt.errorbar(bin_centers_np(bx), unfold_var_hist, y_err, bin_width_np(bx)/2., marker='.',
                          color='black', linestyle='None', label='Unfolded')
             plt.xlim(min_max_var0)
+            plt.ylim(bottom=0)
             plt.xlabel(var_label_list[0], fontsize=12)
             plt.legend()
             plt.show()
@@ -320,12 +331,27 @@ class Unfold:
 
     def load_response(self):
         with open(self.config["response_file"], 'rb') as f:
-            self.response = pickle.load(f)
+            unfold_param_dict = pickle.load(f)
 
-    @staticmethod
+        self.response = unfold_param_dict["response"]
+        self.remap_evts.true_map = unfold_param_dict["true_bin_map"]
+        self.remap_evts.reco_map = unfold_param_dict["reco_bin_map"]
+        self.true_bin_array = unfold_param_dict["true_bin_array"]
+        self.reco_bin_array = unfold_param_dict["reco_bin_array"]
+        self.reco_nbins_sparse = unfold_param_dict["reco_nbins_sparse"]
+        print("Loaded unfold param file:", self.config["response_file"])
+
     def save_response(self, file_name):
+        unfold_param_dict = {"response": self.response,
+                             "true_bin_map": self.remap_evts.true_map,
+                             "reco_bin_map": self.remap_evts.reco_map,
+                             "true_bin_array": self.true_bin_array,
+                             "reco_bin_array": self.reco_bin_array,
+                             "reco_nbins_sparse": self.reco_nbins_sparse}
+
         with open(file_name, 'wb') as f:
-            pickle.dump(self.response, f)
+            pickle.dump(unfold_param_dict, f)
+        print("Wrote unfold param file:", file_name)
 
     @staticmethod
     def configure(config_file):

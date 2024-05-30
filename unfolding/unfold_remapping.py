@@ -152,13 +152,13 @@ class Remapping:
 
         return n1d_sparse, n1d_err_sparse
 
-    def map_1d_to_nd(self, unfolded_hist_np, unfolded_cov_np, true_nd_hist, true_cov_nd, true_nbins_1d_sparse, nbins):
+    def map_1d_to_nd(self, unfolded_hist_np, unfolded_cov_np, nbins):
         """
         Convert 1D back to ND
         """
         unfold_nd_hist = np.zeros(nbins)
         unfold_nd_cov = np.zeros([nbins, nbins])
-        eff_1d = np.ones(true_nbins_1d_sparse)
+        eff_1d = np.ones(unfolded_hist_np.shape)
         data_mc_scale = 1
 
         for i in range(nbins):
@@ -170,9 +170,11 @@ class Remapping:
                     if self.true_map[j] > 0 and unfolded_hist_np[self.true_map[j] - 1] > 0:
                         eff_denom = eff_1d[self.true_map[i] - 1] * eff_1d[self.true_map[j] - 1]
                         unfold_nd_cov[i, j] = unfolded_cov_np[self.true_map[i] - 1, self.true_map[j] - 1] / eff_denom
-            elif eff_1d[self.true_map[i] - 1] == 0:
-                unfold_nd_hist[i] = true_nd_hist[i] * data_mc_scale
-                unfold_nd_cov[i, i] = true_cov_nd[i, i] * data_mc_scale * data_mc_scale
+            elif eff_1d[self.true_map[i] - 1] == 0: # FIXME do something better here
+                print("Warning: Efficiency is 0 here!")
+                raise ValueError
+                # unfold_nd_hist[i] = true_nd_hist[i] * data_mc_scale
+                # unfold_nd_cov[i, i] = true_cov_nd[i, i] * data_mc_scale * data_mc_scale
 
         unfold_nd_err = np.sqrt(np.diag(unfold_nd_cov))
 

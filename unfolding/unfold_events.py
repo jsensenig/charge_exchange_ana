@@ -249,8 +249,10 @@ class Unfold:
         true_bin_edges = np.asarray([self.truth_hist.GetBinLowEdge(b + 1) for b in range(self.truth_hist.GetNbinsX()+1)])
         true_bin_centers = (true_bin_edges[1:] + true_bin_edges[:-1]) / 2.
 
-        ax2.hist(true_bin_centers, bins=true_bin_edges, weights=true_hist_np, edgecolor='black', color='indianred', label='Truth')
-        ax2.errorbar(true_bin_centers, unfolded_data_hist_np, np.sqrt(np.diag(unfolded_cov_np)), marker='.', color='black', linestyle='None', label='Unfolded Data')
+        _,bx,_=ax2.hist(true_bin_centers, bins=true_bin_edges, weights=true_hist_np, edgecolor='black', color='indianred',
+                        alpha=0.9, label='Truth')
+        ax2.errorbar(true_bin_centers, unfolded_data_hist_np, np.sqrt(np.diag(unfolded_cov_np)), bin_width_np(bx)/2,
+                     capsize=2, marker='s', markersize=3, color='black', linestyle='None', label='Unfolded Data')
         ax2.set_ylim(bottom=0)
         plt.legend()
         plt.savefig(self.figs_path + "/data_unfolded_hist_cov.pdf")
@@ -281,7 +283,8 @@ class Unfold:
 
             y_err = unfold_var_hist.sum(axis=0) / np.sqrt(unfold_var_err.sum(axis=0))
             ax1.hist(true_var_list[0], bins=binsx, range=min_max_var0, edgecolor='black', color='indianred', alpha=0.9, label='True')
-            ax1.errorbar(bin_centers_np(bx), unfold_var_hist.sum(axis=0), y_err, bin_width_np(bx), marker='.', color='black', linestyle='None', label='Unfolded')
+            ax1.errorbar(bin_centers_np(bx), unfold_var_hist.sum(axis=0), y_err, bin_width_np(bx), capsize=2, marker='s',
+                         markersize=3, color='black', linestyle='None', label='Unfolded')
             ax1.set_xlabel(var_label_list[0], fontsize=12)
             ax1.set_xticks(np.arange(200, 1900, 200))
             ax1.set_xlim(min_max_var0)
@@ -290,7 +293,8 @@ class Unfold:
 
             y_err = unfold_var_hist.sum(axis=1) / np.sqrt(unfold_var_err.sum(axis=1))
             ax2.hist(true_var_list[1], bins=binsy, range=min_max_var1, edgecolor='black', color='indianred', alpha=0.9, label='True')
-            ax2.errorbar(bin_centers_np(by), unfold_var_hist.sum(axis=1), y_err, bin_width_np(by), marker='.', color='black', linestyle='None', label='Unfolded')
+            ax2.errorbar(bin_centers_np(by), unfold_var_hist.sum(axis=1), y_err, bin_width_np(by), capsize=2, marker='s',
+                         markersize=3, color='black', linestyle='None', label='Unfolded')
             ax2.set_xlabel(var_label_list[1], fontsize=12)
             ax2.set_xlim(min_max_var1)
             ax2.set_ylim(bottom=0)
@@ -303,8 +307,8 @@ class Unfold:
             y_err = unfold_var_hist / np.sqrt(unfold_var_err)
             _, bx, _ = plt.hist(true_var_list[0], bins=binsx, range=min_max_var0, edgecolor='black', color='indianred',
                                 alpha=0.9, label='True')
-            plt.errorbar(bin_centers_np(bx), unfold_var_hist, y_err, bin_width_np(bx)/2., marker='.',
-                         color='black', linestyle='None', label='Unfolded')
+            plt.errorbar(bin_centers_np(bx), unfold_var_hist, y_err, bin_width_np(bx)/2., capsize=2, marker='s',
+                         markersize=3, color='black', linestyle='None', label='Unfolded')
             plt.xlim(min_max_var0)
             plt.ylim(bottom=0)
             plt.xlabel(var_label_list[0], fontsize=12)

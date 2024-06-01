@@ -144,9 +144,9 @@ class Unfold:
 
         true_var_list = None
         if self.is_training:
-            true_var_list = [var_dict[var] for var in self.true_record_var]
+            true_var_list = [var_dict[var][var_dict["true_xsec_mask"]] for var in self.true_record_var]
 
-        reco_var_list = [var_dict[var] for var in self.reco_record_var]
+        reco_var_list = [var_dict[var][var_dict["reco_xsec_mask"]] for var in self.reco_record_var]
 
         return true_var_list, reco_var_list
 

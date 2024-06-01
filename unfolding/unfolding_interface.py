@@ -59,6 +59,9 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars = {}
 
     def get_xsec_variable(self, event_record, reco_mask):
+        self.xsec_vars["true_xsec_mask"] = np.ones(len(event_record)).astype(bool) if self.is_mc else None
+        self.xsec_vars["reco_xsec_mask"] = np.ones(len(event_record)).astype(bool)
+
         # Calculate and add the requisite columns to the event record
         # Make masks for incomplete initial and through-going pions
         true_up, true_down, reco_up, reco_down = self.beam_pion_fiducial_volume(event_record=event_record)
@@ -74,8 +77,18 @@ class BeamPionVariables(XSecVariablesBase):
         if self.is_mc:
             self.xsec_vars["true_beam_new_init_energy"] = ak.to_numpy(event_record["true_beam_traj_KE"][:, 0])
             self.xsec_vars["true_beam_new_end_energy"] = ak.to_numpy(event_record["true_beam_interactingEnergy"])
+            self.xsec_vars["true_xsec_mask"] &= ((self.xsec_vars["true_beam_new_init_energy"] >= self.eslice_bin_array[0]) &
+                                                 (self.xsec_vars["true_beam_new_init_energy"] <= self.eslice_bin_array[-1]))
+            self.xsec_vars["true_xsec_mask"] &= ((self.xsec_vars["true_beam_new_end_energy"] >= self.eslice_bin_array[0]) &
+                                                 (self.xsec_vars["true_beam_new_end_energy"] <= self.eslice_bin_array[-1]))
 
         new_init_energy, new_end_energy = self.make_reco_beam_incident(event_record=event_record)
+
+        # Mask out events which do not have intial or end energies within our range of interest
+        self.xsec_vars["reco_xsec_mask"] &= ((new_init_energy >= self.eslice_bin_array[0]) &
+                                             (new_init_energy <= self.eslice_bin_array[-1]))
+        self.xsec_vars["reco_xsec_mask"] &= ((new_end_energy >= self.eslice_bin_array[0]) &
+                                             (new_end_energy <= self.eslice_bin_array[-1]))
 
         # Add the reco incident
         self.xsec_vars["reco_beam_new_init_energy"] = new_init_energy
@@ -91,10 +104,8 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["reco_beam_all_int_energy"] = reco_all_int
         self.xsec_vars["reco_beam_sig_int_energy"] = reco_int
 
-        #
-        true_incomplete_slice, reco_incomplete_slice = self.incomplete_energy_slice()
-        self.xsec_vars["true_incomplete_slice_mask"] = true_incomplete_slice
-        self.xsec_vars["reco_incomplete_slice_mask"] = reco_incomplete_slice
+        # Mask out incomplete slices
+        self.incomplete_energy_slice()
 
         return self.xsec_vars
 
@@ -148,26 +159,26 @@ class BeamPionVariables(XSecVariablesBase):
                        - self.pip_mass        
         reco_initial_energy -= 12.74 # FIXME temporary Eloss
 
+        self.xsec_vars["true_xsec_mask"] &= ((true_initial_energy >= self.eslice_bin_array[0]) &
+                                             (true_initial_energy <= self.eslice_bin_array[-1]))
+        self.xsec_vars["reco_xsec_mask"] &= ((reco_initial_energy >= self.eslice_bin_array[0]) &
+                                             (reco_initial_energy <= self.eslice_bin_array[-1]))
+
         return true_initial_energy, reco_initial_energy
 
     def incomplete_energy_slice(self):
 
-        true_incomplete_slice = None
         if self.is_mc:
-            bin_idx = np.digitize(self.xsec_vars["true_beam_new_init_energy"], bins=self.eslice_bin_array)
-            for i, b in enumerate(self.eslice_bin_array):
-                bin_idx[bin_idx == i] = b
-            true_incomplete_slice = self.xsec_vars["true_beam_new_end_energy"] < bin_idx
+            init_bin_idx = np.digitize(self.xsec_vars["true_beam_new_init_energy"], bins=self.eslice_bin_array)
+            end_bin_idx = np.digitize(self.xsec_vars["true_beam_new_end_energy"], bins=self.eslice_bin_array)
+            true_incomplete_slice = init_bin_idx == end_bin_idx
+            self.xsec_vars["true_xsec_mask"] &= ~true_incomplete_slice
 
-        # 0th bin is underflow so the bin index will give us the idx+1 of the bin_array which is the upper edge
-        bin_idx = np.digitize(self.xsec_vars["reco_beam_new_init_energy"], bins=self.eslice_bin_array)
-        for i, b in enumerate(self.eslice_bin_array):
-            bin_idx[bin_idx == i] = b
+        init_bin_idx = np.digitize(self.xsec_vars["reco_beam_new_init_energy"], bins=self.eslice_bin_array)
+        end_bin_idx = np.digitize(self.xsec_vars["reco_beam_new_end_energy"], bins=self.eslice_bin_array)
+        reco_incomplete_slice = init_bin_idx == end_bin_idx
 
-        # E_end < upper_bin_edge -> incomplete
-        reco_incomplete_slice = self.xsec_vars["reco_beam_new_end_energy"] < bin_idx
-
-        return true_incomplete_slice, reco_incomplete_slice
+        self.xsec_vars["reco_xsec_mask"] &= ~reco_incomplete_slice
 
     def make_beam_int_ke(self, event_record, reco_mask):
         """
@@ -180,11 +191,11 @@ class BeamPionVariables(XSecVariablesBase):
         true_all_int, true_int = None, None
         if self.is_mc:
             # All pion inelastic interactions
-            true_all_int_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["true_downstream_mask"]
+            true_all_int_mask = ~self.xsec_vars["true_upstream_mask"] #& ~self.xsec_vars["true_downstream_mask"]
             true_all_int = np.ones(len(event_record)) * -1.
             true_all_int[true_all_int_mask] = self.xsec_vars["true_beam_new_end_energy"][true_all_int_mask].copy()
             # Exclusive interaction
-            true_int_mask = ak.to_numpy(event_record[self.signal_proc]) & true_all_int_mask
+            true_int_mask = ak.to_numpy(event_record[self.signal_proc]) #& true_all_int_mask
             true_int = np.ones(len(event_record)) * -1.
             true_int[true_int_mask] = self.xsec_vars["true_beam_new_end_energy"][true_int_mask].copy()
 
@@ -194,7 +205,7 @@ class BeamPionVariables(XSecVariablesBase):
         reco_all_int[reco_all_int_mask] = self.xsec_vars["reco_beam_new_end_energy"][reco_all_int_mask]
         # Exclusive interactions
         # For interacting just apply mask to end KE to extract the interacting
-        reco_int_mask = reco_mask & reco_all_int_mask
+        reco_int_mask = reco_mask #& reco_all_int_mask
         reco_int = np.ones(len(event_record)) * -1.
         reco_int[reco_int_mask] = self.xsec_vars["reco_beam_new_end_energy"][reco_int_mask]
 

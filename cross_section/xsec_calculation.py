@@ -1,6 +1,8 @@
 from abc import abstractmethod
 import json
 import numpy as np
+import uproot
+import ROOT
 from bethe_bloch_utils import BetheBloch
 from cex_analysis.plot_utils import bin_width_np, bin_centers_np
 
@@ -65,6 +67,7 @@ class XSecTotal(XSecBase):
         self.eslices = np.asarray(self.local_config["eslices"])
         self.delta_e = bin_width_np(self.eslices)
         self.bethe_bloch = BetheBloch(mass=139.57, charge=1)
+        self.geant_total_xsec = {}
 
     def calc_xsec(self, hist_dict):
         """
@@ -106,6 +109,14 @@ class XSecTotal(XSecBase):
 
         return np.flip(inc_hist)
 
+    def load_geant_total_xsec(self, xsec_file):
+
+        with uproot.open(xsec_file) as file:
+            loaded_xsec = file
+
+        for graph in loaded_xsec:
+            self.geant_total_xsec[graph] = loaded_xsec[graph].values()
+
 
 class XSecDiff(XSecBase):
     """
@@ -133,9 +144,50 @@ class XSecDoubleDiff(XSecBase):
         super().__init__(config_file=config_file)
 
         self.local_config = self.config["XSecDoubleDiff"]
+        self.geant_xsec_dict = {}
 
     def calc_xsec(self, hist_dict):
         pass
 
     def propagate_error(self):
         pass
+
+    def get_geant_cross_section(self, energy, angle, beam):
+        # If the beam KE does not exist we should know, throw error
+        if int(beam) not in self.geant_xsec_dict.keys():
+            print("No match for beam", int(beam), "in dictionary", self.geant_xsec_dict.keys())
+            #raise RuntimeError
+            return 1.
+
+        """
+        1) Select the correct 2D plot for the incident pion energy
+        2) find the global bin number corresponding to the values of energy, angle
+        """
+        global_bin = self.geant_xsec_dict[int(beam)].FindBin(energy, angle)
+        """
+        # 3) get the content in that bin.bin content = cross section[mb]
+        """
+        return self.geant_xsec_dict[beam].GetBinContent(global_bin) * 10. #* 1.e3  # convert to micro-barn
+
+    def load_geant_double_diff_xsec(self):
+         beam_bins = np.array([1000., 1500., 1800., 2100.])
+         #beam_bins = np.array([950.,1050.,1150.,1250.,1350.,1450.,1550.,1650.,1750.,1850.,1950.,2050])
+         beam_energy_hist = ROOT.TH1D("beam_energy", "Beam Pi+ Kinetic Energy;T_{#pi^{+}} [MeV/c];Count", len(beam_bins)-1, beam_bins)
+
+
+         geant_file = "/Users/jsen/geant_xsec/cross_section_out_1m_3ke_new_cex_p150_picut_xnucleon.root"
+         geant_xsec_file = ROOT.TFile(geant_file)
+
+         # cd into the ROOT directory so we can clone the histograms from file
+         # otherwise we lose the histograms when the file is closed
+         ROOT.gROOT.cd()
+         for bin_i in range(1, beam_energy_hist.GetXaxis().GetNbins()+1):
+             bin_center = beam_energy_hist.GetBinCenter(bin_i)
+             geant_graph_name = "inel_cex_" + str(int(bin_center)) + "_MeV"
+             print("Loading GEANT Xsec TGraph", geant_graph_name)
+             self.geant_xsec_dict[bin_center] = geant_xsec_file.Get(geant_graph_name).Clone()
+
+         geant_xsec_file.Close()
+
+         for k in self.geant_xsec_dict:
+             print("Loaded XSec  [ Beam KE=", k, "  Type=", type(self.geant_xsec_dict[k]), "]")

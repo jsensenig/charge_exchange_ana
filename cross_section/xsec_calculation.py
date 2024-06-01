@@ -93,10 +93,16 @@ class XSecTotal(XSecBase):
         in all preceding bins.
         """
         inc_hist = np.zeros(len(init_hist))
-        for b in range(len(self.eslices) - 1):
-            # inc_hist[b] = np.sum(np.flip(init_hist)[:b + 1]) - np.sum(np.flip(end_hist)[:b])
-            inc_hist[b] = np.sum(np.flip(end_hist)[b:]) - np.sum(np.flip(init_hist)[(b + 1):])
-            # inc_hist[b] = np.sum(init_hist[b:]) - np.sum(end_hist[(b + 1):])
+        #for b in range(len(self.eslices) - 1):
+        #    # inc_hist[b] = np.sum(np.flip(init_hist)[:b + 1]) - np.sum(np.flip(end_hist)[:b])
+        #    inc_hist[b] = np.sum(np.flip(end_hist)[b:]) - np.sum(np.flip(init_hist)[(b + 1):])
+        #    # inc_hist[b] = np.sum(init_hist[b:]) - np.sum(end_hist[(b + 1):])
+
+        for ibin in range(len(self.eslices)-2):
+            for itmp in range(0, ibin+1):
+                inc_hist[ibin+1] += np.flip(init_hist)[itmp]
+            for itmp in range(0, ibin):
+                inc_hist[ibin+1] -= np.flip(end_hist)[itmp]
 
         return np.flip(inc_hist)
 

@@ -1,7 +1,6 @@
 from abc import abstractmethod
 import json
 import awkward as ak
-import numba as nb
 import numpy as np
 
 import cross_section_utils as xsec_utils
@@ -22,7 +21,6 @@ class XSecVariablesBase:
         """
         pass
 
-    @nb.njit()
     def mask_list(self, key, mask):
         masked_list = []
         for el, m in zip(self.xsec_vars[key], mask):

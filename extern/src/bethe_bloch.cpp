@@ -26,7 +26,6 @@ py::array_t<double> BetheBloch::ke_along_track(double init_ke, const py::array_t
   return track_ke;
 }
 
-
 double BetheBloch::KEAtLength(double KE0, double tracklength) {
 
   int iKE = int(KE0);

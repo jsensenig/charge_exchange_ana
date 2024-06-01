@@ -2,6 +2,7 @@ import json
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import ROOT
 import RooUnfold
 import awkward as ak
@@ -224,12 +225,12 @@ class Unfold:
 
         # Transpose response so we have truth vs reco
         _, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,5))
-        f = ax1.imshow(response_matrix_np.T, origin='lower', cmap=plt.cm.jet)
+        f = ax1.imshow(response_matrix_np.T, origin='lower', cmap=plt.cm.jet, norm=LogNorm())
         ax1.set_title("Response Matrix", fontsize=14)
         ax1.set_xlabel("Reco Bins", fontsize=12)
         ax1.set_ylabel("True Bins", fontsize=12)
         plt.colorbar(f)
-        f = ax2.imshow((response_matrix_np * norm_factor).T, origin='lower', cmap=plt.cm.jet)
+        f = ax2.imshow((response_matrix_np * norm_factor).T, origin='lower', cmap=plt.cm.jet, norm=LogNorm())
         ax2.set_title("Response Matrix: $P(Reco | True)$", fontsize=14)
         ax2.set_xlabel("Reco Bins", fontsize=12)
         ax2.set_ylabel("True Bins", fontsize=12)
@@ -323,13 +324,15 @@ class Unfold:
             reco_array = np.asarray(self.config["reco_bins"], dtype=np.dtype('d'))
             self.truth_ndim = len(true_array)
             self.reco_ndim = len(reco_array)
-        else:
+        else: # 0th bins is underflow and n+1th bin is overflow
             nbins, bin_range = self.config["truth_bins"]["nbins"], self.config["truth_bins"]["limits"]
             self.truth_ndim = len(nbins)
             true_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
+            true_array = [np.concatenate(([limits[0] - 1000], tarr, [limits[1] + 1000])) for tarr, limits in zip(true_array, bin_range)]
             nbins, bin_range = self.config["reco_bins"]["nbins"], self.config["reco_bins"]["limits"]
             self.reco_ndim = len(nbins)
             reco_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
+            reco_array = [np.concatenate(([limits[0] - 1000], tarr, [limits[1] + 1000])) for tarr, limits in zip(reco_array, bin_range)]
 
         return true_array, reco_array
 

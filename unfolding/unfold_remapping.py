@@ -18,10 +18,12 @@ class Remapping:
 
     def remap_training_events(self, true_list, reco_list, bin_list, ndim):
 
+        # 3D (l,m,n) -> (l*m*n) + (m*n) + n
         # total_bins = sum([nbin_list[d-1]**d for d in range(1, ndim+1)])
         # self.true_total_bins = sum([(len(bin_list[d - 1]) - 1) ** d for d in range(1, ndim + 1)])
         # self.true_total_bins = sum([(len(bin_list[d - 1]) - 1) ** (1 + ndim - d) for d in range(1, ndim + 1)])
-        self.true_total_bins = sum(np.flip(np.cumprod(np.flip([len(d) - 1 for d in bin_list]))))
+        # self.true_total_bins = sum(np.flip(np.cumprod(np.flip([len(d)-1 for d in bin_list]))))
+        self.true_total_bins = np.prod([len(d) - 1 for d in bin_list])
 
         true_event_weights = [np.ones(arr.shape) for arr in true_list]
         reco_event_weights = [np.ones(arr.shape) for arr in reco_list]
@@ -61,7 +63,8 @@ class Remapping:
 
         # self.reco_total_bins = sum([nbin_list[d - 1]**d for d in range(1, ndim + 1)])
         # self.reco_total_bins = sum([(len(bin_list[d - 1]) - 1) ** (1+ndim - d) for d in range(1, ndim + 1)])
-        self.reco_total_bins = sum(np.flip(np.cumprod(np.flip([len(d) - 1 for d in bin_list]))))
+        #self.reco_total_bins = sum(np.flip(np.cumprod(np.flip([len(d)-1 for d in bin_list])))) # NOTE change from len() -1
+        self.reco_total_bins = np.prod([len(d)-1 for d in bin_list])
 
         data_event_weights = [np.ones(arr.shape) for arr in data_list]
 
@@ -85,14 +88,14 @@ class Remapping:
         """
         # Mask out events that fall in underflow or overflow bins
         mask_events = np.ones(shape=corr_var_list[0].shape, dtype=bool)
-        for cvar, bins in zip(corr_var_list, bin_list):
+        for cvar, bins in zip(corr_var_list, bin_list): # NOTE remove masking
             mask_events &= (cvar >= bins[0]) & (cvar < bins[-1])
 
         # Bin shifts, the last element is only added so multiply by 1
         # bin_shift = np.flip(np.cumprod([len(d) - 1 for d in bin_list]))
         # bin_shift = np.flip(np.cumprod(np.flip([len(d) - 1 for d in bin_list]))).astype('int')
         # bin_shift[-1] = 1
-        bin_lens = [len(d) - 1 for d in bin_list]
+        bin_lens = [len(d)-1 for d in bin_list] # NOTE changed from len() -1
         bin_shift = [np.prod(bin_lens[d + 1:]).astype('int') for d, l in enumerate(bin_lens)]
 
         weight_array = None
@@ -101,21 +104,22 @@ class Remapping:
             arr, bins, shift, weight = arr_bin
             nbins = len(bins) - 1
             # Mapping from measured space (usually energy) to bin space
-            n_binned = np.digitize(x=arr[mask_events], bins=bins, right=False)
+            n_binned = np.digitize(x=arr[mask_events], bins=bins, right=False) - 1
             if debug: print("Unique bins:", np.unique(n_binned))
-            if debug: print("(n_binned >= 1) & (n_binned <= (", nbins, ")") # was >= 1 and <= 0
-            n_binned = n_binned[(n_binned >= 1) & (n_binned <= nbins)]  # ignore under/over flow bins, 0/n+1 respectively
+            if debug: print("(n_binned >= 0) & (n_binned <= (", nbins-1, ")") # was >= 1 and <= 0 # NOTE remove cut
+            n_binned = n_binned[(n_binned >= 0) & (n_binned <= nbins-1)]  # ignore under/over flow bins, 0/n+1 respectively
             if debug: print("Unique Bins post under/over -flow cut:", np.unique(n_binned))
+            if debug: print("Shift:", shift)
             nnd_bin_array += shift * n_binned
 
         print("Max bin:", np.max(nnd_bin_array))
         if debug: print("Unique Bins:", np.unique(nnd_bin_array))
-        nnd_bin_array -= 1
+        # nnd_bin_array -= 1 # NOTE remove shift
 
         # Create the histogram with event weighting and calculate errors
         evt_weight = np.ones(nnd_bin_array.shape)
-        num_nd, _ = np.histogram(nnd_bin_array, bins=total_bins, range=(0, total_bins), weights=evt_weight)
-        num_nd_err, _ = np.histogram(nnd_bin_array, bins=total_bins, range=(0, total_bins), weights=evt_weight * evt_weight)
+        num_nd, _ = np.histogram(nnd_bin_array, bins=total_bins, range=(0, total_bins-1), weights=evt_weight)
+        num_nd_err, _ = np.histogram(nnd_bin_array, bins=total_bins, range=(0, total_bins-1), weights=evt_weight * evt_weight)
         num_nd_vcov = np.diag(num_nd_err)
 
         return nnd_bin_array, num_nd, np.sqrt(num_nd_err), num_nd_vcov
@@ -184,12 +188,11 @@ class Remapping:
     def map_bin_to_variable_space(unfold_nd_hist_np, unfold_nd_cov_np, truth_bin_list):
 
         bin_lens = [len(b) - 1 for b in truth_bin_list]
-        final_shift = sum(np.flip(np.cumprod(np.flip(bin_lens[1:]))))
 
         # Cast into nth-order tensor containing bins corresponding to the original measured physics variable
-        # shifting the variable since we are ignoring bin 0
-        unfold_var_hist = unfold_nd_hist_np[final_shift:].reshape(bin_lens).T
-        unfold_var_err = np.diag(unfold_nd_cov_np)[final_shift:].reshape(bin_lens).T
+        # the first bin is underflow and last is overflow
+        unfold_var_hist = unfold_nd_hist_np.reshape(bin_lens)
+        unfold_var_err = np.diag(unfold_nd_cov_np).reshape(bin_lens)
 
         return unfold_var_hist, unfold_var_err
 

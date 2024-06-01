@@ -5,6 +5,7 @@ import numba as nb
 import numpy as np
 
 import cross_section_utils as xsec_utils
+from cross_section.xsec_calculation import XSecTotal
 from bethe_bloch_utils import BetheBloch
 
 
@@ -40,11 +41,6 @@ class XSecVariablesBase:
 
         return config
 
-# class BetheBloch(bethe_bloch_utils.BetheBloch):
-#
-#     def __init__(self, mass, charge):
-#         super().__init__(mass, charge)
-
 
 class BeamPionVariables(XSecVariablesBase):
     def __init__(self, config_file, is_mc):
@@ -54,7 +50,7 @@ class BeamPionVariables(XSecVariablesBase):
         self.signal_proc = self.config["signal_proc"]
         self.beam_pip_zlow, self.beam_pip_zhigh = self.config["beam_pip_zlow"], self.config["beam_pip_zhigh"]
         self.pip_mass = self.config["pip_mass"] # pip_mass = 0.13957039  # pi+/- [GeV/c]
-        self.eslice_bin_array = self.config["eslice_bin_edges"]
+        self.eslice_bin_array = self.config["eslice_bin_edges"] # FIXME inherit this from xsec
 
         self.bethe_bloch = BetheBloch(mass=139.57, charge=1)
 
@@ -86,7 +82,7 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["reco_beam_new_end_energy"] = new_end_energy
 
         true_all_int, true_int, reco_all_int, reco_int = self.make_beam_int_ke(event_record=event_record,
-                                                                                                   reco_mask=reco_mask)
+                                                                               reco_mask=reco_mask)
 
         if self.is_mc:
             self.xsec_vars["true_beam_all_int_energy"] = true_all_int
@@ -144,11 +140,11 @@ class BeamPionVariables(XSecVariablesBase):
         double ff_energy_reco = beam_inst_KE*1000 - Eloss;//12.74;
         double initialE_reco = bb.KEAtLength(ff_energy_reco, trackLenAccum[0]);
         """
-
+        beame = 0. # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
         true_initial_energy = ak.to_numpy(event_record["true_beam_traj_KE"][:, 0]) if self.is_mc else None
 
         # Note the beam momentum is converted GeV -> MeV
-        reco_initial_energy = np.sqrt(np.square(self.pip_mass) + np.square(ak.to_numpy(event_record["beam_inst_P"] + 1.)*1.e3)) \
+        reco_initial_energy = np.sqrt(np.square(self.pip_mass) + np.square(ak.to_numpy(event_record["beam_inst_P"] + beame)*1.e3)) \
                        - self.pip_mass        
         reco_initial_energy -= 12.74 # FIXME temporary Eloss
 
@@ -186,11 +182,11 @@ class BeamPionVariables(XSecVariablesBase):
             # All pion inelastic interactions
             true_all_int_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["true_downstream_mask"]
             true_all_int = np.ones(len(event_record)) * -1.
-            true_all_int[true_all_int_mask] = self.xsec_vars["true_beam_new_end_energy"][true_all_int_mask]
+            true_all_int[true_all_int_mask] = self.xsec_vars["true_beam_new_end_energy"][true_all_int_mask].copy()
             # Exclusive interaction
             true_int_mask = ak.to_numpy(event_record[self.signal_proc]) & true_all_int_mask
             true_int = np.ones(len(event_record)) * -1.
-            true_all_int[true_int_mask] = self.xsec_vars["true_beam_new_end_energy"][true_int_mask]
+            true_int[true_int_mask] = self.xsec_vars["true_beam_new_end_energy"][true_int_mask].copy()
 
         # All pion inelastic interactions
         reco_all_int_mask = ~self.xsec_vars["reco_upstream_mask"] & ~self.xsec_vars["reco_downstream_mask"]

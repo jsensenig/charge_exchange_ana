@@ -224,27 +224,32 @@ class Pi0Variables(XSecVariablesBase):
     def __init__(self, config_file, is_mc):
         super().__init__(is_mc=is_mc)
 
+        self.config = self.configure(config_file=config_file)
+        self.signal_proc = self.config["signal_proc"]
+
     def get_xsec_variable(self, event_record, reco_mask):
-        true_pi0_energy, reco_pi0_energy = self.make_pi0_energy(event_record=event_record)
+        true_pi0_energy, reco_pi0_energy = self.make_pi0_energy(event_record=event_record, reco_mask=reco_mask)
         self.xsec_vars["true_pi0_energy"] = true_pi0_energy
         self.xsec_vars["reco_pi0_energy"] = reco_pi0_energy
 
-        true_cos_theta, reco_cos_theta = self.make_pi0_cos_theta(event_record=event_record)
+        true_cos_theta, reco_cos_theta = self.make_pi0_cos_theta(event_record=event_record, reco_mask=reco_mask)
         self.xsec_vars["true_pi0_cos_theta"] = true_cos_theta
         self.xsec_vars["reco_pi0_cos_theta"] = reco_cos_theta
 
         return self.xsec_vars
 
-    def make_pi0_energy(self, event_record):
+    def make_pi0_energy(self, event_record, reco_mask):
         true_pi0_energy = None
         if self.is_mc:
-            true_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"], axis=1) * 1.e3)
+            true_mask = event_record[self.signal_proc]
+            true_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][true_mask], axis=1) * 1.e3)
 
-        reco_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"], axis=1) * 1.e3)
+        reco_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][reco_mask], axis=1) * 1.e3)
 
         return true_pi0_energy, reco_pi0_energy
 
-    def make_pi0_cos_theta(self, event_record):
+    def make_pi0_cos_theta(self, event_record, reco_mask):
+        true_mask = event_record[self.signal_proc]
         # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector and normalize
         beam_dir = np.vstack((ak.to_numpy(event_record["true_beam_endPx"]),
                               ak.to_numpy(event_record["true_beam_endPy"]),
@@ -273,4 +278,4 @@ class Pi0Variables(XSecVariablesBase):
         # respective direction unit vectors
         true_cos_theta = np.diag(beam_dir_unit @ full_len_daughter_dir.T)
 
-        return true_cos_theta, true_cos_theta
+        return true_cos_theta[true_mask], true_cos_theta[reco_mask]

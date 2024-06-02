@@ -1,0 +1,21 @@
+{
+  "show_plots": true,
+   "is_training": true,
+  "bayes_niter": 4,
+  "xsec_vars": "Pi0Variables",
+  "var_names": ["pi0_energy", "pi0_cos_theta"],
+  "true_record_var": ["true_pi0_energy", "true_pi0_cos_theta"],
+  "reco_record_var": ["reco_pi0_energy", "reco_pi0_cos_theta"],
+  "use_bin_array":  false,
+  "truth_bins": {
+     "nbins": [10,10],
+     "limits": [[150,1000],[-1,1]]
+  },
+  "reco_bins": {
+     "nbins": [10,10],
+     "limits": [[150,1000],[-1,1]]
+    },
+  "figure_path": "/Users/jsen/work/Protodune/analysis/cex_event_selection/figs",
+  "interface_config": "/Users/jsen/work/Protodune/analysis/cex_event_selection/config/var_interface.json",
+  "response_file": "/Users/jsen/work/Protodune/analysis/cex_event_selection/notebooks/test_response.pkl"
+}

@@ -142,14 +142,11 @@ class Unfold:
         var_dict = self.vars.get_xsec_variable(event_record=event_record, reco_mask=reco_mask)
         print("Loaded variables:", list(var_dict))
 
-        true_fid_mask = ~var_dict["true_upstream_mask"] & ~var_dict["true_downstream_mask"]
-        reco_fid_mask = ~var_dict["reco_upstream_mask"] & ~var_dict["reco_downstream_mask"]
-
         true_var_list = None
         if self.is_training:
-            true_var_list = [var_dict[var][var_dict["true_xsec_mask"] & true_fid_mask] for var in self.true_record_var]
+            true_var_list = [var_dict[var] for var in self.true_record_var]
 
-        reco_var_list = [var_dict[var][var_dict["reco_xsec_mask"] & reco_fid_mask] for var in self.reco_record_var]
+        reco_var_list = [var_dict[var] for var in self.reco_record_var]
 
         return true_var_list, reco_var_list
 

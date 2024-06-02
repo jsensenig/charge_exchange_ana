@@ -136,7 +136,7 @@ class XSecDiff(XSecBase):
         int_hist = hist_dict["int_hist"]
 
         assert int_hist.ndim == 2, f"Interacting histogram must be 2D but its {int_hist.ndim}D!"
-        assert int_hist.shape[0] == end_hist.shape, f"Interacting histogram axis 0 must match Initial/End histogram shape!"
+        assert int_hist.shape[0] == end_hist.shape[0], f"Interacting histogram axis 0 must match Initial/End histogram shape!"
 
         inc_hist = self.calculate_incident(init_hist=init_hist, end_hist=end_hist)
 
@@ -150,8 +150,8 @@ class XSecDiff(XSecBase):
         xsec_array = np.zeros_like(int_hist)
 
         # Loop over the y-axis of int hist, assumed to be dX
-        for j in range(init_hist.shape[1]):
-            xsec_array[:, j] = total_xsec_prefactor * (1. / bin_width_np(init_hist[0, :])) * (int_hist[:, j] / inc_hist)
+        for j in range(int_hist.shape[1]):
+            xsec_array[:, j] = total_xsec_prefactor * (1. / bin_width_np(int_hist[0, :])) * (int_hist[:, j] / inc_hist)
 
         return xsec_array
 
@@ -182,7 +182,7 @@ class XSecDoubleDiff(XSecBase):
         int_hist = hist_dict["int_hist"]
 
         assert int_hist.ndim == 3, f"Interacting histogram must be 3D but its {int_hist.ndim}D!"
-        assert int_hist.shape[0] == end_hist.shape, f"Interacting histogram axis 0 must match Initial/End histogram shape!"
+        assert int_hist.shape[0] == end_hist.shape[0], f"Interacting histogram axis 0 must match Initial/End histogram shape!"
 
     def propagate_error(self):
         pass

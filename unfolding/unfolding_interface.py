@@ -244,10 +244,10 @@ class Pi0Variables(XSecVariablesBase):
         if self.is_mc:
             true_mask = event_record[self.signal_proc]
             true_pi0_mom = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][true_mask], axis=1) * 1.e3)
-            true_pi0_energy = np.sqrt(true_pi0_mom * true_pi0_mom + 135. * 135.)
+            true_pi0_energy = np.sqrt(true_pi0_mom * true_pi0_mom + 135. * 135.) - 135.
 
         reco_pi0_mom = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][reco_mask], axis=1) * 1.e3)
-        reco_pi0_energy = np.sqrt(reco_pi0_mom * reco_pi0_mom + 135. * 135.)
+        reco_pi0_energy = np.sqrt(reco_pi0_mom * reco_pi0_mom + 135. * 135.) - 135.
 
         return true_pi0_energy, reco_pi0_energy
 

@@ -129,29 +129,29 @@ class XSecDiff(XSecBase):
 
         self.local_config = self.config["XSecDiff"]
 
-    def calc_xsec(self, hist_dict):
+    def calc_xsec(self, hist_dict, beam_eslice_edges):
         # Get the requisite histograms
-        init_hist = hist_dict["init_hist"]
-        end_hist = hist_dict["end_hist"]
+        inc_hist = hist_dict["inc_hist"]
+        #end_hist = hist_dict["end_hist"]
         int_hist = hist_dict["int_hist"]
 
-        assert int_hist.ndim == 2, f"Interacting histogram must be 2D but its {int_hist.ndim}D!"
-        assert int_hist.shape[0] == end_hist.shape[0], f"Interacting histogram axis 0 must match Initial/End histogram shape!"
+        #assert int_hist.ndim == 2, f"Interacting histogram must be 2D but its {int_hist.ndim}D!"
+        #assert int_hist.shape[0] == end_hist.shape[0], f"Interacting histogram axis 0 must match Initial/End histogram shape!"
 
-        inc_hist = self.calculate_incident(init_hist=init_hist, end_hist=end_hist)
+        #inc_hist = self.calculate_incident(init_hist=init_hist, end_hist=end_hist)
 
         # Get dE/dx as a function fo KE for the center of each bin
-        dedx = np.asarray([self.bethe_bloch.meandEdx(ke) for ke in bin_centers_np(self.eslice_edges)])
+        dedx = np.asarray([self.bethe_bloch.meandEdx(ke) for ke in bin_centers_np(beam_eslice_edges)])
 
         # The Eslice cross-section calculation
-        total_xsec_prefactor = (self.sigma_factor / self.delta_e) * dedx
+        total_xsec_prefactor = (self.sigma_factor / bin_width_np(beam_eslice_edges)) * dedx
 
         # The cross section result is going to be 2D, the same shape as the interacting histogram
         xsec_array = np.zeros_like(int_hist)
 
         # Loop over the y-axis of int hist, assumed to be dX
-        for j in range(int_hist.shape[1]):
-            xsec_array[:, j] = total_xsec_prefactor * (1. / bin_width_np(int_hist[0, :])) * (int_hist[:, j] / inc_hist)
+        for j in range(int_hist.shape[0]):
+            xsec_array[j] = total_xsec_prefactor * (1. / bin_width_np(self.eslice_edges)) * (int_hist[j] / inc_hist)
 
         return xsec_array
 

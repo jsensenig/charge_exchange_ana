@@ -49,13 +49,13 @@ class XSecBase:
         in all preceding bins.
         """
         inc_hist = np.zeros(len(init_hist))
-        for ibin in range(len(self.eslice_edges)-2):
-            for itmp in range(0, ibin+1):
-                inc_hist[ibin+1] += np.flip(init_hist)[itmp]
-            for itmp in range(0, ibin):
-                inc_hist[ibin+1] -= np.flip(end_hist)[itmp]
+        for ibin in range(len(self.eslice_edges)-1):
+            for itmp in range(ibin, len(init_hist)):
+                inc_hist[ibin] += init_hist[itmp]
+            for itmp in range(ibin+1, len(init_hist)):
+                inc_hist[ibin] -= end_hist[itmp]
 
-        return np.flip(inc_hist)
+        return inc_hist
 
     @staticmethod
     def configure(config_file):
@@ -99,7 +99,7 @@ class XSecTotal(XSecBase):
         dedx = np.asarray([self.bethe_bloch.meandEdx(ke) for ke in bin_centers_np(self.eslice_edges)])
 
         # The Eslice cross-section calculation
-        xsec = (self.sigma_factor / self.delta_e) * dedx * np.log(inc_hist / (inc_hist - int_hist))
+        xsec = int_hist * (self.sigma_factor / ( end_hist * self.delta_e)) * dedx * np.log(inc_hist / (inc_hist - end_hist))
 
         return xsec
 

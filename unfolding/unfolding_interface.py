@@ -103,6 +103,9 @@ class BeamPionVariables(XSecVariablesBase):
         true_mask = ~self.xsec_vars["true_upstream_mask"] & self.xsec_vars["true_xsec_mask"]
         reco_mask = ~self.xsec_vars["reco_upstream_mask"] & self.xsec_vars["reco_xsec_mask"]
 
+        self.xsec_vars["full_len_true_mask"] = true_mask
+        self.xsec_vars["full_len_reco_mask"] = reco_mask
+
         for k in self.xsec_vars:
             if k.split('_')[0] == 'true':
                 self.xsec_vars[k] = self.xsec_vars[k][true_mask]
@@ -240,9 +243,11 @@ class Pi0Variables(XSecVariablesBase):
         true_pi0_energy = None
         if self.is_mc:
             true_mask = event_record[self.signal_proc]
-            true_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][true_mask], axis=1) * 1.e3)
+            true_pi0_mom = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][true_mask], axis=1) * 1.e3)
+            true_pi0_energy = np.sqrt(true_pi0_mom * true_pi0_mom + 135. * 135.)
 
-        reco_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][reco_mask], axis=1) * 1.e3)
+        reco_pi0_mom = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][reco_mask], axis=1) * 1.e3)
+        reco_pi0_energy = np.sqrt(reco_pi0_mom * reco_pi0_mom + 135. * 135.)
 
         return true_pi0_energy, reco_pi0_energy
 

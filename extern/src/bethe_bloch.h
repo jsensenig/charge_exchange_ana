@@ -15,6 +15,8 @@ class BetheBloch {
 
   py::array_t<double> ke_along_track(double init_ke, const py::array_t<double> &track_cumlen);
 
+  py::array_t<double> ke_at_point(const py::array_t<double> &init_ke, const py::array_t<double> &track_cumlen); 
+
   double meandEdx(double KE);
 
   double IntegratedEdx(double KE0, double KE1, int n = 10000);

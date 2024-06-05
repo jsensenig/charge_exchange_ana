@@ -26,6 +26,28 @@ py::array_t<double> BetheBloch::ke_along_track(double init_ke, const py::array_t
   return track_ke;
 }
 
+py::array_t<double> BetheBloch::ke_at_point(const py::array_t<double> &init_ke, const py::array_t<double> &track_cumlen) {
+
+  py::buffer_info buf_init_ke = init_ke.request();
+  py::buffer_info buf_track_cumlen = track_cumlen.request();
+
+  if ( buf_init_ke.size != buf_track_cumlen.size ) throw std::runtime_error("Input shapes must match");
+
+  double *ptr_init_ke = static_cast<double *>(buf_init_ke.ptr);
+  double *ptr_track_cumlen = static_cast<double *>(buf_track_cumlen.ptr);
+
+  // Allocate result numpy buffer
+  auto track_ke = py::array_t<double>(buf_track_cumlen.size);
+  py::buffer_info buf_track_ke = track_ke.request();
+  double *ptr_track_ke = static_cast<double *>(buf_track_ke.ptr);
+
+  for (size_t i = 0; i < buf_track_cumlen.shape[0]; ++i) {
+    ptr_track_ke[i] = KEAtLength(ptr_init_ke[i], ptr_track_cumlen[i]);
+  }
+
+  return track_ke;
+}
+
 double BetheBloch::KEAtLength(double KE0, double tracklength) {
 
   int iKE = int(KE0);

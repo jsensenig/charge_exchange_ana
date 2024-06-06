@@ -239,13 +239,13 @@ class BeamPionVariables(XSecVariablesBase):
         if plot_reco: ax3.hist(self.xsec_vars["reco_beam_sig_int_energy"][reco_mask], bins=bin_array[2], alpha=0.8,
                                color='indianred', edgecolor='black', label='Reco')
 
-        ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=2).sum(axis=1), unfold_err.sum(axis=2).sum(axis=1),
+        ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=2).sum(axis=1), np.sqrt(unfold_err.sum(axis=2).sum(axis=1)),
                      bin_width_np(bx1[2:4]) / 2, capsize=2, marker='s', markersize=3, linestyle='None', color='black',
                      label='Unfolded')
-        ax2.errorbar(bin_centers_np(bx2), unfold_hist.sum(axis=2).sum(axis=0), unfold_err.sum(axis=2).sum(axis=0),
+        ax2.errorbar(bin_centers_np(bx2), unfold_hist.sum(axis=2).sum(axis=0), np.sqrt(unfold_err.sum(axis=2).sum(axis=0)),
                      bin_width_np(bx2[2:4]) / 2, capsize=2, marker='s', markersize=3, linestyle='None', color='black',
                      label='Unfolded')
-        ax3.errorbar(bin_centers_np(bx3), unfold_hist.sum(axis=1).sum(axis=0), unfold_err.sum(axis=1).sum(axis=0),
+        ax3.errorbar(bin_centers_np(bx3), unfold_hist.sum(axis=1).sum(axis=0), np.sqrt(unfold_err.sum(axis=1).sum(axis=0)),
                      bin_width_np(bx3[2:4]) / 2, capsize=2, marker='s', markersize=3, linestyle='None', color='black',
                      label='Unfolded')
         ax1.set_title('$KE_{init}$', fontsize=14)
@@ -337,9 +337,9 @@ class Pi0Variables(XSecVariablesBase):
         rh2, _, _ = ax2.hist(self.xsec_vars["reco_pi0_cos_theta"], bins=bin_array[1], alpha=0.8, color='indianred',
                              edgecolor='black', label='Reco')
 
-        ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=1), unfold_err.sum(axis=1), bin_width_np(bx1[1:-1]) / 2,
+        ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=1), np.sqrt(unfold_err.sum(axis=1)), bin_width_np(bx1[1:-1]) / 2,
                      capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
-        ax2.errorbar(bin_centers_np(bx2), unfold_hist.sum(axis=0), unfold_err.sum(axis=0), bin_width_np(bx2[1:-1]) / 2,
+        ax2.errorbar(bin_centers_np(bx2), unfold_hist.sum(axis=0), np.sqrt(unfold_err.sum(axis=0)), bin_width_np(bx2[1:-1]) / 2,
                      capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
         ax1.set_title('$T_{\\pi^0}$', fontsize=16)
         ax2.set_title('$cos\\theta_{\\pi^0}$', fontsize=16)

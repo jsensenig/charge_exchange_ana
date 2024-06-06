@@ -2,6 +2,7 @@ from abc import abstractmethod
 import json
 import awkward as ak
 import numpy as np
+import matplotlib.pyplot as plt
 
 import cross_section_utils as xsec_utils
 from cross_section.xsec_calculation import XSecTotal
@@ -220,6 +221,51 @@ class BeamPionVariables(XSecVariablesBase):
 
         return true_int, reco_int
 
+    def plot_beam_vars(self, unfold_hist, unfold_err, bin_array, h1_limits, h2_limits, h3_limits, plot_reco=True):
+        true_mask = ~self.xsec_vars["true_upstream_mask"] & self.xsec_vars["true_xsec_mask"]
+        reco_mask = ~self.xsec_vars["reco_upstream_mask"] & self.xsec_vars["reco_xsec_mask"]
+
+        _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
+        h1, bx1 , _ = ax1.hist(self.xsec_vars["true_beam_initial_energy"][true_mask], bins=bin_array[0],
+                               edgecolor='black', label='True')
+        if plot_reco: ax1.hist(self.xsec_vars["reco_beam_initial_energy"][reco_mask], bins=bin_array[0], alpha=0.8,
+                               color='indianred',edgecolor='black', label='Reco')
+        h2, bx2, _ = ax2.hist(self.xsec_vars["true_beam_end_energy"][true_mask], bins=bin_array[1],
+                              edgecolor='black', label='True')
+        if plot_reco: ax2.hist(self.xsec_vars["reco_beam_end_energy"][reco_mask], bins=bin_array[1], alpha=0.8,
+                               color='indianred', edgecolor='black', label='Reco')
+        h3, bx3, _ = ax3.hist(self.xsec_vars["true_beam_sig_int_energy"][true_mask], bins=bin_array[2],
+                              edgecolor='black', label='True')
+        if plot_reco: ax3.hist(self.xsec_vars["reco_beam_sig_int_energy"][reco_mask], bins=bin_array[2], alpha=0.8,
+                               color='indianred', edgecolor='black', label='Reco')
+
+        ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=2).sum(axis=1), unfold_err.sum(axis=2).sum(axis=1),
+                     bin_width_np(bx1[2:4]) / 2, capsize=2, marker='s', markersize=3, linestyle='None', color='black',
+                     label='Unfolded')
+        ax2.errorbar(bin_centers_np(bx2), unfold_hist.sum(axis=2).sum(axis=0), unfold_err.sum(axis=2).sum(axis=0),
+                     bin_width_np(bx2[2:4]) / 2, capsize=2, marker='s', markersize=3, linestyle='None', color='black',
+                     label='Unfolded')
+        ax3.errorbar(bin_centers_np(bx3), unfold_hist.sum(axis=1).sum(axis=0), unfold_err.sum(axis=1).sum(axis=0),
+                     bin_width_np(bx3[2:4]) / 2, capsize=2, marker='s', markersize=3, linestyle='None', color='black',
+                     label='Unfolded')
+        ax1.set_title('$KE_{init}$', fontsize=14)
+        ax2.set_title('$KE_{end}$', fontsize=14)
+        ax3.set_title('$KE_{int}$', fontsize=14)
+        ax1.set_xlim(h1_limits)
+        ax2.set_xlim(h2_limits)
+        ax3.set_xlim(h3_limits)
+        ax1.set_ylim(bottom=0)
+        ax2.set_ylim(bottom=0)
+        ax3.set_ylim(bottom=0, top=(np.max(h3[1:-1]) * 1.2))
+        ax1.legend()
+        ax2.legend()
+        ax3.legend()
+        plt.show()
+
+        print("True Init/End/Int", np.sum(h1), "/", np.sum(h2), "/", np.sum(h3))
+        print("Reco Init/End/Int", unfold_hist.sum(axis=2).sum(axis=1).sum(), "/",
+              unfold_hist.sum(axis=2).sum(axis=0).sum(), "/", unfold_hist.sum(axis=1).sum(axis=0).sum())
+
 
 class Pi0Variables(XSecVariablesBase):
     def __init__(self, config_file, is_mc):
@@ -282,3 +328,30 @@ class Pi0Variables(XSecVariablesBase):
         true_cos_theta = np.diag(beam_dir_unit @ full_len_daughter_dir.T)
 
         return true_cos_theta[true_mask], true_cos_theta[reco_mask]
+
+    def plot_pi0_vars(self, unfold_hist, unfold_err, bin_array, h1_limits, h2_limits, plot_reco=True):
+
+        _, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 5))
+        h1, bx1, h1obj = ax1.hist(self.xsec_vars["true_pi0_energy"], bins=bin_array[0], edgecolor='black', label='True')
+        rh1, _, _ = ax1.hist(self.xsec_vars["reco_pi0_energy"], bins=bin_array[0], alpha=0.8, color='indianred',
+                             edgecolor='black', label='Reco')
+        h2, bx2, _ = ax2.hist(self.xsec_vars["true_pi0_cos_theta"], bins=bin_array[1], edgecolor='black', label='True')
+        rh2, _, _ = ax2.hist(self.xsec_vars["reco_pi0_cos_theta"], bins=bin_array[1], alpha=0.8, color='indianred',
+                             edgecolor='black', label='Reco')
+
+        ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=1), unfold_err.sum(axis=1), bin_width_np(bx1[1:-1]) / 2,
+                     capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
+        ax2.errorbar(bin_centers_np(bx2), unfold_hist.sum(axis=0), unfold_err.sum(axis=0), bin_width_np(bx2[1:-1]) / 2,
+                     capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
+        ax1.set_title('$T_{\\pi^0}$', fontsize=16)
+        ax2.set_title('$cos\\theta_{\\pi^0}$', fontsize=16)
+        ax1.set_xlim(h1_limits)
+        ax2.set_xlim(h2_limits)
+        ax1.set_ylim(bottom=0)
+        ax2.set_ylim(bottom=0)
+        ax1.legend()
+        ax2.legend()
+        plt.show()
+
+        print("True T_pi0/cos_pi0", np.sum(h1), "/", np.sum(h2))
+        print("Reco T_pi0/cos_pi0", np.sum(rh1), "/", np.sum(rh2))

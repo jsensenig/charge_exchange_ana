@@ -3,6 +3,7 @@ import json
 import numpy as np
 import uproot
 import ROOT
+import matplotlib.pyplot as plt
 from bethe_bloch_utils import BetheBloch
 from cex_analysis.plot_utils import bin_width_np, bin_centers_np
 
@@ -114,6 +115,33 @@ class XSecTotal(XSecBase):
         for graph in loaded_xsec:
             self.geant_total_xsec[graph] = loaded_xsec[graph].values()
 
+    def plot_beam_xsec(self, unfold_hist, unfold_err, process, bin_array, xlim, ylim, xsec_file):
+
+        # Load Geant cross-section model if not already loaded
+        if len(self.geant_total_xsec) == 0:
+            self.load_geant_total_xsec(xsec_file=xsec_file)
+
+        # Calculate the cross-section
+        xsec_hists = {"init_hist": unfold_hist.sum(axis=2).sum(axis=1)[1:-1],
+                      "end_hist": unfold_hist.sum(axis=2).sum(axis=0)[1:-1],
+                      "int_hist": unfold_hist.sum(axis=1).sum(axis=0)[1:-1]}
+
+        total_xsec = self.calc_xsec(hist_dict=xsec_hists)
+
+        plt.figure(figsize=(12, 5))
+        plt.errorbar(bin_centers_np(bin_array), total_xsec, np.sqrt(unfold_err.sum(axis=2).sum(axis=0)[1:-1]),
+                     bin_width_np(bin_centers_np(bin_array)) / 2, capsize=2, marker='s', markersize=3,
+                     linestyle='None', color='black', label='MC Unfolded')
+        plt.plot(self.geant_total_xsec[process][0], self.geant_total_xsec[process][1], linestyle='--',
+                 color='indianred', label='Geant $\\sigma$')
+        plt.xlabel("$T_{\\pi^+}$ [MeV]", fontsize=14)
+        plt.ylabel("$\sigma$ [mb]", fontsize=14)
+        plt.xlim(xlim)
+        plt.ylim(ylim)
+        plt.xticks(np.arange(xlim[0], xlim[1]+1, 100))
+        plt.legend()
+        plt.show()
+
 
 class XSecDiff(XSecBase):
     """
@@ -128,6 +156,7 @@ class XSecDiff(XSecBase):
         super().__init__(config_file=config_file)
 
         self.local_config = self.config["XSecDiff"]
+        self.geant_diff_xsec = {}
 
     def calc_xsec(self, hist_dict, beam_eslice_edges=None):
         # Get the requisite histograms
@@ -151,6 +180,64 @@ class XSecDiff(XSecBase):
 
     def propagate_error(self):
         pass
+
+    def load_geant_total_xsec(self, xsec_file):
+
+        with uproot.open(xsec_file) as file:
+            loaded_xsec = file
+
+        for graph in loaded_xsec:
+            self.geant_diff_xsec[graph] = loaded_xsec[graph].values()
+
+    def get_geant_diff_xsec(self, pi0_var):
+        if pi0_var == 'pi0_ke':
+            y = self.geant_diff_xsec['inel_cex_1dKEpi0775_MeV;1'].values()
+            x = np.linspace(0, 1200, len(self.geant_diff_xsec['inel_cex_1dKEpi0775_MeV;1'].values()))
+        elif pi0_var == 'pi0_cos':
+            y = self.geant_diff_xsec['inel_cex_1dcosThetapi0775_MeV;1'].values()
+            x = np.linspace(-1, 1, len(self.geant_diff_xsec['inel_cex_1dcosThetapi0775_MeV;1'].values()))
+        else:
+            print("Unknown cross-section", pi0_var, "choose ['pi0_ke', 'pi0_cos']")
+            raise ValueError
+
+        return x, y
+
+    def plot_pi0_xsec(self, unfold_hist, unfold_err, inc_hist, beam_eslices, diff_var, bin_array, xlim, xsec_file):
+
+        xsec_x, xsec_y = self.get_geant_diff_xsec(pi0_var=diff_var)
+        if len(self.geant_diff_xsec) == 0:
+            self.load_geant_total_xsec(xsec_file=xsec_file)
+
+        if diff_var == "pi0_ke":
+            xsec_hist2d = {"inc_hist": inc_hist, "int_hist": unfold_hist.sum(axis=1)}
+            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices)
+            plt.errorbar(abs(bin_centers_np(bin_array[0])), diff_xsec, np.sqrt(unfold_err.sum(axis=1)),
+                         abs(bin_width_np(bin_array[0])) / 2, capsize=2, marker='s', markersize=3, linestyle='None',
+                         color='black', label='MC Unfolded')
+
+            plt.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dT_{\\pi^0}$')
+            plt.xlabel("$T_{\\pi^0}$ [MeV]", fontsize=14)
+            plt.ylabel("$\\frac{d\\sigma}{dT_{\\pi^0}}$ [mb]")
+            plt.ylim(0, 0.3)
+            plt.xticks(np.arange(xlim[0], xlim[1]+1, 100))
+        elif diff_var == "pi0_cos":
+            xsec_hist2d = {"inc_hist": inc_hist, "int_hist": unfold_hist.sum(axis=0)}
+            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices)
+            plt.errorbar(bin_centers_np(bin_array[1][1:-1]), diff_xsec, np.sqrt(unfold_err.sum(axis=0)),
+                         bin_width_np(bin_array[1]) / 2, capsize=2, marker='s', markersize=3, linestyle='None',
+                         color='black', label='MC Unfolded')
+            plt.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dcos\\theta_{\\pi^0}$')
+            plt.xlabel("$cos\\theta_{\\pi^0}$", fontsize=14)
+            plt.ylabel("$\\frac{d\\sigma}{dcos\\theta_{\\pi^0}}$ [mb]")
+            plt.ylim(0, 150)
+            plt.xticks(np.arange(-1, 1.1, 2 / bin_array[1].shape[0]))
+        else:
+            print("Unknown cross-section use ['pi0_ke', 'pi0_cos']")
+            raise ValueError
+
+        plt.xlim(xlim)
+        plt.legend()
+        plt.show()
 
 
 class XSecDoubleDiff(XSecBase):

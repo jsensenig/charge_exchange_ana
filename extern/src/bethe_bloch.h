@@ -13,6 +13,8 @@ class BetheBloch {
 
   BetheBloch(double mass, int charge);
 
+  double range_from_ke(double ke);
+
   py::array_t<double> ke_along_track(double init_ke, const py::array_t<double> &track_cumlen);
 
   py::array_t<double> ke_at_point(const py::array_t<double> &init_ke, const py::array_t<double> &track_cumlen); 

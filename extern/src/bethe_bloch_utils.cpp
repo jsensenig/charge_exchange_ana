@@ -9,6 +9,7 @@ PYBIND11_MODULE(bethe_bloch_utils, m) {
         .def(py::init<double, int>(), py::arg("mass"), py::arg("charge"))
         .def("ke_along_track", &BetheBloch::ke_along_track)
         .def("ke_at_point", &BetheBloch::ke_at_point)
+        .def("range_from_ke", &BetheBloch::range_from_ke)
         .def("meandEdx", &BetheBloch::meandEdx);
 }
 

@@ -9,6 +9,11 @@ namespace py = pybind11;
 
 BetheBloch::BetheBloch(double mass, int charge) : _mass(mass), _charge(charge) {}
 
+double BetheBloch::range_from_ke(double ke){
+
+  return IntegratedEdx(0, ke);
+}
+
 py::array_t<double> BetheBloch::ke_along_track(double init_ke, const py::array_t<double> &track_cumlen) {
 
   py::buffer_info buf_track_cumlen = track_cumlen.request();

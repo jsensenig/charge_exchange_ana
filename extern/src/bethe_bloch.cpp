@@ -103,6 +103,43 @@ void BetheBloch::CreateSplineAtKE(int iKE){
 
 }
 
+double BetheBloch::ke_from_range_spline(double range) {
+
+  if ( !sp_range_KE ) {
+    std::cout << "Spline does not exit." << std::endl;
+    exit(1);
+  }
+  return sp_range_KE->Eval(range);
+
+}
+
+void BetheBloch::create_splines(int np, double min_ke, double max_ke) {
+
+  if (sp_KE_range) delete sp_KE_range;
+  if (sp_range_KE) delete sp_range_KE;
+
+  for (const auto & x : spmap){
+    if (x.second) delete x.second;
+  }
+  spmap.clear();
+  
+  double *KE = new double[np];
+  double *Range = new double[np];
+
+  for (int i = 0; i<np; ++i){
+    double ke = pow(10, log10(min_ke)+i*log10(max_ke/min_ke)/np);
+    KE[i] = ke;
+    Range[i] = range_from_ke(ke);
+  }
+
+  sp_KE_range = new TSpline3("sp_KE_range", KE, Range, np, "b2e2", 0, 0);
+  sp_range_KE = new TSpline3("sp_range_KE", Range, KE, np, "b2e2", 0, 0);
+
+  delete[] KE;
+  delete[] Range;
+
+}
+
 double BetheBloch::IntegratedEdx(double KE0, double KE1, int n){
 
   if (KE0>KE1) std::swap(KE0, KE1);

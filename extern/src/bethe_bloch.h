@@ -25,8 +25,11 @@ class BetheBloch {
 
   double KEAtLength(double KE0, double tracklength);
 
+  double ke_from_range_spline(double range);
+
   void CreateSplineAtKE(int iKE);
 
+  void create_splines(int np = 1000, double minke = .01, double maxke = 2e5);
 
  private:
 

@@ -196,11 +196,11 @@ class XSecDiff(XSecBase):
 
     def get_geant_diff_xsec(self, pi0_var):
         if pi0_var == 'pi0_ke':
-            y = self.geant_diff_xsec['inel_cex_1dKEpi0775_MeV;1'].values()
-            x = np.linspace(0, 1200, len(self.geant_diff_xsec['inel_cex_1dKEpi0775_MeV;1'].values()))
+            y = self.geant_diff_xsec['inel_cex_1dKEpi0775_MeV;1']
+            x = np.linspace(0, 1200, len(self.geant_diff_xsec['inel_cex_1dKEpi0775_MeV;1']))
         elif pi0_var == 'pi0_cos':
-            y = self.geant_diff_xsec['inel_cex_1dcosThetapi0775_MeV;1'].values()
-            x = np.linspace(-1, 1, len(self.geant_diff_xsec['inel_cex_1dcosThetapi0775_MeV;1'].values()))
+            y = self.geant_diff_xsec['inel_cex_1dcosThetapi0775_MeV;1']
+            x = np.linspace(-1, 1, len(self.geant_diff_xsec['inel_cex_1dcosThetapi0775_MeV;1']))
         else:
             print("Unknown cross-section", pi0_var, "choose ['pi0_ke', 'pi0_cos']")
             raise ValueError
@@ -213,7 +213,9 @@ class XSecDiff(XSecBase):
             self.load_geant_total_xsec(xsec_file=xsec_file)
 
         xsec_x, xsec_y = self.get_geant_diff_xsec(pi0_var=diff_var)
+        self.eslice_edges = bin_array
 
+        plt.figure(figsize=(12, 5))
         if diff_var == "pi0_ke":
             xsec_hist2d = {"inc_hist": inc_hist, "int_hist": unfold_hist.sum(axis=1)}
             diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices)

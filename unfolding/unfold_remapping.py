@@ -99,7 +99,8 @@ class Remapping:
         bin_shift = [np.prod(bin_lens[d + 1:]).astype('int') for d, l in enumerate(bin_lens)]
 
         weight_array = None
-        nnd_bin_array = np.zeros(np.count_nonzero(mask_events)).astype('int')
+        # nnd_bin_array = np.zeros(np.count_nonzero(mask_events)).astype('int')
+        digitized_vars = []
         for i, arr_bin in enumerate(zip(corr_var_list, bin_list, bin_shift, evt_weights)):
             arr, bins, shift, weight = arr_bin
             nbins = len(bins) - 1
@@ -108,21 +109,25 @@ class Remapping:
             if debug: print("Unique bins:", np.unique(n_binned))
             if debug: print("(n_binned >= 0) & (n_binned <= (", nbins-1, ")") # was >= 1 and <= 0 # NOTE remove cut
             n_binned = n_binned[(n_binned >= 0) & (n_binned <= nbins-1)]  # ignore under/over flow bins, 0/n+1 respectively
+            digitized_vars.append(n_binned)
             if debug: print("Unique Bins post under/over -flow cut:", np.unique(n_binned))
             if debug: print("Shift:", shift)
-            nnd_bin_array += shift * n_binned
+            # nnd_bin_array += shift * n_binned
 
-        print("Max bin:", np.max(nnd_bin_array))
-        if debug: print("Unique Bins:", np.unique(nnd_bin_array))
-        # nnd_bin_array -= 1 # NOTE remove shift
+        # Now ravel (unwrap) the indices
+        stacked_vars = np.vstack(digitized_vars)
+        ravelled_idx = np.ravel_multi_index(stacked_vars, dims=bin_list)
+
+        print("Max bin:", np.max(ravelled_idx))
+        if debug: print("Unique Bins:", np.unique(ravelled_idx))
 
         # Create the histogram with event weighting and calculate errors
-        evt_weight = np.ones(nnd_bin_array.shape)
-        num_nd, _ = np.histogram(nnd_bin_array, bins=total_bins, range=(0, total_bins-1), weights=evt_weight)
-        num_nd_err, _ = np.histogram(nnd_bin_array, bins=total_bins, range=(0, total_bins-1), weights=evt_weight * evt_weight)
+        evt_weight = np.ones(ravelled_idx.shape)
+        num_nd, _ = np.histogram(ravelled_idx, bins=total_bins, range=(0, total_bins-1), weights=evt_weight)
+        num_nd_err, _ = np.histogram(ravelled_idx, bins=total_bins, range=(0, total_bins-1), weights=evt_weight * evt_weight)
         num_nd_vcov = np.diag(num_nd_err)
 
-        return nnd_bin_array, num_nd, np.sqrt(num_nd_err), num_nd_vcov
+        return ravelled_idx, num_nd, np.sqrt(num_nd_err), num_nd_vcov
 
     @staticmethod
     def map_nd_to_1d(num_nd, num_nd_err, total_bins):

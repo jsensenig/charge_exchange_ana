@@ -190,16 +190,80 @@ class Remapping:
         return unfold_nd_hist, unfold_nd_cov, unfold_nd_err
 
     @staticmethod
-    def map_bin_to_variable_space(unfold_nd_hist_np, unfold_nd_cov_np, truth_bin_list):
+    def propagate_unfolded_1d_errors(unfolded_cov, bin_list):
 
+        cov_num_bins = np.prod(bin_list)
+        var_1d_num_bins = np.sum(bin_list)
+        jacobian = np.zeros((var_1d_num_bins, cov_num_bins))
+        print("Nbins Cov/Var 1D:", cov_num_bins, "/", var_1d_num_bins)
+
+        cov_bin_idx = np.arange(cov_num_bins)
+        bin_sum = 0
+        for dim_idx, nbins in enumerate(bin_list):
+            idx = np.unravel_index(cov_bin_idx, bin_list)[dim_idx] + bin_sum
+            jacobian[idx, cov_bin_idx] = 1
+            bin_sum += nbins
+
+        # Propagate the errors with the Jacobian
+        unfolded_1d_err_cov = (jacobian @ unfolded_cov) @ jacobian.T
+
+        # Remove under/over flow bins (first/last bins idx=0/-1)
+        selected_idx = []
+        bin_shift = 0
+        for nbins in bin_list:
+            selected_idx += list(np.arange(1, nbins - 1) + bin_shift)
+            bin_shift += nbins
+
+        # Remove x-axis under/over flow bins, then y-axis
+        temp_cov = unfolded_1d_err_cov[selected_idx, :]
+        no_under_over_flow_cov = temp_cov[:, selected_idx]
+
+        # Return covariance with and without over_under flow bins
+        return unfolded_1d_err_cov, no_under_over_flow_cov
+
+    @staticmethod
+    def propagate_unfolded_errors_with_incident(unfolded_1d_cov, bin_list):
+        """
+        This assumes no under/over flow bins
+        Call the bins within the range , ROI range/region of interest
+        """
+        roi_num_bins = sum(bin_list)
+        over_flow_bins = 2 * len(bin_list)
+        num_bins = bin_list[0] - 2
+        jacobian = np.zeros([roi_num_bins - over_flow_bins, roi_num_bins])
+
+        # Incident covariance
+        for ibin in range(num_bins - 1):
+            for itmp in range(ibin, num_bins):
+                jacobian[ibin, itmp] = 1
+            for itmp in range(ibin + num_bins, num_bins + num_bins):
+                jacobian[ibin, itmp] = -1
+
+        # End covariance
+        for ibin in range(num_bins, num_bins + num_bins):
+            jacobian[ibin, ibin] = 1
+
+        # Interacting (signal) covariance
+        for ibin in range(num_bins + num_bins, num_bins + num_bins + num_bins - 1):
+            jacobian[ibin, ibin] = 1
+
+        unfolded_1d_with_inc_cov = (jacobian @ unfolded_1d_cov) @ jacobian.T
+
+        return unfolded_1d_with_inc_cov
+
+    @staticmethod
+    def map_bin_to_variable_space(unfold_nd_hist_np, unfold_nd_cov_np, truth_bin_list):
+        """
+        Only works for bins since we can sum over the unwanted axes, not covariance
+        """
         bin_lens = [len(b) - 1 for b in truth_bin_list]
 
         # Cast into nth-order tensor containing bins corresponding to the original measured physics variable
         # the first bin is underflow and last is overflow
         unfold_var_hist = unfold_nd_hist_np.reshape(bin_lens)
-        unfold_var_err = np.diag(unfold_nd_cov_np).reshape(bin_lens)
+        # unfold_var_err = np.diag(unfold_nd_cov_np).reshape(bin_lens)
 
-        return unfold_var_hist, unfold_var_err
+        return unfold_var_hist
 
     def plot_variables(self, var_list, nbin_list):
 

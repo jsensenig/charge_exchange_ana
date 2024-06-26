@@ -1,6 +1,6 @@
 import cex_analysis.plot_utils as utils
 from cex_analysis.histogram_data import Hist1d, HistStack, HistEff
-from cex_analysis.histogram_data import HistogramData
+# from cex_analysis.histogram_data import HistogramData
 from cex_analysis.true_process import TrueProcess
 # import ROOT
 import awkward as ak
@@ -25,6 +25,16 @@ class HistogramV2:
 
     def configure_hists(self, config):
         self.hist_config = config
+
+    @staticmethod
+    def generate_name(hist_name, hist_type, precut):
+        type_name = 'eff_' if hist_type == 'efficiency' else hist_type + '_'
+        if precut:
+            name = 'precut_' + type_name + hist_name
+        else:
+            name = 'postcut_' + type_name + hist_name
+
+        return name
 
     @staticmethod
     def merge_hist_list(hist_list):
@@ -55,7 +65,9 @@ class HistogramV2:
         eff_hist.fill_total(x=xtotal, legend=name, weights=None)
         eff_hist.fill_passed(x=xpassed, legend=name, weights=None)
 
-        self.hist_data.append(HistogramData("efficiency", name, eff_hist, precut=False))
+        # self.hist_data.append(HistogramData("efficiency", name, eff_hist, precut=False))
+        full_name = self.generate_name(hist_name=name, hist_type='efficiency', precut=False)
+        self.hist_data.append({'name': full_name, 'type': 'efficiency', 'hist': eff_hist})
 
     def plot_particles(self, x, idx, precut):
 
@@ -69,7 +81,9 @@ class HistogramV2:
         hist = Hist1d(num_bins=bins, bin_range=[lower_lim, upper_lim])
         hist.fill_hist(x=x, legend=name, weights=None)
 
-        self.hist_data.append(HistogramData("hist", name, hist, precut=precut))
+        # self.hist_data.append(HistogramData("hist", name, hist, precut=precut))
+        full_name = self.generate_name(hist_name=name, hist_type='hist', precut=precut)
+        self.hist_data.append({'name': full_name, 'type': 'hist', 'hist': hist})
 
     def plot_particles_stack(self, x, x_pdg, idx, precut):
         """
@@ -114,7 +128,9 @@ class HistogramV2:
                 stack.fill_hist(x=pdg_filtered_dict[pdg], legend=legend, weights=None)
 
         # Store this hist in our master map as a HistogramData class
-        self.hist_data.append(HistogramData("stack", name, stack, precut=precut))
+        # self.hist_data.append(HistogramData("stack", name, stack, precut=precut))
+        full_name = self.generate_name(hist_name=name, hist_type='stack', precut=precut)
+        self.hist_data.append({'name': full_name, 'type': 'stack', 'hist': stack})
 
         return
 
@@ -127,7 +143,9 @@ class HistogramV2:
         hist = Hist1d(num_bins=bins, bin_range=[lower_lim, upper_lim])
         hist.fill_hist(x=x, legend=name, weights=None)
 
-        self.hist_data.append(HistogramData("hist", name, hist, precut=precut))
+        # self.hist_data.append(HistogramData("hist", name, hist, precut=precut))
+        full_name = self.generate_name(hist_name=name, hist_type='hist', precut=precut)
+        self.hist_data.append({'name': full_name, 'type': 'hist', 'hist': hist})
 
     def plot_process_stack(self, x, idx, variable, precut):
         """
@@ -167,6 +185,8 @@ class HistogramV2:
             stack.fill_hist(x=process_dict[proc], legend=legend, weights=None)
 
         # Store this hist in our master map as a HistogramData class
-        self.hist_data.append(HistogramData("stack", name, stack, precut=precut))
+        # self.hist_data.append(HistogramData("stack", name, stack, precut=precut))
+        full_name = self.generate_name(hist_name=name, hist_type='stack', precut=precut)
+        self.hist_data.append({'name': full_name, 'type': 'stack', 'hist': stack})
 
         return

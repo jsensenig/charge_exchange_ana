@@ -53,7 +53,7 @@ class HistStack(Hist1d):
         self.set_legend(legend=legend)
 
     def get_hist(self):
-        return self.stack['hists'], self.stack['bins']
+        return {'hist': self.stack['hists'], 'bins': self.stack['bins']}
 
 
 class HistEff(Hist1d):
@@ -82,7 +82,7 @@ class HistEff(Hist1d):
         self.set_legend(legend=legend)
 
     def get_hist(self):
-        return self.efficiency['passed'], self.efficiency['total'], self.efficiency['bins']
+        return {'passed': self.efficiency['passed'], 'total': self.efficiency['total'], 'bins': self.efficiency['bins']}
 
     def get_efficiency_hist(self):
         if self.efficiency['passed'] is not None and self.efficiency['passed'] is not None:

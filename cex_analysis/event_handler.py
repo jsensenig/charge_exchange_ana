@@ -1,6 +1,7 @@
 from cex_analysis.cut_factory import CutFactory
 from cex_analysis.event_selection_base import EventSelectionBase
-from cex_analysis.histograms import Histogram
+# from cex_analysis.histograms import Histogram
+from cex_analysis.histograms_v2 import HistogramV2
 from cex_analysis.efficiency_data import EfficiencyData
 from cex_analysis.true_process import TrueProcess
 import awkward as ak
@@ -28,7 +29,7 @@ class EventHandler:
         self.create_analysis()
 
         # Initialize the histogram class for this instance of EventHandler
-        self.Hist_object = Histogram(config=config)
+        self.Hist_object = HistogramV2(config=config)
 
         # Initialize the efficiency data class
         self.efficiency = EfficiencyData(num_true_process=0, cut_efficiency_dict={}, cut_total_dict={})

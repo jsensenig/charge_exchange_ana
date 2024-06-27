@@ -41,7 +41,7 @@ class EventHandler:
         :return:
         """
         # Get all available Cut classes and import them
-        pkg_dir = Path(__file__).parent
+        pkg_dir = str(Path(__file__).parent)
         print("Importing all subclasses from:", pkg_dir)
 
         for (module_loader, name, ispkg) in pkgutil.iter_modules([pkg_dir]):

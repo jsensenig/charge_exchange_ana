@@ -992,7 +992,7 @@ class RecoShowerDirection(EventSelectionBase):
 
     def plot_particles_base(self, events, pdg, precut, hists):
         # pass
-        hists.plot_process(x=events, precut=precut)
+        # hists.plot_process(x=events, precut=precut)
         for idx, plot in enumerate(self.local_hist_config):
             hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
             hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)

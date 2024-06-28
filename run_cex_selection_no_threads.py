@@ -70,15 +70,15 @@ def merge_hist_maps(config, hist_maps):
 
 
 def calculate_efficiency(selected_true, selected_total, true_count_list):
-    total_eff, total_sel, total_count = eff_data.combine_efficiency(cut_efficiency_dict_list=selected_true,
-                                                                    cut_total_dict_list=selected_total,
-                                                                    process_true_count_list=true_count_list)
+    #total_eff, total_sel, total_count = eff_data.combine_efficiency(cut_efficiency_dict_list=selected_true,
+    #                                                                cut_total_dict_list=selected_total,
+    #                                                                process_true_count_list=true_count_list)
 
-    cum_eff, purity, eff, sel, fom = eff_data.calculate_efficiency(cut_efficiency_dict=total_eff,
-                                                                   cut_total_dict=total_sel,
-                                                                   process_true_count=total_count)
+    cum_eff, purity, eff, sel, fom = eff_data.calculate_efficiency(cut_efficiency_dict=selected_true,
+                                                                   cut_total_dict=selected_total,
+                                                                   process_true_count=true_count_list)
 
-    for ceff, f, p, cut, s, l in zip(cum_eff, eff, purity, total_eff, sel, fom):
+    for ceff, f, p, cut, s, l in zip(cum_eff, eff, purity, selected_true, sel, fom):
         print("Cut: [\033[92m", '{:<18}'.format(cut), "\033[0m] Cumulative eff:", '{:.4f}'.format(ceff),
               " Eff:", '{:.4f}'.format(f), "Purity:", '{:.4f}'.format(p),
               "S/sqrt(S+B):", '{:.4f}'.format(l), "Selection:", s, "True/Total")
@@ -107,14 +107,18 @@ def save_results(results):
 
     # Open file and declare data types
     h5_file = h5py.File('test_hist_file.hdf5', 'w')
-    data_str = h5py.vlen_dtype(np.dtype(str))
+    data_str = h5py.string_dtype(encoding='utf-8')
+    data_vlen_str = h5py.vlen_dtype(data_str)
     data_float32 = h5py.vlen_dtype(np.dtype('float32'))
     data_int32 = h5py.vlen_dtype(np.dtype('int32'))
 
     # Top level, one for each histogram
     hist_name = h5_file.create_dataset('hist_name', (num_hists,), dtype=data_str)
     hist_type = h5_file.create_dataset('hist_type', (num_hists,), dtype=data_str)
+    hist_xlabel = h5_file.create_dataset('hist_xlabel', (num_hists,), dtype=data_str)
+    hist_ylabel = h5_file.create_dataset('hist_ylabel', (num_hists,), dtype=data_str)
     hist_bins = h5_file.create_dataset('hist_bins', (num_hists,), dtype=data_float32)
+    hist_legend = h5_file.create_dataset('hist_legend', (num_hists,), dtype=data_vlen_str)
 
     hist_passed = h5_file.create_dataset('hist_passed', (num_hists,), dtype=data_int32)
     hist_total = h5_file.create_dataset('hist_total', (num_hists,), dtype=data_int32)
@@ -124,8 +128,11 @@ def save_results(results):
     for i, hist in enumerate(hist_map): # {name, type, hist}
         hist_name[i] = hist['name']
         hist_type[i] = hist['type']
+        hist_xlabel[i] = hist['xlabel']
+        hist_ylabel[i] = hist['ylabel']
         hist_dict = hist['hist'].get_hist()
         hist_bins[i] = hist_dict['bins']
+        hist_legend[i] = hist_dict['legend']
         if hist['type'] == 'efficiency':
             hist_total[i] = hist_dict['total']
             hist_passed[i] = hist_dict['passed']
@@ -190,6 +197,7 @@ if __name__ == "__main__":
     files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
 
     file_list = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_9.root:pduneana/beamana"
+    file_list = "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana*.root:beamana"
 
     # Number of threads
     # num_workers = 1

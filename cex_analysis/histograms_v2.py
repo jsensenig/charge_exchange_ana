@@ -123,7 +123,7 @@ class HistogramV2:
         for i, pdg in enumerate(sorted_length):
             # Get the fraction of PDG
             pdg_fraction = round((100. * len(pdg_filtered_dict[pdg]) / len(x_flat)), 2)
-            legend = (utils.pdg2string.get(pdg) + "  " + str(len(pdg_filtered_dict[pdg])) + "/" + str(len(x_flat)) +
+            legend = (str(pdg) + "  " + str(len(pdg_filtered_dict[pdg])) + "/" + str(len(x_flat)) +
                       " (" + str(pdg_fraction) + "%)")
 
             if len(pdg_filtered_dict[pdg]) > 0:
@@ -181,7 +181,7 @@ class HistogramV2:
         for i, proc in enumerate(sorted_length):
             # Get the fraction of PDG
             proc_fraction = round((100. * len(process_dict[proc][process_dict[proc] > -900.]) / total_daughters), 2)
-            legend = (proc + "  " + str(len(process_dict[proc][process_dict[proc] > -900.])) +
+            legend = (str(utils.string2proc[proc]) + "  " + str(len(process_dict[proc][process_dict[proc] > -900.])) +
                       "/" + str(total_daughters) + " (" + str(proc_fraction) + "%)")
 
             stack.fill_stack(x=process_dict[proc], legend=legend, weights=None)

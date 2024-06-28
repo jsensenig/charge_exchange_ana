@@ -8,29 +8,54 @@ color_text = '\033[31mpositron : light_red ' \
              '\033[0m, muon : black'
 
 # ROOT color palette: https://root-forum.cern.ch/t/what-is-your-best-way-to-increment-colors/13809/2
-colors = {-11:  46,  # red
-          11:   49,  # brown
-          2212: 8,   # green
-          211:  64,  # blue
-          -211: 67,  # cyan
-          -13:  40,  # green-brown
-          13:   38,  # light-blue
-          321:  9,   # purple
-          22:   92,  # orange
-          0:    29}  # grey-green
+# colors = {-11:  46,  # red
+#           11:   49,  # brown
+#           2212: 8,   # green
+#           211:  64,  # blue
+#           -211: 67,  # cyan
+#           -13:  40,  # green-brown
+#           13:   38,  # light-blue
+#           321:  9,   # purple
+#           22:   92,  # orange
+#           0:    29}  # grey-green
 
-proc_colors = {'pion_elastic': 46,
-               'pion_and_pi0': 49,
-               'pi0_production': 8,
-               'single_charge_exchange': 64,
-               'double_charge_exchange': 67,
-               'pion_production': 38,
-               'absorption': 53,
-               'quasi_elastic': 94,
-               'charged_neutral_pion_production': 130,
-               'mctruth_charged_neutral_pion': 91,
-               'mcreco_charged_neutral_pion': 24,
-               'other': 29}
+# matplotlib colors
+colors = {-11:  'indianred',  # red
+          11:   'orchid',  # brown
+          2212: 'seagreen',   # green
+          211:  'royalblue',  # blue
+          -211: 'paleturquoise',  # cyan
+          -13:  'peru',  # green-brown
+          13:   'cadetblue',  # light-blue
+          321:  'mediumorchid',   # purple
+          22:   'goldenrod',  # orange
+          0:    'olivedrab'}  # grey-green
+
+# proc_colors = {'pion_elastic': 46,
+#                'pion_and_pi0': 49,
+#                'pi0_production': 8,
+#                'single_charge_exchange': 64,
+#                'double_charge_exchange': 67,
+#                'pion_production': 38,
+#                'absorption': 53,
+#                'quasi_elastic': 94,
+#                'charged_neutral_pion_production': 130,
+#                'mctruth_charged_neutral_pion': 91,
+#                'mcreco_charged_neutral_pion': 24,
+#                'other': 29}
+
+proc_colors = {'pion_elastic': 'indianred',
+               'pion_and_pi0': 'orchid',
+               'pi0_production': 'seagreen',
+               'single_charge_exchange': 'royalblue',
+               'double_charge_exchange': 'paleturquoise',
+               'pion_production': 'peru',
+               'absorption': 'cadetblue',
+               'quasi_elastic': 'darkmagenta',
+               'charged_neutral_pion_production': 'goldenrod',
+               'mctruth_charged_neutral_pion': 'coral',
+               'mcreco_charged_neutral_pion': 'lightpink',
+               'other': 'olivedrab'}
 
 pdg2string = {-11:  '$e^+$',
               11:   'e^-$',
@@ -44,6 +69,32 @@ pdg2string = {-11:  '$e^+$',
               13:   '$\\mu^-$',
               22:   '$\\gamma$',
               0:    'other'}
+
+proc2string = {10001: 'pion_elastic',
+               10002: 'pion_and_pi0',
+               10003: 'pi0_production',
+               10004: 'single_charge_exchange',
+               10005: 'double_charge_exchange',
+               10006: 'pion_production',
+               10007: 'absorption',
+               10008: 'quasi_elastic',
+               10009: 'charged_neutral_pion_production',
+               10010: 'mctruth_charged_neutral_pion',
+               10011: 'mcreco_charged_neutral_pion',
+               10012: 'other'}
+
+string2proc = {proc2string[10001]: 10001,
+               proc2string[10002]: 10002,
+               proc2string[10003]: 10003,
+               proc2string[10004]: 10004,
+               proc2string[10005]: 10005,
+               proc2string[10006]: 10006,
+               proc2string[10007]: 10007,
+               proc2string[10008]: 10008,
+               proc2string[10009]: 10009,
+               proc2string[10010]: 10010,
+               proc2string[10011]: 10011,
+               proc2string[10012]: 10012}
 
 
 # Helper to set the histogram colors

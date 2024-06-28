@@ -6,7 +6,7 @@
     "lower": 0
   },
   "histograms": [
-    { "reco_beam_calo_endZ": ["apa3_cut", "APA3Cut;EndZ [cm];Count", 50, 0, 600] },
-    { "reco_beam_calo_endZ": ["apa3_fine_cut", "APA3FineCut;EndZ [cm];Count", 400, 200, 600] }
+    { "reco_beam_calo_endZ": ["apa3_cut", "EndZ [cm]", "Count", 50, 0, 600] },
+    { "reco_beam_calo_endZ": ["apa3_fine_cut", "EndZ [cm]", "Count", 400, 200, 600] }
   ]
 }

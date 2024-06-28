@@ -3,12 +3,13 @@ import numpy as np
 
 
 class Hist1d:
-    def __init__(self, num_bins, bin_range):
+    def __init__(self, num_bins, bin_range, xlabel, ylabel):
         self.num_bins = num_bins
         self.bin_range = bin_range
         _, self.bins = np.histogram([], bins=self.num_bins, range=self.bin_range)
         self.hist = None
         self.legend = []
+        self.xlabel, self.ylabel = xlabel, ylabel
 
     def __add__(self, other):
         if not isinstance(other, Hist1d):
@@ -28,12 +29,12 @@ class Hist1d:
         self.legend = legend
 
     def get_hist(self):
-        return self.hist, self.bins
+        return {'hist': self.hist, 'bins': self.bins, 'legend': self.legend, 'xlabel': self.xlabel, 'ylabel': self.ylabel}
 
 
 class HistStack(Hist1d):
-    def __init__(self, num_bins, bin_range):
-        super().__init__(num_bins=num_bins, bin_range=bin_range)
+    def __init__(self, num_bins, bin_range, xlabel, ylabel):
+        super().__init__(num_bins=num_bins, bin_range=bin_range, xlabel=xlabel, ylabel=ylabel)
         self.stack = {'bins': self.bins, 'hists': []}
         self.legend = []
 
@@ -53,12 +54,13 @@ class HistStack(Hist1d):
         self.set_legend(legend=legend)
 
     def get_hist(self):
-        return {'hist': self.stack['hists'], 'bins': self.stack['bins']}
+        return {'hist': self.stack['hists'], 'bins': self.stack['bins'], 'legend': self.legend, 'xlabel': self.xlabel,
+                'ylabel': self.ylabel}
 
 
 class HistEff(Hist1d):
-    def __init__(self, num_bins, bin_range):
-        super().__init__(num_bins=num_bins, bin_range=bin_range)
+    def __init__(self, num_bins, bin_range, xlabel, ylabel):
+        super().__init__(num_bins=num_bins, bin_range=bin_range, xlabel=xlabel, ylabel=ylabel)
         self.efficiency = {'bins': self.bins, 'total': None, 'passed': None}
         self.legend = []
 
@@ -82,7 +84,8 @@ class HistEff(Hist1d):
         self.set_legend(legend=legend)
 
     def get_hist(self):
-        return {'passed': self.efficiency['passed'], 'total': self.efficiency['total'], 'bins': self.efficiency['bins']}
+        return {'passed': self.efficiency['passed'], 'total': self.efficiency['total'], 'bins': self.efficiency['bins'],
+                'legend': self.legend, 'xlabel': self.xlabel, 'ylabel': self.ylabel}
 
     def get_efficiency_hist(self):
         if self.efficiency['passed'] is not None and self.efficiency['passed'] is not None:

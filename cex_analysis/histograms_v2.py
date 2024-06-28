@@ -54,14 +54,14 @@ class HistogramV2:
     def plot_efficiency(self, xtotal, xpassed, idx):
 
         # Get the config to create the plot for this cut
-        name, title, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
+        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
 
         # If this is ndim array flatten it
         xtotal = ak.flatten(xtotal, axis=None)
         xpassed = ak.flatten(xpassed, axis=None)
 
         # Fill the hists
-        eff_hist = HistEff(num_bins=bins, bin_range=[lower_lim, upper_lim])
+        eff_hist = HistEff(num_bins=bins, bin_range=[lower_lim, upper_lim], xlabel=xlabel, ylabel=ylabel)
         eff_hist.fill_total(x=xtotal, legend=name, weights=None)
         eff_hist.fill_passed(x=xpassed, legend=name, weights=None)
 
@@ -72,13 +72,13 @@ class HistogramV2:
     def plot_particles(self, x, idx, precut):
 
         # Get the config to create the plot for this cut
-        name, title, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
+        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
 
         # If this is ndim array flatten it
         x = ak.flatten(x, axis=None)
 
         # Fill the hists
-        hist = Hist1d(num_bins=bins, bin_range=[lower_lim, upper_lim])
+        hist = Hist1d(num_bins=bins, bin_range=[lower_lim, upper_lim], xlabel=xlabel, ylabel=ylabel)
         hist.fill_hist(x=x, legend=name, weights=None)
 
         # self.hist_data.append(HistogramData("hist", name, hist, precut=precut))
@@ -98,7 +98,7 @@ class HistogramV2:
             print("Must use Awkward Arrays to plot!")
 
         # The name and binning should be the same for all particles
-        name, title, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
+        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
 
         # Flatten the array once
         x_flat = ak.flatten(x, axis=None)
@@ -116,7 +116,7 @@ class HistogramV2:
 
         # sorted() sorts the values in descending order
         sorted_length = sorted(pdg_lengths_dict, key=pdg_lengths_dict.get, reverse=True)
-        stack = HistStack(num_bins=bins, bin_range=[lower_lim, upper_lim])
+        stack = HistStack(num_bins=bins, bin_range=[lower_lim, upper_lim], xlabel=xlabel, ylabel=ylabel)
         # legend_list
         for i, pdg in enumerate(sorted_length):
             # Get the fraction of PDG
@@ -125,7 +125,7 @@ class HistogramV2:
                       " (" + str(pdg_fraction) + "%)")
 
             if len(pdg_filtered_dict[pdg]) > 0:
-                stack.fill_hist(x=pdg_filtered_dict[pdg], legend=legend, weights=None)
+                stack.fill_stack(x=pdg_filtered_dict[pdg], legend=legend, weights=None)
 
         # Store this hist in our master map as a HistogramData class
         # self.hist_data.append(HistogramData("stack", name, stack, precut=precut))
@@ -137,10 +137,10 @@ class HistogramV2:
     def plot_process(self, x, precut):
 
         # Get the config to create the plot for this cut
-        name, title, bins, lower_lim, upper_lim = list(self.hist_config[0].values())[0]
+        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[0].values())[0]
 
         # Fill the hists
-        hist = Hist1d(num_bins=bins, bin_range=[lower_lim, upper_lim])
+        hist = Hist1d(num_bins=bins, bin_range=[lower_lim, upper_lim], xlabel=xlabel, ylabel=ylabel)
         hist.fill_hist(x=x, legend=name, weights=None)
 
         # self.hist_data.append(HistogramData("hist", name, hist, precut=precut))
@@ -157,7 +157,7 @@ class HistogramV2:
         :return:
         """
         # The name and binning should be the same for all particles
-        name, title, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
+        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
 
         # Invalid values default to -999 so mask out if it's less than -900
         valid_mask = ak.flatten(x[variable], axis=None) > -900.
@@ -175,14 +175,14 @@ class HistogramV2:
 
         # sorted() sorts the values in descending order
         sorted_length = sorted(process_lengths_dict, key=process_lengths_dict.get, reverse=True)
-        stack = HistStack(num_bins=bins, bin_range=[lower_lim, upper_lim])
+        stack = HistStack(num_bins=bins, bin_range=[lower_lim, upper_lim], xlabel=xlabel, ylabel=ylabel)
         for i, proc in enumerate(sorted_length):
             # Get the fraction of PDG
             proc_fraction = round((100. * len(process_dict[proc][process_dict[proc] > -900.]) / total_daughters), 2)
             legend = (proc + "  " + str(len(process_dict[proc][process_dict[proc] > -900.])) +
                       "/" + str(total_daughters) + " (" + str(proc_fraction) + "%)")
 
-            stack.fill_hist(x=process_dict[proc], legend=legend, weights=None)
+            stack.fill_stack(x=process_dict[proc], legend=legend, weights=None)
 
         # Store this hist in our master map as a HistogramData class
         # self.hist_data.append(HistogramData("stack", name, stack, precut=precut))

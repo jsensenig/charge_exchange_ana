@@ -6,7 +6,7 @@
     "lower": 95.0
   },
   "histograms": [
-    { "beam_inst_TOF": ["tof_cut", "TOFCut;TOF [ns];Count", 80, 90, 150] },
-    { "beam_inst_P": ["tof_cut_mom", "TOFCut;P [GeV/c];Count", 100, 0.5, 2.5] }
+    { "beam_inst_TOF": ["tof_cut", "TOF [ns]", "Count", 80, 90, 150] },
+    { "beam_inst_P": ["tof_cut_mom", "P [GeV/c]", "Count", 100, 0.5, 2.5] }
   ]
 }

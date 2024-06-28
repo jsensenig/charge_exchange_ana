@@ -9,8 +9,8 @@
     "cnn_track_cut_param": 0.56
   },
   "histograms": [
-    { "proton_chi2_ndof": ["daughter_pion_cut", "DaughterPionCut;#chi^2/ndof;Count", 100, 0, 1000] },
-    { "reco_daughter_PFP_trackScore_collection": ["daughter_track_score", "DaughterPionCut;Track Score;Count", 50, 0.0, 1.0] }
+    { "proton_chi2_ndof": ["daughter_pion_cut", "$chi^2$/ndof", "Count", 100, 0, 1000] },
+    { "reco_daughter_PFP_trackScore_collection": ["daughter_track_score", "Track Score", "Count", 50, 0.0, 1.0] }
   ]
 }
 

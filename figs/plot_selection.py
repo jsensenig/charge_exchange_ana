@@ -17,6 +17,7 @@ def create_plots(hists, data_hists):
         if htype == b'stack':
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8,7), sharex=True, gridspec_kw={'height_ratios': [6, 1]})
             legend = [utils.code2string[int(leg.rsplit()[0])] + " " + b' '.join(leg.rsplit()[2:]).decode('UTF-8') for leg in hists['hist_legend'][idx]]
+            stack_type = 'process' if int(hists['hist_legend'][idx][0].rsplit()[0]) > 5000 else 'pdg'
             hcol = [utils.colors[int(leg.rsplit()[0])] for leg in hists['hist_legend'][idx]]
             hlist = [h for h in hists['hist_stack'][idx] if len(h) > 0]
             hep.histplot(hlist, hists['hist_bins'][idx], stack=True, histtype='fill', ax=ax1, color=hcol)
@@ -30,8 +31,9 @@ def create_plots(hists, data_hists):
             ax2.set_xlabel(hists['hist_xlabel'][idx].decode('UTF-8'))
             ax2.set_ylabel('Data/MC', fontsize=14)
             ax2.set_ylim(0.8, 1.2)
-            plt.savefig('figs/' + 'stack_' + hname + '.pdf')
+            plt.savefig('figs/' + 'stack_' + stack_type + '_' + hname + '.pdf')
         elif htype == b'efficiency':
+            plt.figure(figsize=(8,7))
             effic = hists['hist_passed'][idx] / hists['hist_total'][idx]
             effic[np.isnan(effic)] = 0.
             plt.errorbar(hists['hist_bins'][idx][0:-1], effic, effic*0.1, capsize=2, marker='s', markersize=3,
@@ -57,7 +59,6 @@ def create_plots(hists, data_hists):
             ax2.set_ylim(0.8, 1.2)
             plt.savefig('figs/' + 'hist1d_' + hname + '.pdf')
 
-        if idx > 15: break
 
 def get_data_hists(hists):
     data_dict = {}

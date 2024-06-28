@@ -8,6 +8,7 @@ import uproot
 import time
 import json
 import h5py
+import os
 
 
 def open_file(file_name, tree_dir):
@@ -94,6 +95,11 @@ def save_results(results):
     *_, num_last_cut = cut_signal_selected.items()
     print("Selected", num_last_cut, " events out of", signal_total, "true CEX events")
 
+    hist_file = 'test_hist_file.hdf5'
+    cut_file = 'test_cut_file.hdf5'
+    os.remove(hist_file) if os.path.exists(hist_file) else None
+    os.remove(cut_file) if os.path.exists(cut_file) else None
+
     # Write cut efficiency and purity
     h5_file = h5py.File('test_cut_file.hdf5', 'w')
     h5_file.create_dataset('cut_names', data=list(cut_total_selected.keys()))
@@ -128,9 +134,9 @@ def save_results(results):
     for i, hist in enumerate(hist_map): # {name, type, hist}
         hist_name[i] = hist['name']
         hist_type[i] = hist['type']
-        hist_xlabel[i] = hist['xlabel']
-        hist_ylabel[i] = hist['ylabel']
         hist_dict = hist['hist'].get_hist()
+        hist_xlabel[i] = hist_dict['xlabel']
+        hist_ylabel[i] = hist_dict['ylabel']
         hist_bins[i] = hist_dict['bins']
         hist_legend[i] = hist_dict['legend']
         if hist['type'] == 'efficiency':

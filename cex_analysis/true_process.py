@@ -44,6 +44,7 @@ class TrueProcess:
 
         # Pion production
         events["pion_production"] = pion_inelastic & self.pion_production(events, valid_piplus, valid_piminus)
+        events["all_pion_production"] = pion_inelastic & self.pion_production_v2(events, valid_piplus, valid_piminus)
 
         # pi0 production
         events["pi0_production"] = pion_inelastic & self.pi0_production(events, valid_piplus, valid_piminus)
@@ -77,6 +78,11 @@ class TrueProcess:
         #         "quasi_elastic", "pion_production", "pi0_production", "pion_and_pi0"]
         return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "other",
                 "pion_production", "pi0_production", "mctruth_charged_neutral_pion", "mcreco_charged_neutral_pion"]
+
+    @staticmethod
+    def get_process_list_simple():
+        return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "other",
+                "all_pion_production"]
 
     def get_reco_particle_counts(self, events):
         for pdg in self.pdg_dict:
@@ -129,6 +135,10 @@ class TrueProcess:
         return (((piminus > 1) | (piplus > 1)) |
                 ((piminus > 0) & (piplus > 0))) & (events["true_daughter_nPi0"] == 0) & \
                 ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
+
+    @staticmethod
+    def pion_production_v2(events, piplus, piminus):
+        return (piminus + piplus + (events["true_daughter_nPi0"] == 0)) > 1
 
     @staticmethod
     def pi0_production(events, piplus, piminus):

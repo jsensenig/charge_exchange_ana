@@ -17,7 +17,8 @@ class HistogramV2:
         self.hist_data = []
 
         # Get the true process list
-        self.true_process_list = TrueProcess.get_process_list()
+        # self.true_process_list = TrueProcess.get_process_list()
+        self.true_process_list = TrueProcess.get_process_list_simple()
 
     def get_hist_map(self):
         return self.hist_data

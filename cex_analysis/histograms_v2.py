@@ -6,7 +6,6 @@ from cex_analysis.true_process import TrueProcess
 import awkward as ak
 #import cex_analysis.plot_utils
 import plotting_utils
-import numpy as np
 
 
 class HistogramV2:
@@ -181,7 +180,7 @@ class HistogramV2:
         for i, proc in enumerate(sorted_length):
             # Get the fraction of PDG
             proc_fraction = round((100. * len(process_dict[proc][process_dict[proc] > -900.]) / total_daughters), 2)
-            legend = (str(utils.string2proc[proc]) + "  " + str(len(process_dict[proc][process_dict[proc] > -900.])) +
+            legend = (str(utils.string2code[proc]) + "  " + str(len(process_dict[proc][process_dict[proc] > -900.])) +
                       "/" + str(total_daughters) + " (" + str(proc_fraction) + "%)")
 
             stack.fill_stack(x=process_dict[proc], legend=legend, weights=None)

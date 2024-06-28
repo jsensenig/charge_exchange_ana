@@ -16,20 +16,17 @@ def create_plots(hists, data_hists):
         bin_center = (hists['hist_bins'][idx][0:-1] + hists['hist_bins'][idx][1:]) / 2
         if htype == b'stack':
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8,7), sharex=True, gridspec_kw={'height_ratios': [6, 1]})
-            legend = [utils.code2string[int(leg.rsplit()[0])] + " " + b' '.join(leg.rsplit()[2:]).decode('UTF-8') for leg in
-                      hists['hist_legend'][idx]]
+            legend = [utils.code2string[int(leg.rsplit()[0])] + " " + b' '.join(leg.rsplit()[2:]).decode('UTF-8') for leg in hists['hist_legend'][idx]]
             hcol = [utils.colors[int(leg.rsplit()[0])] for leg in hists['hist_legend'][idx]]
             hlist = [h for h in hists['hist_stack'][idx] if len(h) > 0]
             hep.histplot(hlist, hists['hist_bins'][idx], stack=True, histtype='fill', ax=ax1, color=hcol)
-            ax1.errorbar((hists['hist_bins'][idx][0:-1]+hists['hist_bins'][idx][1:])/2, data_hists[hname],
-                         np.sqrt(data_hists[hname]), capsize=2, marker='s', markersize=3, color='black', linestyle='None')
+            ax1.errorbar(bin_center, data_hists[hname], np.sqrt(data_hists[hname]), capsize=2, marker='s', markersize=3, color='black', linestyle='None')
             ax1.set_title(hname)
             ax1.legend(legend + ['Data'])
             ax1.set_ylabel(hists['hist_ylabel'][idx].decode('UTF-8'))
             ratio = data_hists[hname] / data_hists[hname]
             ax2.errorbar(bin_center, ratio, ratio * 0.1, capsize=2, marker='s', markersize=3, color='black', linestyle='None')
             plt.grid()
-            ax2.set_xlabel('X [cm]')
             ax2.set_xlabel(hists['hist_xlabel'][idx].decode('UTF-8'))
             ax2.set_ylabel('Data/MC', fontsize=14)
             ax2.set_ylim(0.8, 1.2)
@@ -47,22 +44,20 @@ def create_plots(hists, data_hists):
         elif htype == b'hist':
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8,7), sharex=True, gridspec_kw={'height_ratios': [6, 1]})
             hep.histplot(hists['hist_1d'][idx], hists['hist_bins'][idx], histtype='fill', ax=ax1)
-            ax1.errorbar((hists['hist_bins'][idx][0:-1]+hists['hist_bins'][idx][1:])/2, data_hists[hname],
-                         np.sqrt(data_hists[hname]), capsize=2, marker='s', markersize=3, color='black', linestyle='None')
+            ax1.errorbar(bin_center, data_hists[hname], np.sqrt(data_hists[hname]), capsize=2, marker='s', markersize=3, color='black', linestyle='None')
             ax1.set_title(hname)
-            leg = [l.decode('UTF-8') for l in hists['hist_legend'][idx]]
-            ax1.legend(leg + ['Data'])
+            legend = [l.decode('UTF-8') for l in hists['hist_legend'][idx]]
+            ax1.legend(legend + ['Data'])
             ax1.set_ylabel(hists['hist_ylabel'][idx].decode('UTF-8'))
             ratio = data_hists[hname] / data_hists[hname]
-            ax2.errorbar(bin_center, ratio, ratio * 0.1, capsize=2, marker='s', markersize=3, color='black',
-                         linestyle='None')
+            ax2.errorbar(bin_center, ratio, ratio * 0.1, capsize=2, marker='s', markersize=3, color='black', linestyle='None')
             plt.grid()
-            ax2.set_xlabel('X [cm]')
             ax2.set_xlabel(hists['hist_xlabel'][idx].decode('UTF-8'))
             ax2.set_ylabel('Data/MC', fontsize=14)
             ax2.set_ylim(0.8, 1.2)
             plt.savefig('figs/' + 'hist1d_' + hname + '.pdf')
 
+        if idx > 15: break
 
 def get_data_hists(hists):
     data_dict = {}

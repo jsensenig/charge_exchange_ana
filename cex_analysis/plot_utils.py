@@ -30,7 +30,8 @@ code2string = {-11:  '$e^+$',
                10009: 'charged_neutral_pion_production',
                10010: 'mctruth_charged_neutral_pion',
                10011: 'mcreco_charged_neutral_pion',
-               10012: 'other'}
+               10012: 'other',
+               10013: 'all_pion_production'}
 
 string2code = {code2string[-11]: -11,
                code2string[11]: 11,
@@ -55,7 +56,8 @@ string2code = {code2string[-11]: -11,
                code2string[10009]: 10009,
                code2string[10010]: 10010,
                code2string[10011]: 10011,
-               code2string[10012]: 10012}
+               code2string[10012]: 10012,
+               code2string[10013]: 10013}
 
 # matplotlib colors
 colors = {-11:  'indianred',  # red
@@ -79,7 +81,8 @@ colors = {-11:  'indianred',  # red
         10009: 'goldenrod',
         10010: 'coral',
         10011: 'lightpink',
-        10012: 'olivedrab'}
+        10012: 'olivedrab',
+        10013: 'peru'}
 
 # ROOT color palette: https://root-forum.cern.ch/t/what-is-your-best-way-to-increment-colors/13809/2
 # colors = {-11:  46,  # red

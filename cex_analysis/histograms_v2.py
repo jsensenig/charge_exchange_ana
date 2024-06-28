@@ -31,10 +31,12 @@ class HistogramV2:
         type_name = 'eff_' if hist_type == 'efficiency' else hist_type + '_'
         if precut:
             name = 'precut_' + type_name + hist_name
+            hname = 'precut_' + hist_name
         else:
             name = 'postcut_' + type_name + hist_name
+            hname = 'postcut_' + hist_name
 
-        return name
+        return name, hname
 
     @staticmethod
     def merge_hist_list(hist_list):
@@ -66,8 +68,8 @@ class HistogramV2:
         eff_hist.fill_passed(x=xpassed, legend=name, weights=None)
 
         # self.hist_data.append(HistogramData("efficiency", name, eff_hist, precut=False))
-        full_name = self.generate_name(hist_name=name, hist_type='efficiency', precut=False)
-        self.hist_data.append({'name': full_name, 'type': 'efficiency', 'hist': eff_hist})
+        full_name, hist_name = self.generate_name(hist_name=name, hist_type='efficiency', precut=False)
+        self.hist_data.append({'name': full_name, 'hist_name': hist_name, 'type': 'efficiency', 'hist': eff_hist})
 
     def plot_particles(self, x, idx, precut):
 
@@ -82,8 +84,8 @@ class HistogramV2:
         hist.fill_hist(x=x, legend=name, weights=None)
 
         # self.hist_data.append(HistogramData("hist", name, hist, precut=precut))
-        full_name = self.generate_name(hist_name=name, hist_type='hist', precut=precut)
-        self.hist_data.append({'name': full_name, 'type': 'hist', 'hist': hist})
+        full_name, hist_name = self.generate_name(hist_name=name, hist_type='hist', precut=precut)
+        self.hist_data.append({'name': full_name, 'hist_name': hist_name, 'type': 'hist', 'hist': hist})
 
     def plot_particles_stack(self, x, x_pdg, idx, precut):
         """
@@ -129,8 +131,8 @@ class HistogramV2:
 
         # Store this hist in our master map as a HistogramData class
         # self.hist_data.append(HistogramData("stack", name, stack, precut=precut))
-        full_name = self.generate_name(hist_name=name, hist_type='stack', precut=precut)
-        self.hist_data.append({'name': full_name, 'type': 'stack', 'hist': stack})
+        full_name, hist_name = self.generate_name(hist_name=name, hist_type='stack', precut=precut)
+        self.hist_data.append({'name': full_name, 'hist_name': hist_name, 'type': 'stack', 'hist': stack})
 
         return
 
@@ -144,8 +146,8 @@ class HistogramV2:
         hist.fill_hist(x=x, legend=name, weights=None)
 
         # self.hist_data.append(HistogramData("hist", name, hist, precut=precut))
-        full_name = self.generate_name(hist_name=name, hist_type='hist', precut=precut)
-        self.hist_data.append({'name': full_name, 'type': 'hist', 'hist': hist})
+        full_name, hist_name = self.generate_name(hist_name=name, hist_type='hist', precut=precut)
+        self.hist_data.append({'name': full_name, 'hist_name': hist_name, 'type': 'hist', 'hist': hist})
 
     def plot_process_stack(self, x, idx, variable, precut):
         """
@@ -186,7 +188,7 @@ class HistogramV2:
 
         # Store this hist in our master map as a HistogramData class
         # self.hist_data.append(HistogramData("stack", name, stack, precut=precut))
-        full_name = self.generate_name(hist_name=name, hist_type='stack', precut=precut)
-        self.hist_data.append({'name': full_name, 'type': 'stack', 'hist': stack})
+        full_name, hist_name = self.generate_name(hist_name=name, hist_type='stack', precut=precut)
+        self.hist_data.append({'name': full_name, 'hist_name': hist_name, 'type': 'stack', 'hist': stack})
 
         return

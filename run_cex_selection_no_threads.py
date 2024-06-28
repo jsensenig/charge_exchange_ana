@@ -132,7 +132,7 @@ def save_results(results):
     hist_1d = h5_file.create_dataset('hist_1d', (num_hists,), dtype=data_int32)
 
     for i, hist in enumerate(hist_map): # {name, type, hist}
-        hist_name[i] = hist['name']
+        hist_name[i] = hist['hist_name']
         hist_type[i] = hist['type']
         hist_dict = hist['hist'].get_hist()
         hist_xlabel[i] = hist_dict['xlabel']

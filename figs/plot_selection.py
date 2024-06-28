@@ -13,6 +13,7 @@ def create_plots(hists, data_hists):
         hname = hists['hist_name'][idx].decode('UTF-8')
         print(idx, " - ", hname)
         htype = hists['hist_type'][idx]
+        bin_center = (hists['hist_bins'][idx][0:-1] + hists['hist_bins'][idx][1:]) / 2
         if htype == b'stack':
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8,7), sharex=True, gridspec_kw={'height_ratios': [6, 1]})
             legend = [utils.code2string[int(leg.rsplit()[0])] + " " + b' '.join(leg.rsplit()[2:]).decode('UTF-8') for leg in
@@ -25,12 +26,14 @@ def create_plots(hists, data_hists):
             ax1.set_title(hname)
             ax1.legend(legend + ['Data'])
             ax1.set_ylabel(hists['hist_ylabel'][idx].decode('UTF-8'))
-            ax2.plot(hists['hist_bins'][idx][0:-1], hlist[0]/hlist[0])
+            ratio = data_hists[hname] / data_hists[hname]
+            ax2.errorbar(bin_center, ratio, ratio * 0.1, capsize=2, marker='s', markersize=3, color='black', linestyle='None')
             plt.grid()
             ax2.set_xlabel('X [cm]')
             ax2.set_xlabel(hists['hist_xlabel'][idx].decode('UTF-8'))
-            ax2.set_ylabel('Ratio')
-            # plt.show()
+            ax2.set_ylabel('Data/MC', fontsize=14)
+            ax2.set_ylim(0.8, 1.2)
+            plt.savefig('figs/' + 'stack_' + hname + '.pdf')
         elif htype == b'efficiency':
             effic = hists['hist_passed'][idx] / hists['hist_total'][idx]
             effic[np.isnan(effic)] = 0.
@@ -40,7 +43,7 @@ def create_plots(hists, data_hists):
             leg = [l.decode('UTF-8') for l in hists['hist_legend'][idx]]
             plt.legend(leg)
             plt.ylabel(hists['hist_ylabel'][idx].decode('UTF-8'))
-            # plt.show()
+            plt.savefig('figs/' + 'effic_' + hname + '.pdf')
         elif htype == b'hist':
             fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8,7), sharex=True, gridspec_kw={'height_ratios': [6, 1]})
             hep.histplot(hists['hist_1d'][idx], hists['hist_bins'][idx], histtype='fill', ax=ax1)
@@ -50,14 +53,15 @@ def create_plots(hists, data_hists):
             leg = [l.decode('UTF-8') for l in hists['hist_legend'][idx]]
             ax1.legend(leg + ['Data'])
             ax1.set_ylabel(hists['hist_ylabel'][idx].decode('UTF-8'))
-            ax2.plot(hists['hist_bins'][idx][0:-1], hists['hist_1d'][idx]/hists['hist_1d'][idx])
+            ratio = data_hists[hname] / data_hists[hname]
+            ax2.errorbar(bin_center, ratio, ratio * 0.1, capsize=2, marker='s', markersize=3, color='black',
+                         linestyle='None')
             plt.grid()
             ax2.set_xlabel('X [cm]')
             ax2.set_xlabel(hists['hist_xlabel'][idx].decode('UTF-8'))
-            ax2.set_ylabel('Ratio')
-            # plt.show()
-
-        plt.savefig('figs/' + hists['hist_name'][idx].decode('UTF-8') + '.pdf')
+            ax2.set_ylabel('Data/MC', fontsize=14)
+            ax2.set_ylim(0.8, 1.2)
+            plt.savefig('figs/' + 'hist1d_' + hname + '.pdf')
 
 
 def get_data_hists(hists):
@@ -69,7 +73,7 @@ def get_data_hists(hists):
     return data_dict
 
 
-if __name__ == 'main':
+if __name__ == '__main__':
 
     data_hist_file = 'test_hist_file.hdf5'
     with h5py.File(data_hist_file, 'r') as hists:

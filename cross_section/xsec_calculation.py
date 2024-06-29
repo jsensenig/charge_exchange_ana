@@ -104,8 +104,29 @@ class XSecTotal(XSecBase):
 
         return xsec
 
-    def propagate_error(self):
-        pass
+    def propagate_error(self, inc_hist, end_hist, int_hist, prefactor, cov_with_inc, bin_list):
+        """
+        Propagate the errors through the cross-section calculation
+        3 derivatives wrt Ninc, Nend and Nint
+        """
+        inc_minus_end = inc_hist - end_hist
+
+        deriv_int_hist = prefactor * (1. / end_hist) * np.log(inc_hist / inc_minus_end)
+        deriv_end_hist = prefactor * (int_hist / end_hist) * ((1. / inc_minus_end) - (1. / end_hist) * np.log(inc_hist / inc_minus_end))
+        deriv_inc_hist = prefactor * (int_hist / end_hist) * (end_hist / (inc_hist*end_hist - inc_hist*inc_hist))
+
+        bin_lens = np.ma.count(bin_list, axis=1) - 3
+        nbins = bin_lens[0]
+        jacobian = np.zeros([nbins, 3 * nbins])
+
+        jacobian[:, :nbins] = deriv_inc_hist  # ∂σ/∂Ninc
+        jacobian[:, nbins:2 * nbins] = deriv_end_hist  # ∂σ/∂Nend
+        jacobian[:, 2 * nbins:3 * nbins] = deriv_int_hist  # ∂σ/∂Nint_ex
+
+        unfolded_xsec_cov = (jacobian @ cov_with_inc) @ jacobian.T
+        xsec_yerr = np.sqrt(np.diagonal(unfolded_xsec_cov))
+
+        return unfolded_xsec_cov, xsec_yerr
 
     def load_geant_total_xsec(self, xsec_file):
 
@@ -115,7 +136,7 @@ class XSecTotal(XSecBase):
         for graph in loaded_xsec:
             self.geant_total_xsec[graph] = loaded_xsec[graph].values()
 
-    def plot_beam_xsec(self, unfold_hist, unfold_err, process, bin_array, xlim, ylim, xsec_file):
+    def plot_beam_xsec(self, unfold_hist, yerr, process, bin_array, xlim, ylim, xsec_file):
 
         proc_name = {"cex": "cex_KE;1", "abs": "abs_KE;1", "inel": "total_inel_KE;1"}
 
@@ -131,9 +152,8 @@ class XSecTotal(XSecBase):
         total_xsec = self.calc_xsec(hist_dict=xsec_hists)
 
         plt.figure(figsize=(12, 5))
-        plt.errorbar(bin_centers_np(bin_array), total_xsec, np.sqrt(unfold_err.sum(axis=2).sum(axis=0)[1:-1]),
-                     bin_width_np(bin_centers_np(bin_array)) / 2, capsize=2, marker='s', markersize=3,
-                     linestyle='None', color='black', label='MC Unfolded')
+        plt.errorbar(bin_centers_np(bin_array), total_xsec, yerr, bin_width_np(bin_centers_np(bin_array)) / 2,
+                     capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
         plt.plot(self.geant_total_xsec[proc_name[process]][0], self.geant_total_xsec[proc_name[process]][1],
                  linestyle='--', color='indianred', label='Geant $\\sigma$')
         plt.xlabel("$T_{\\pi^+}$ [MeV]", fontsize=14)
@@ -180,8 +200,10 @@ class XSecDiff(XSecBase):
 
         return xsec_array
 
-    def propagate_error(self):
-        pass
+    def propagate_error(self, inc_hist, int_hist, prefactor):
+
+        deriv_int_hist = prefactor * (1. / inc_hist)
+        deriv_inc_hist = - prefactor * (int_hist / (inc_hist*inc_hist))
 
     def load_geant_total_xsec(self, xsec_file):
 
@@ -278,7 +300,7 @@ class XSecDoubleDiff(XSecBase):
         # The cross section result is going to be 2D, the same shape as the interacting histogram
         xsec_array = np.zeros_like(int_hist)
 
-        # Loop over the y-axis of int hist, assumed to be dX
+        # Loop over the y-axis of int hist, assumed to be dXdY
         for j in range(int_hist.shape[0]):
             for k in range(int_hist.shape[1]):
                 bin_widths = 1. / (bin_width_np(self.eslice_edges[0]) * bin_width_np(self.eslice_edges[1]))
@@ -286,8 +308,10 @@ class XSecDoubleDiff(XSecBase):
 
         return xsec_array
 
-    def propagate_error(self):
-        pass
+    def propagate_error(self, inc_hist, int_hist, prefactor):
+
+        deriv_int_hist = prefactor * (1. / inc_hist)
+        deriv_inc_hist = - prefactor * (int_hist / (inc_hist * inc_hist))
 
     def get_geant_cross_section(self, energy, angle, beam):
         # If the beam KE does not exist we should know, throw error

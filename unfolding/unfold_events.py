@@ -35,9 +35,11 @@ class Unfold:
         self.true_record_var = self.config["true_record_var"]
         self.reco_record_var = self.config["reco_record_var"]
 
-        # Get the classes to interface teh data to the unfolding
+        # Get the classes to interface the data to the unfolding
         var_cls = {cls.__name__: cls for cls in XSecVariablesBase.__subclasses__()}
         self.vars = var_cls[self.config["xsec_vars"]](config_file=self.config["interface_config"], is_mc=self.is_training)
+        self.beam_vars = self.config["xsec_vars"] == "BeamPionVariables"
+
 
     @staticmethod
     def compile_cpp_helpers():
@@ -118,10 +120,13 @@ class Unfold:
                                                                     truth_bin_list=self.true_bin_array)
 
         # Errors, one with the unfolded variables and one with the incident histofram
+        bin_lens = np.ma.count(self.reco_bin_array, axis=1) - 1 
         unfolded_1d_err_cov, no_under_over_flow_cov = self.remap_evts.propagate_unfolded_1d_errors(unfolded_cov=unfold_nd_cov_np,
-                                                                                                   bin_list=self.reco_bin_array)
-        unfolded_1d_with_inc_cov = self.remap_evts.propagate_unfolded_errors_with_incident(unfolded_1d_cov=no_under_over_flow_cov,
-                                                                                           bin_list=self.reco_bin_array)
+                                                                                                   bin_list=bin_lens)
+        unfolded_1d_with_inc_cov = None
+        if self.beam_vars:
+            unfolded_1d_with_inc_cov = self.remap_evts.propagate_unfolded_errors_with_incident(unfolded_1d_cov=no_under_over_flow_cov,
+                                                                                               bin_list=bin_lens)
 
         # FIXME disable for now
         if self.show_plots and self.is_training and False:
@@ -132,7 +137,7 @@ class Unfold:
                                                  var_label_list=self.config["var_names"])
 
         if return_np:
-            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfolded_1d_err_cov, unfolded_1d_with_inc_cov
+            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfolded_1d_err_cov, no_under_over_flow_cov, unfolded_1d_with_inc_cov
         else:
             pass
             #return unfolded_data_hist, unfolded_data_cov, unfolded_data_corr_np, self.truth_hist

@@ -192,8 +192,8 @@ class Remapping:
     @staticmethod
     def propagate_unfolded_1d_errors(unfolded_cov, bin_list):
 
-        cov_num_bins = np.prod(bin_list)
-        var_1d_num_bins = np.sum(bin_list)
+        cov_num_bins = np.prod(bin_list).astype(int)
+        var_1d_num_bins = np.sum(bin_list).astype(int)
         jacobian = np.zeros((var_1d_num_bins, cov_num_bins))
         print("Nbins Cov/Var 1D:", cov_num_bins, "/", var_1d_num_bins)
 
@@ -229,8 +229,9 @@ class Remapping:
         """
         roi_num_bins = sum(bin_list)
         over_flow_bins = 2 * len(bin_list)
+        roi_num_bins -= over_flow_bins
         num_bins = bin_list[0] - 2
-        jacobian = np.zeros([roi_num_bins - over_flow_bins, roi_num_bins])
+        jacobian = np.zeros([roi_num_bins, roi_num_bins])
 
         # Incident covariance
         for ibin in range(num_bins - 1):

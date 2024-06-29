@@ -114,20 +114,25 @@ class Unfold:
         unfolded_corr_np = self.correlation_from_covariance(unfolded_cov=unfold_nd_cov_np)
 
         unfold_var_hist = self.remap_evts.map_bin_to_variable_space(unfold_nd_hist_np=unfold_nd_hist_np,
-                                                                                    unfold_nd_cov_np=unfold_nd_cov_np,
-                                                                                    truth_bin_list=self.true_bin_array)
+                                                                    unfold_nd_cov_np=unfold_nd_cov_np,
+                                                                    truth_bin_list=self.true_bin_array)
 
-        # FIXME 
-        unfold_var_err = np.ones_like(unfold_var_hist) * np.sqrt(unfold_var_hist)
+        # Errors, one with the unfolded variables and one with the incident histofram
+        unfolded_1d_err_cov, no_under_over_flow_cov = self.remap_evts.propagate_unfolded_1d_errors(unfolded_cov=unfold_nd_cov_np,
+                                                                                                   bin_list=self.reco_bin_array)
+        unfolded_1d_with_inc_cov = self.remap_evts.propagate_unfolded_errors_with_incident(unfolded_1d_cov=no_under_over_flow_cov,
+                                                                                           bin_list=self.reco_bin_array)
 
-        if self.show_plots and self.is_training:
+        # FIXME disable for now
+        if self.show_plots and self.is_training and False:
+            unfold_var_err = np.ones_like(unfold_var_hist) * np.sqrt(unfold_var_hist)
             bin_lens = [len(b) - 1 for b in self.true_bin_array]
             self.plot_unfolded_results_var_space(unfold_var_hist=unfold_var_hist, unfold_var_err=unfold_var_err,
                                                  true_var_list=true_var_list, bin_lens=bin_lens,
                                                  var_label_list=self.config["var_names"])
 
         if return_np:
-            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfold_var_err
+            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfolded_1d_err_cov, unfolded_1d_with_inc_cov
         else:
             pass
             #return unfolded_data_hist, unfolded_data_cov, unfolded_data_corr_np, self.truth_hist

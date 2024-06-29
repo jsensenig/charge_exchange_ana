@@ -116,7 +116,7 @@ class Remapping:
 
         # Now ravel (unwrap) the indices
         stacked_vars = np.vstack(digitized_vars)
-        ravelled_idx = np.ravel_multi_index(stacked_vars, dims=bin_list)
+        ravelled_idx = np.ravel_multi_index(stacked_vars, dims=bin_lens)
 
         print("Max bin:", np.max(ravelled_idx))
         if debug: print("Unique Bins:", np.unique(ravelled_idx))

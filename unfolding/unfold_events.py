@@ -113,9 +113,12 @@ class Unfold:
 
         unfolded_corr_np = self.correlation_from_covariance(unfolded_cov=unfold_nd_cov_np)
 
-        unfold_var_hist, unfold_var_err = self.remap_evts.map_bin_to_variable_space(unfold_nd_hist_np=unfold_nd_hist_np,
+        unfold_var_hist = self.remap_evts.map_bin_to_variable_space(unfold_nd_hist_np=unfold_nd_hist_np,
                                                                                     unfold_nd_cov_np=unfold_nd_cov_np,
                                                                                     truth_bin_list=self.true_bin_array)
+
+        # FIXME 
+        unfold_var_err = np.ones_like(unfold_var_hist) * np.sqrt(unfold_var_hist)
 
         if self.show_plots and self.is_training:
             bin_lens = [len(b) - 1 for b in self.true_bin_array]

@@ -155,9 +155,9 @@ class ShowerLikelihood:
         :return:
         """
 
-        self.no_pi0_2d_template = np.loadtxt('/Users/jsen/tmp/tmp_pi0_shower/no_pi0_2d_pdf.txt')
-        self.one_pi0_2d_template = np.loadtxt('/Users/jsen/tmp/tmp_pi0_shower/one_pi0_2d_pdf.txt')
-        self.n_pi0_2d_template = np.loadtxt('/Users/jsen/tmp/tmp_pi0_shower/n_pi0_2d_pdf.txt')
+        self.no_pi0_2d_template = np.loadtxt('no_pi0_2d_pdf.txt')
+        self.one_pi0_2d_template = np.loadtxt('one_pi0_2d_pdf.txt')
+        self.n_pi0_2d_template = np.loadtxt('n_pi0_2d_pdf.txt')
 
         # These 3 arrays are using reco_beam_calo_end{X,Y,Z} which is SCE-corrected while the SPs are not SCE-corrected
         # self.no_pi0_template = np.array([3.07312894e-03, 2.15119026e-02, 5.87735911e-02, 1.43284637e-01,

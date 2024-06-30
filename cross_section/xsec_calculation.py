@@ -250,7 +250,7 @@ class XSecDiff(XSecBase):
 
         return x, y
 
-    def plot_pi0_xsec(self, unfold_hist, unfold_err, inc_hist, beam_eslices, diff_var, bin_array, xlim, xsec_file):
+    def plot_pi0_xsec(self, unfold_hist, yerr, inc_hist, beam_eslices, diff_var, bin_array, xlim, xsec_file):
 
         if len(self.geant_diff_xsec) == 0:
             self.load_geant_total_xsec(xsec_file=xsec_file)
@@ -262,10 +262,8 @@ class XSecDiff(XSecBase):
         if diff_var == "pi0_ke":
             xsec_hist2d = {"inc_hist": inc_hist, "int_hist": unfold_hist.sum(axis=1)}
             diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices)
-            plt.errorbar(abs(bin_centers_np(bin_array)), diff_xsec, np.sqrt(unfold_err.sum(axis=1)),
-                         abs(bin_width_np(bin_array)) / 2, capsize=2, marker='s', markersize=3, linestyle='None',
-                         color='black', label='MC Unfolded')
-
+            plt.errorbar(abs(bin_centers_np(bin_array)), diff_xsec, yerr, abs(bin_width_np(bin_array)) / 2,
+                         capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
             plt.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dT_{\\pi^0}$')
             plt.xlabel("$T_{\\pi^0}$ [MeV]", fontsize=14)
             plt.ylabel("$\\frac{d\\sigma}{dT_{\\pi^0}}$ [mb]")
@@ -274,9 +272,8 @@ class XSecDiff(XSecBase):
         elif diff_var == "pi0_cos":
             xsec_hist2d = {"inc_hist": inc_hist, "int_hist": unfold_hist.sum(axis=0)}
             diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices)
-            plt.errorbar(bin_centers_np(bin_array), diff_xsec, np.sqrt(unfold_err.sum(axis=0)),
-                         bin_width_np(bin_array) / 2, capsize=2, marker='s', markersize=3, linestyle='None',
-                         color='black', label='MC Unfolded')
+            plt.errorbar(bin_centers_np(bin_array), diff_xsec, yerr, bin_width_np(bin_array) / 2, capsize=2,
+                         marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
             plt.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dcos\\theta_{\\pi^0}$')
             plt.xlabel("$cos\\theta_{\\pi^0}$", fontsize=14)
             plt.ylabel("$\\frac{d\\sigma}{dcos\\theta_{\\pi^0}}$ [mb]")

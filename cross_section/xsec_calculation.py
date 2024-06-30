@@ -113,15 +113,16 @@ class XSecTotal(XSecBase):
 
         deriv_int_hist = prefactor * (1. / end_hist) * np.log(inc_hist / inc_minus_end)
         deriv_end_hist = prefactor * (int_hist / end_hist) * ((1. / inc_minus_end) - (1. / end_hist) * np.log(inc_hist / inc_minus_end))
-        deriv_inc_hist = prefactor * (int_hist / end_hist) * (end_hist / (inc_hist*end_hist - inc_hist*inc_hist))
+        deriv_inc_hist = prefactor * int_hist / inc_hist / (inc_hist - end_hist)
 
         bin_lens = np.ma.count(bin_list, axis=1) - 3
         nbins = bin_lens[0]
         jacobian = np.zeros([nbins, 3 * nbins])
 
-        jacobian[:, :nbins] = deriv_inc_hist  # ∂σ/∂Ninc
-        jacobian[:, nbins:2 * nbins] = deriv_end_hist  # ∂σ/∂Nend
-        jacobian[:, 2 * nbins:3 * nbins] = deriv_int_hist  # ∂σ/∂Nint_ex
+        idx = np.arange(nbins)
+        jacobian[idx, idx] = deriv_inc_hist  # ∂σ/∂Ninc
+        jacobian[idx, idx + nbins] = deriv_end_hist  # ∂σ/∂Nend
+        jacobian[idx, idx + nbins + nbins] = deriv_int_hist  # ∂σ/∂Nint_ex
 
         unfolded_xsec_cov = (jacobian @ cov_with_inc) @ jacobian.T
         xsec_yerr = np.sqrt(np.diagonal(unfolded_xsec_cov))
@@ -200,10 +201,30 @@ class XSecDiff(XSecBase):
 
         return xsec_array
 
-    def propagate_error(self, inc_hist, int_hist, prefactor):
+    def propagate_error(self, inc_hist, int_hist, prefactor, cov_with_inc, bin_list):
 
         deriv_int_hist = prefactor * (1. / inc_hist)
         deriv_inc_hist = - prefactor * (int_hist / (inc_hist*inc_hist))
+
+        bin_lens = np.ma.count(bin_list, axis=1) - 3
+        nbins = bin_lens[0]
+        jacobian = np.zeros([nbins, 2 * nbins])
+
+        block_lower_left = cov_with_inc[:nbins, :nbins]
+        block_lower_right = cov_with_inc[:nbins, 2*nbins:]
+        block_upper_left = cov_with_inc[2*nbins:, :nbins]
+        block_upper_right = cov_with_inc[2*nbins:, 2*nbins:]
+
+        combined_cov = np.block([[block_lower_left, block_lower_right], [block_upper_left, block_upper_right]])
+
+        idx = np.arange(nbins)
+        jacobian[idx, idx] = deriv_inc_hist  # ∂σ/∂Ninc
+        jacobian[idx, idx + nbins] = deriv_int_hist  # ∂σ/∂Nend
+
+        unfolded_xsec_cov = (jacobian @ combined_cov) @ jacobian.T
+        xsec_yerr = np.sqrt(np.diagonal(unfolded_xsec_cov))
+
+        return unfolded_xsec_cov, xsec_yerr
 
     def load_geant_total_xsec(self, xsec_file):
 
@@ -308,10 +329,30 @@ class XSecDoubleDiff(XSecBase):
 
         return xsec_array
 
-    def propagate_error(self, inc_hist, int_hist, prefactor):
+    def propagate_error(self, inc_hist, int_hist, prefactor, cov_with_inc, bin_list):
 
         deriv_int_hist = prefactor * (1. / inc_hist)
         deriv_inc_hist = - prefactor * (int_hist / (inc_hist * inc_hist))
+
+        bin_lens = np.ma.count(bin_list, axis=1) - 3
+        nbins = bin_lens[0]
+        jacobian = np.zeros([nbins, 2 * nbins])
+
+        block_lower_left = cov_with_inc[:nbins, :nbins]
+        block_lower_right = cov_with_inc[:nbins, 2 * nbins:]
+        block_upper_left = cov_with_inc[2 * nbins:, :nbins]
+        block_upper_right = cov_with_inc[2 * nbins:, 2 * nbins:]
+
+        combined_cov = np.block([[block_lower_left, block_lower_right], [block_upper_left, block_upper_right]])
+
+        idx = np.arange(nbins)
+        jacobian[idx, idx] = deriv_inc_hist  # ∂σ/∂Ninc
+        jacobian[idx, idx + nbins] = deriv_int_hist  # ∂σ/∂Nend
+
+        unfolded_xsec_cov = (jacobian @ combined_cov) @ jacobian.T
+        xsec_yerr = np.sqrt(np.diagonal(unfolded_xsec_cov))
+
+        return unfolded_xsec_cov, xsec_yerr
 
     def get_geant_cross_section(self, energy, angle, beam):
         # If the beam KE does not exist we should know, throw error

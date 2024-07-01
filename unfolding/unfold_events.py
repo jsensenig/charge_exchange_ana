@@ -341,11 +341,11 @@ class Unfold:
             nbins, bin_range = self.config["truth_bins"]["nbins"], self.config["truth_bins"]["limits"]
             self.truth_ndim = len(nbins)
             true_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
-            true_array = [np.concatenate(([limits[0] - 1000], tarr, [limits[1] + 1000])) for tarr, limits in zip(true_array, bin_range)]
+            true_array = [np.concatenate(([-10], tarr, [limits[1] + 1000])) for tarr, limits in zip(true_array, bin_range)]
             nbins, bin_range = self.config["reco_bins"]["nbins"], self.config["reco_bins"]["limits"]
             self.reco_ndim = len(nbins)
             reco_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
-            reco_array = [np.concatenate(([limits[0] - 1000], tarr, [limits[1] + 1000])) for tarr, limits in zip(reco_array, bin_range)]
+            reco_array = [np.concatenate(([-10], tarr, [limits[1] + 1000])) for tarr, limits in zip(reco_array, bin_range)]
 
         return true_array, reco_array
 

@@ -88,8 +88,10 @@ class Remapping:
         """
         # Mask out events that fall in underflow or overflow bins
         mask_events = np.ones(shape=corr_var_list[0].shape, dtype=bool)
+        print("Pre", np.count_nonzero(mask_events))
         for cvar, bins in zip(corr_var_list, bin_list): # NOTE remove masking
             mask_events &= (cvar >= bins[0]) & (cvar < bins[-1])
+        print("Post", np.count_nonzero(mask_events))
 
         # Bin shifts, the last element is only added so multiply by 1
         # bin_shift = np.flip(np.cumprod([len(d) - 1 for d in bin_list]))

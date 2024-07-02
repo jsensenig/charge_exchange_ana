@@ -100,7 +100,8 @@ class XSecTotal(XSecBase):
         dedx = np.asarray([self.bethe_bloch.meandEdx(ke) for ke in bin_centers_np(self.eslice_edges)])
 
         # The Eslice cross-section calculation
-        xsec = int_hist * (self.sigma_factor / ( end_hist * self.delta_e)) * dedx * np.log(inc_hist / (inc_hist - end_hist))
+        #xsec = int_hist * (self.sigma_factor / ( end_hist * self.delta_e)) * dedx * np.log(inc_hist / (inc_hist - end_hist))
+        xsec = (self.sigma_factor / ( self.delta_e)) * dedx * np.log(inc_hist / (inc_hist - int_hist))
 
         return xsec
 
@@ -111,9 +112,11 @@ class XSecTotal(XSecBase):
         """
         inc_minus_end = inc_hist - end_hist
 
-        deriv_int_hist = prefactor * (1. / end_hist) * np.log(inc_hist / inc_minus_end)
-        deriv_end_hist = prefactor * (int_hist / end_hist) * ((1. / inc_minus_end) - (1. / end_hist) * np.log(inc_hist / inc_minus_end))
-        deriv_inc_hist = prefactor * int_hist / inc_hist / (inc_hist - end_hist)
+        #deriv_int_hist = prefactor * (1. / end_hist) * np.log(inc_hist / inc_minus_end)
+        #deriv_end_hist = prefactor * (int_hist / end_hist) * ((1. / inc_minus_end) - (1. / end_hist) * np.log(inc_hist / inc_minus_end))
+        #deriv_inc_hist = prefactor * int_hist / inc_hist / (inc_hist - end_hist)
+        deriv_inc_hist = prefactor * ((1. / inc_hist) - (1. / (inc_hist - int_hist)))
+        deriv_int_hist = prefactor * (1. / (inc_hist - int_hist))
 
         bin_lens = np.ma.count(bin_list, axis=1) - 3
         nbins = bin_lens[0]
@@ -121,7 +124,7 @@ class XSecTotal(XSecBase):
 
         idx = np.arange(nbins)
         jacobian[idx, idx] = deriv_inc_hist  # ∂σ/∂Ninc
-        jacobian[idx, idx + nbins] = deriv_end_hist  # ∂σ/∂Nend
+        #jacobian[idx, idx + nbins] = deriv_end_hist  # ∂σ/∂Nend
         jacobian[idx, idx + nbins + nbins] = deriv_int_hist  # ∂σ/∂Nint_ex
 
         unfolded_xsec_cov = (jacobian @ cov_with_inc) @ jacobian.T

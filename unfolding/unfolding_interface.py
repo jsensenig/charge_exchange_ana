@@ -157,7 +157,7 @@ class BeamPionVariables(XSecVariablesBase):
         double ff_energy_reco = beam_inst_KE*1000 - Eloss;//12.74;
         double initialE_reco = bb.KEAtLength(ff_energy_reco, trackLenAccum[0]);
         """
-        beame = 0. # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
+        beame = 1. # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
 
         true_initial_energy = None
         if self.is_mc:
@@ -169,6 +169,8 @@ class BeamPionVariables(XSecVariablesBase):
         reco_ff_energy = np.sqrt(np.square(self.pip_mass) + np.square(ak.to_numpy(event_record["beam_inst_P"] + beame)*1.e3)) \
                        - self.pip_mass        
         reco_ff_energy -= 12.74 # FIXME temporary Eloss
+        if beame == 1:
+            reco_ff_energy += np.random.normal(0,70,len(reco_ff_energy))
 
         nz_mask = ak.to_numpy(ak.count(event_record["reco_track_cumlen"], axis=1) > 0)
         reco_initial_energy = np.ones(len(event_record)).astype('d') * -1.

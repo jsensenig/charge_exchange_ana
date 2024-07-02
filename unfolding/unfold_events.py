@@ -96,9 +96,10 @@ class Unfold:
         self.truth_hist = ROOT.TH1D("truth", "Truth", self.truth_nbins_sparse, 0, self.truth_nbins_sparse)
         unfolded_data_hist_np, unfolded_data_cov_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
                                                                          cov_matrix=unfolded_data_cov)
-        print("unfolded_data_hist_np", unfolded_data_hist_np)
+
         # Plot sparse unfolded results
         if self.show_plots and self.is_training:
+            self.truth_hist = ROOT.TH1D("truth", "Truth", int(len(unfolded_data_hist_np)), 0, float(len(unfolded_data_hist_np)))
             self.plot_unfolded_results(unfolded_data_hist_np=unfolded_data_hist_np, unfolded_cov_np=unfolded_data_cov_np,
                                        true_hist_np=sparse_tuple[0])
 
@@ -109,7 +110,7 @@ class Unfold:
                                                                               nbins=total_bins)
 
         if self.show_plots and self.is_training:
-            self.truth_hist = ROOT.TH1D("truth", "Truth", int(total_bins), 0, float(total_bins))
+            self.truth_hist = ROOT.TH1D("truth", "Truth", int(len(unfold_nd_hist_np)), 0, float(len(unfold_nd_hist_np)))
             self.plot_unfolded_results(unfolded_data_hist_np=unfold_nd_hist_np, unfolded_cov_np=unfold_nd_cov_np,
                                        true_hist_np=nd_hist_tuple[0])
 
@@ -146,7 +147,7 @@ class Unfold:
         if self.reco_hist is not None:
             self.reco_hist.Delete()
 
-        self.reco_hist = ROOT.TH1D("data", "Data", self.reco_nbins_sparse, 0, self.reco_nbins_sparse-2)
+        self.reco_hist = ROOT.TH1D("data", "Data", self.reco_nbins_sparse, 0, self.reco_nbins_sparse)
         _ = [self.reco_hist.SetBinContent(i + 1, sparse_data_hist[i]) for i in range(self.reco_nbins_sparse)]
 
     def get_unfold_variables(self, event_record, true_mask, reco_mask):
@@ -165,8 +166,8 @@ class Unfold:
 
     def create_response_matrix(self, reco_events, true_events):
 
-        self.response = RooUnfold.RooUnfoldResponse(self.reco_nbins_sparse, 1, self.reco_nbins_sparse + 1,
-                                                    self.truth_nbins_sparse, 1, self.truth_nbins_sparse + 1)
+        self.response = RooUnfold.RooUnfoldResponse(self.reco_nbins_sparse, 1, self.reco_nbins_sparse+1,
+                                                    self.truth_nbins_sparse, 1, self.truth_nbins_sparse+1)
 
         ROOT.fill_response_1d(len(reco_events), reco_events, true_events, np.ones_like(reco_events), self.response)
 
@@ -175,7 +176,7 @@ class Unfold:
         unfold = RooUnfold.RooUnfoldBayes(self.response, self.reco_hist, self.bayes_niter)
 
         # Get statistical uncorrelated bin errors
-        data_error = np.diag([self.reco_hist.GetBinError(b) for b in range(self.reco_hist.GetNbinsX())])
+        data_error = np.diag([self.reco_hist.GetBinError(b+1) for b in range(self.reco_hist.GetNbinsX())])
         data_diag_error = ROOT.TMatrix(data_error.shape[0], data_error.shape[1])
         for i in range(data_error.shape[0]):
             for j in range(data_error.shape[1]):
@@ -185,7 +186,8 @@ class Unfold:
 
         unfolded_data_hist = unfold.Hunfold() # returns Hist
         unfolded_data_cov = unfold.Eunfold()  # returns TVectorD
-
+        print("unfolded_data_hist.GetNbinsX()", unfolded_data_hist.GetNbinsX())
+        print("NRows:", unfolded_data_cov.GetNrows(), " NCols:", unfolded_data_cov.GetNcols())
         return unfolded_data_hist, unfolded_data_cov
 
     def create_hists_numpy(self, data_events, reco_events=None, true_events=None):
@@ -341,11 +343,11 @@ class Unfold:
             nbins, bin_range = self.config["truth_bins"]["nbins"], self.config["truth_bins"]["limits"]
             self.truth_ndim = len(nbins)
             true_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
-            true_array = [np.concatenate(([-10], tarr, [limits[1] + 1000])) for tarr, limits in zip(true_array, bin_range)]
+            true_array = [np.concatenate(([-1000], tarr, [limits[1] + 1000])) for tarr, limits in zip(true_array, bin_range)]
             nbins, bin_range = self.config["reco_bins"]["nbins"], self.config["reco_bins"]["limits"]
             self.reco_ndim = len(nbins)
             reco_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
-            reco_array = [np.concatenate(([-10], tarr, [limits[1] + 1000])) for tarr, limits in zip(reco_array, bin_range)]
+            reco_array = [np.concatenate(([-1000], tarr, [limits[1] + 1000])) for tarr, limits in zip(reco_array, bin_range)]
 
         return true_array, reco_array
 

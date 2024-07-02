@@ -236,7 +236,7 @@ class Remapping:
         jacobian = np.zeros([roi_num_bins, roi_num_bins])
 
         # Incident covariance
-        for ibin in range(num_bins - 1):
+        for ibin in range(num_bins):
             for itmp in range(ibin, num_bins):
                 jacobian[ibin, itmp] = 1
             for itmp in range(ibin + num_bins, num_bins + num_bins):
@@ -247,7 +247,7 @@ class Remapping:
             jacobian[ibin, ibin] = 1
 
         # Interacting (signal) covariance
-        for ibin in range(num_bins + num_bins, num_bins + num_bins + num_bins - 1):
+        for ibin in range(num_bins + num_bins, num_bins + num_bins + num_bins):
             jacobian[ibin, ibin] = 1
 
         unfolded_1d_with_inc_cov = (jacobian @ unfolded_1d_cov) @ jacobian.T

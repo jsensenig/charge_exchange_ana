@@ -43,14 +43,14 @@ class XSecVariablesBase:
 
 
 class BeamPionVariables(XSecVariablesBase):
-    def __init__(self, config_file, is_mc):
+    def __init__(self, config_file, is_mc, energy_slices):
         super().__init__(is_mc=is_mc)
 
         self.config = self.configure(config_file=config_file)
         self.signal_proc = self.config["signal_proc"]
         self.beam_pip_zlow, self.beam_pip_zhigh = self.config["beam_pip_zlow"], self.config["beam_pip_zhigh"]
         self.pip_mass = self.config["pip_mass"] # pip_mass = 0.13957039  # pi+/- [GeV/c]
-        self.eslice_bin_array = self.config["eslice_bin_edges"] # FIXME inherit this from xsec
+        self.eslice_bin_array = energy_slices #self.config["eslice_bin_edges"] # FIXME inherit this from xsec
 
         self.bethe_bloch = BetheBloch(mass=139.57, charge=1)
 
@@ -267,7 +267,7 @@ class BeamPionVariables(XSecVariablesBase):
 
 
 class Pi0Variables(XSecVariablesBase):
-    def __init__(self, config_file, is_mc):
+    def __init__(self, config_file, is_mc, energy_slices=None):
         super().__init__(is_mc=is_mc)
 
         self.config = self.configure(config_file=config_file)

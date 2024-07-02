@@ -10,7 +10,7 @@ from cex_analysis.plot_utils import bin_width_np, bin_centers_np
 
 class XSecBase:
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, eslice_edges):
 
         self.consts = {"rho": 1.1,
                        "Nav": 1.e23,
@@ -25,7 +25,7 @@ class XSecBase:
         self.sigma_factor = argon_molar_mass / (avogadro_constant * liquid_argon_density)
         self.sigma_factor *= 1.e27  # Convert to milli-barn
         self.config = self.configure(config_file=config_file)
-        self.eslice_edges = np.asarray(self.config["eslice_edges"])
+        self.eslice_edges = eslice_edges #np.asarray(self.config["eslice_edges"])
         self.delta_e = bin_width_np(self.eslice_edges)
 
         self.bethe_bloch = BetheBloch(mass=139.57, charge=1)
@@ -79,8 +79,8 @@ class XSecTotal(XSecBase):
     https://arxiv.org/pdf/2312.09333 and more colloquially in,
     https://indico.fnal.gov/event/59095/contributions/263026/attachments/165472/219911/pionXS_HadAna_230329.pdf
     """
-    def __init__(self, config_file):
-        super().__init__(config_file=config_file)
+    def __init__(self, config_file, eslice_edges):
+        super().__init__(config_file=config_file, eslice_edges=eslice_edges)
 
         self.local_config = self.config["XSecTotal"]
         self.geant_total_xsec = {}
@@ -184,8 +184,8 @@ class XSecDiff(XSecBase):
     j = daughter variable bin, e.g. E_{pi^0} or cos theta_{pi^0}
     Note: N^{i,j}_int is a 2D histogram of the beam particle energy and daughter variable
     """
-    def __init__(self, config_file):
-        super().__init__(config_file=config_file)
+    def __init__(self, config_file, eslice_edges):
+        super().__init__(config_file=config_file, eslice_edges=eslice_edges)
 
         self.local_config = self.config["XSecDiff"]
         self.geant_diff_xsec = {}

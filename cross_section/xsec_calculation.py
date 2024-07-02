@@ -10,7 +10,7 @@ from cex_analysis.plot_utils import bin_width_np, bin_centers_np
 
 class XSecBase:
 
-    def __init__(self, config_file, eslice_edges):
+    def __init__(self, config_file):
 
         self.consts = {"rho": 1.1,
                        "Nav": 1.e23,
@@ -25,13 +25,13 @@ class XSecBase:
         self.sigma_factor = argon_molar_mass / (avogadro_constant * liquid_argon_density)
         self.sigma_factor *= 1.e27  # Convert to milli-barn
         self.config = self.configure(config_file=config_file)
-        self.eslice_edges = eslice_edges #np.asarray(self.config["eslice_edges"])
-        self.delta_e = bin_width_np(self.eslice_edges)
+        # self.eslice_edges = eslice_edges #np.asarray(self.config["eslice_edges"])
+        # self.delta_e = bin_width_np(self.eslice_edges)
 
         self.bethe_bloch = BetheBloch(mass=139.57, charge=1)
 
     @abstractmethod
-    def calc_xsec(self, hist_dict, beam_eslice_edges=None):
+    def calc_xsec(self, hist_dict, beam_eslice_edges=None, diff_edges=None):
         """
         API to the cross-section calculations
         """
@@ -43,6 +43,16 @@ class XSecBase:
         Method to implement the error propagation
         """
         pass
+
+    def xsec_prefactor(self, beam_eslice_edges):
+        # Get dE/dx as a function fo KE for the center of each bin
+        dedx = np.asarray([self.bethe_bloch.meandEdx(ke) for ke in bin_centers_np(beam_eslice_edges)])
+        delta_energy = bin_width_np(beam_eslice_edges)
+
+        # The Eslice cross-section calculation
+        xsec_prefactor = dedx * self.sigma_factor / delta_energy
+
+        return xsec_prefactor
 
     def calculate_incident(self, init_hist, end_hist):
         """
@@ -80,12 +90,12 @@ class XSecTotal(XSecBase):
     https://indico.fnal.gov/event/59095/contributions/263026/attachments/165472/219911/pionXS_HadAna_230329.pdf
     """
     def __init__(self, config_file, eslice_edges):
-        super().__init__(config_file=config_file, eslice_edges=eslice_edges)
+        super().__init__(config_file=config_file)
 
         self.local_config = self.config["XSecTotal"]
         self.geant_total_xsec = {}
 
-    def calc_xsec(self, hist_dict, beam_eslice_edges=None):
+    def calc_xsec(self, hist_dict, beam_eslice_edges=None, diff_edges=None):
         """
         Input: 3 hists init KE, end KE, int KE
         """
@@ -95,22 +105,21 @@ class XSecTotal(XSecBase):
         int_hist = hist_dict["int_hist"]
 
         inc_hist = self.calculate_incident(init_hist=init_hist, end_hist=end_hist)
-
-        # Get dE/dx as a function fo KE for the center of each bin
-        dedx = np.asarray([self.bethe_bloch.meandEdx(ke) for ke in bin_centers_np(self.eslice_edges)])
+        prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
         # The Eslice cross-section calculation
         #xsec = int_hist * (self.sigma_factor / ( end_hist * self.delta_e)) * dedx * np.log(inc_hist / (inc_hist - end_hist))
-        xsec = (self.sigma_factor / ( self.delta_e)) * dedx * np.log(inc_hist / (inc_hist - int_hist))
+        xsec = prefactor * np.log(inc_hist / (inc_hist - int_hist))
 
         return xsec
 
-    def propagate_error(self, inc_hist, end_hist, int_hist, prefactor, cov_with_inc, bin_list):
+    def propagate_error(self, inc_hist, end_hist, int_hist, cov_with_inc, beam_eslice_edges, bin_list):
         """
         Propagate the errors through the cross-section calculation
         3 derivatives wrt Ninc, Nend and Nint
         """
-        inc_minus_end = inc_hist - end_hist
+        # inc_minus_end = inc_hist - end_hist
+        prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
         #deriv_int_hist = prefactor * (1. / end_hist) * np.log(inc_hist / inc_minus_end)
         #deriv_end_hist = prefactor * (int_hist / end_hist) * ((1. / inc_minus_end) - (1. / end_hist) * np.log(inc_hist / inc_minus_end))
@@ -153,7 +162,7 @@ class XSecTotal(XSecBase):
                       "end_hist": unfold_hist.sum(axis=2).sum(axis=0)[1:-1],
                       "int_hist": unfold_hist.sum(axis=1).sum(axis=0)[1:-1]}
 
-        total_xsec = self.calc_xsec(hist_dict=xsec_hists)
+        total_xsec = self.calc_xsec(hist_dict=xsec_hists, beam_eslice_edges=bin_array)
 
         fig = plt.figure(figsize=(12, 5))
         ax = fig.add_subplot(111)
@@ -185,33 +194,30 @@ class XSecDiff(XSecBase):
     Note: N^{i,j}_int is a 2D histogram of the beam particle energy and daughter variable
     """
     def __init__(self, config_file, eslice_edges):
-        super().__init__(config_file=config_file, eslice_edges=eslice_edges)
+        super().__init__(config_file=config_file)
 
         self.local_config = self.config["XSecDiff"]
         self.geant_diff_xsec = {}
 
-    def calc_xsec(self, hist_dict, beam_eslice_edges=None):
+    def calc_xsec(self, hist_dict, beam_eslice_edges=None, diff_edges=None):
         # Get the requisite histograms
         inc_hist = hist_dict["inc_hist"]
         int_hist = hist_dict["int_hist"]
 
-        # Get dE/dx as a function fo KE for the center of each bin
-        dedx = np.asarray([self.bethe_bloch.meandEdx(ke) for ke in bin_centers_np(beam_eslice_edges)])
-
-        # The Eslice cross-section calculation
-        total_xsec_prefactor = (self.sigma_factor / bin_width_np(beam_eslice_edges)) * dedx
+        prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
         # The cross section result is going to be 1D, the same shape as the interacting histogram
         xsec_array = np.zeros_like(int_hist)
 
         # Loop over the y-axis of int hist, assumed to be dX
         for j in range(int_hist.shape[0]):
-            xsec_array[j] = total_xsec_prefactor * (1. / bin_width_np(self.eslice_edges)) * (int_hist[j] / inc_hist)
+            xsec_array[j] = prefactor * (1. / bin_width_np(diff_edges)) * (int_hist[j] / inc_hist)
 
         return xsec_array
 
-    def propagate_error(self, inc_hist, int_hist, prefactor, cov_with_inc, bin_list):
+    def propagate_error(self, inc_hist, int_hist, cov_with_inc, beam_eslice_edges, bin_list):
 
+        prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
         deriv_int_hist = prefactor * (1. / inc_hist)
         deriv_inc_hist = - prefactor * (int_hist / (inc_hist*inc_hist))
 
@@ -265,13 +271,12 @@ class XSecDiff(XSecBase):
             self.load_geant_total_xsec(xsec_file=xsec_file)
 
         xsec_x, xsec_y = self.get_geant_diff_xsec(pi0_var=diff_var)
-        self.eslice_edges = bin_array
 
         fig = plt.figure(figsize=(12, 5))
         ax = fig.add_subplot(111)
         if diff_var == "pi0_ke":
             xsec_hist2d = {"inc_hist": inc_hist, "int_hist": unfold_hist.sum(axis=1)}
-            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices)
+            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices, diff_edges=bin_array)
             ax.errorbar(abs(bin_centers_np(bin_array)), diff_xsec, yerr, abs(bin_width_np(bin_array)) / 2,
                          capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
             ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dT_{\\pi^0}$')
@@ -281,7 +286,7 @@ class XSecDiff(XSecBase):
             ax.set_xticks(np.arange(xlim[0], xlim[1]+1, 100))
         elif diff_var == "pi0_cos":
             xsec_hist2d = {"inc_hist": inc_hist, "int_hist": unfold_hist.sum(axis=0)}
-            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices)
+            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices, diff_edges=bin_array)
             ax.errorbar(bin_centers_np(bin_array), diff_xsec, yerr, bin_width_np(bin_array) / 2, capsize=2,
                          marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
             ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dcos\\theta_{\\pi^0}$')
@@ -318,16 +323,12 @@ class XSecDoubleDiff(XSecBase):
         self.local_config = self.config["XSecDoubleDiff"]
         self.geant_xsec_dict = {}
 
-    def calc_xsec(self, hist_dict, beam_eslice_edges=None):
+    def calc_xsec(self, hist_dict, beam_eslice_edges=None, diff_edges=None):
         # Get the requisite histograms
         inc_hist = hist_dict["inc_hist"]
         int_hist = hist_dict["int_hist"]
 
-        # Get dE/dx as a function fo KE for the center of each bin
-        dedx = np.asarray([self.bethe_bloch.meandEdx(ke) for ke in bin_centers_np(beam_eslice_edges)])
-
-        # The Eslice cross-section calculation factors
-        total_xsec_prefactor = (self.sigma_factor / bin_width_np(beam_eslice_edges)) * dedx
+        prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
         # The cross section result is going to be 2D, the same shape as the interacting histogram
         xsec_array = np.zeros_like(int_hist)
@@ -335,13 +336,14 @@ class XSecDoubleDiff(XSecBase):
         # Loop over the y-axis of int hist, assumed to be dXdY
         for j in range(int_hist.shape[0]):
             for k in range(int_hist.shape[1]):
-                bin_widths = 1. / (bin_width_np(self.eslice_edges[0]) * bin_width_np(self.eslice_edges[1]))
-                xsec_array[j, k] = total_xsec_prefactor * bin_widths * (int_hist[j, k] / inc_hist)
+                bin_widths = 1. / (bin_width_np(diff_edges[0]) * bin_width_np(diff_edges[1]))
+                xsec_array[j, k] = prefactor * bin_widths * (int_hist[j, k] / inc_hist)
 
         return xsec_array
 
-    def propagate_error(self, inc_hist, int_hist, prefactor, cov_with_inc, bin_list):
+    def propagate_error(self, inc_hist, int_hist, cov_with_inc, beam_eslice_edges, bin_list):
 
+        prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
         deriv_int_hist = prefactor * (1. / inc_hist)
         deriv_inc_hist = - prefactor * (int_hist / (inc_hist * inc_hist))
 

@@ -54,13 +54,13 @@ class XSecBase:
 
         return xsec_prefactor
 
-    def calculate_incident(self, init_hist, end_hist):
+    def calculate_incident(self, init_hist, end_hist, num_eslices):
         """
         The number incident on a slice is the total start number - the number which ended
         in all preceding bins.
         """
         inc_hist = np.zeros(len(init_hist))
-        for ibin in range(len(self.eslice_edges)-1):
+        for ibin in range(num_eslices):
             for itmp in range(ibin, len(init_hist)):
                 inc_hist[ibin] += init_hist[itmp]
             for itmp in range(ibin+1, len(init_hist)):
@@ -89,7 +89,7 @@ class XSecTotal(XSecBase):
     https://arxiv.org/pdf/2312.09333 and more colloquially in,
     https://indico.fnal.gov/event/59095/contributions/263026/attachments/165472/219911/pionXS_HadAna_230329.pdf
     """
-    def __init__(self, config_file, eslice_edges):
+    def __init__(self, config_file):
         super().__init__(config_file=config_file)
 
         self.local_config = self.config["XSecTotal"]
@@ -104,7 +104,7 @@ class XSecTotal(XSecBase):
         end_hist = hist_dict["end_hist"]
         int_hist = hist_dict["int_hist"]
 
-        inc_hist = self.calculate_incident(init_hist=init_hist, end_hist=end_hist)
+        inc_hist = self.calculate_incident(init_hist=init_hist, end_hist=end_hist, num_eslices=len(init_hist))
         prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
         # The Eslice cross-section calculation
@@ -113,11 +113,18 @@ class XSecTotal(XSecBase):
 
         return xsec
 
-    def propagate_error(self, inc_hist, end_hist, int_hist, cov_with_inc, beam_eslice_edges, bin_list):
+    def propagate_error(self, hist_dict, cov_with_inc, beam_eslice_edges, bin_list):
         """
         Propagate the errors through the cross-section calculation
         3 derivatives wrt Ninc, Nend and Nint
         """
+        # Get the requisite histograms
+        init_hist = hist_dict["init_hist"]
+        end_hist = hist_dict["end_hist"]
+        int_hist = hist_dict["int_hist"]
+                                                                                                               
+        inc_hist = self.calculate_incident(init_hist=init_hist, end_hist=end_hist, num_eslices=len(init_hist))
+
         # inc_minus_end = inc_hist - end_hist
         prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
@@ -193,7 +200,7 @@ class XSecDiff(XSecBase):
     j = daughter variable bin, e.g. E_{pi^0} or cos theta_{pi^0}
     Note: N^{i,j}_int is a 2D histogram of the beam particle energy and daughter variable
     """
-    def __init__(self, config_file, eslice_edges):
+    def __init__(self, config_file):
         super().__init__(config_file=config_file)
 
         self.local_config = self.config["XSecDiff"]

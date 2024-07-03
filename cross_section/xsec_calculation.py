@@ -228,13 +228,14 @@ class XSecDiff(XSecBase):
         nbins = bin_lens[0]
         jacobian = np.zeros([nbins, 2 * nbins])
 
+        yerr = np.diagonal(cov)[:nbins] if err_pos == 1 else np.diagonal(cov)[nbins:]
+
         idx = np.arange(nbins)
         jacobian[idx, idx] = deriv_inc_hist  # ∂σ/∂Ninc
         jacobian[idx, idx + nbins] = deriv_int_hist  # ∂σ/∂Nint
 
         unfolded_xsec_cov = (jacobian @ cov) @ jacobian.T
 
-        yerr = np.diagonal(unfolded_xsec_cov)[:nbins] if err_pos == 1 else np.diagonal(unfolded_xsec_cov)[nbins:]
         xsec_yerr = np.sqrt(yerr + inc_err)
 
         return unfolded_xsec_cov, xsec_yerr

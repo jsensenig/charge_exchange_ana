@@ -123,7 +123,8 @@ class Unfold:
                                                                     truth_bin_list=self.true_bin_array)
 
         # Errors, one with the unfolded variables and one with the incident histofram
-        bin_lens = np.ma.count(self.reco_bin_array, axis=1) - 1 
+        #bin_lens = np.ma.count(self.reco_bin_array, axis=1) - 1 
+        bin_lens = [len(b) - 1 for b in self.reco_bin_array]
         unfolded_1d_err_cov, no_under_over_flow_cov = self.remap_evts.propagate_unfolded_1d_errors(unfolded_cov=unfold_nd_cov_np,
                                                                                                    bin_list=bin_lens)
         unfolded_1d_with_inc_cov = None

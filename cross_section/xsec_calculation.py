@@ -215,8 +215,11 @@ class XSecDiff(XSecBase):
 
         return xsec_array
 
-    def propagate_error(self, inc_hist, int_hist, cov_with_inc, beam_eslice_edges, bin_list):
-
+    def propagate_error(self, inc_hist, int_hist, cov, inc_err, beam_eslice_edges, bin_list, err_pos):
+        """
+        Since the incident and diff variables are unfolded seperately they have uncorrelated errors.
+        So add them in quadrature.
+        """
         prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
         deriv_int_hist = prefactor * (1. / inc_hist)
         deriv_inc_hist = - prefactor * (int_hist / (inc_hist*inc_hist))
@@ -225,19 +228,14 @@ class XSecDiff(XSecBase):
         nbins = bin_lens[0]
         jacobian = np.zeros([nbins, 2 * nbins])
 
-        block_lower_left = cov_with_inc[:nbins, :nbins]
-        block_lower_right = cov_with_inc[:nbins, 2*nbins:]
-        block_upper_left = cov_with_inc[2*nbins:, :nbins]
-        block_upper_right = cov_with_inc[2*nbins:, 2*nbins:]
-
-        combined_cov = np.block([[block_lower_left, block_lower_right], [block_upper_left, block_upper_right]])
-
         idx = np.arange(nbins)
         jacobian[idx, idx] = deriv_inc_hist  # ∂σ/∂Ninc
-        jacobian[idx, idx + nbins] = deriv_int_hist  # ∂σ/∂Nend
+        jacobian[idx, idx + nbins] = deriv_int_hist  # ∂σ/∂Nint
 
-        unfolded_xsec_cov = (jacobian @ combined_cov) @ jacobian.T
-        xsec_yerr = np.sqrt(np.diagonal(unfolded_xsec_cov))
+        unfolded_xsec_cov = (jacobian @ cov) @ jacobian.T
+
+        yerr = np.diagonal(unfolded_xsec_cov)[:nbins] if err_pos == 1 else np.diagonal(unfolded_xsec_cov)[nbins:]
+        xsec_yerr = np.sqrt(yerr + inc_err)
 
         return unfolded_xsec_cov, xsec_yerr
 

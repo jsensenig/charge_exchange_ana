@@ -199,6 +199,8 @@ class XSecDiff(XSecBase):
     i = beam particle energy bin
     j = daughter variable bin, e.g. E_{pi^0} or cos theta_{pi^0}
     Note: N^{i,j}_int is a 2D histogram of the beam particle energy and daughter variable
+    An alternative calculation makes the approx Ninc >> Nint and uses the total xsec calculation
+    xsec_array[j] = (1. / bin_width_np(diff_edges)) * (int_hist[j] / beam_int_hist) * total_xsec
     """
     def __init__(self, config_file):
         super().__init__(config_file=config_file)
@@ -219,34 +221,43 @@ class XSecDiff(XSecBase):
         # Loop over the y-axis of int hist, assumed to be dX
         for j in range(int_hist.shape[0]):
             xsec_array[j] = prefactor * (1. / bin_width_np(diff_edges)) * (int_hist[j] / beam_inc_hist)
-            # xsec_array[j] = (1. / bin_width_np(diff_edges)) * (int_hist[j] / beam_int_hist) * total_xsec
 
         return xsec_array
 
-    def propagate_error(self, inc_hist, int_hist, cov, inc_err, beam_eslice_edges, bin_list, err_pos):
+    def propagate_error(self, unfold_hist, unfold_cov, beam_inc, beam_inc_err, beam_eslice_edges, bin_list, err_pos):
         """
-        Since the incident and diff variables are unfolded seperately they have uncorrelated errors.
+        Since the incident and diff variables are unfolded seperately they are treated as uncorrelated errors.
         So add them in quadrature.
         """
+        ke_nbins, cos_nbins = np.ma.count(bin_list, axis=1) - 3
+        ke_bins, cos_bins = bin_list[0][1:-1], bin_list[1][1:-1]
         prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
-        deriv_int_hist = prefactor * (1. / inc_hist)
-        deriv_inc_hist = - prefactor * (int_hist / (inc_hist*inc_hist))
 
-        bin_lens = np.ma.count(bin_list, axis=1) - 3
-        nbins = bin_lens[0]
-        jacobian = np.zeros([nbins, 2 * nbins])
+        # KE errors
+        idx = np.arange(ke_nbins)
+        jacobian = np.zeros([ke_nbins, ke_nbins + cos_nbins])
+        jacobian[idx, idx] = prefactor / (beam_inc * bin_width_np(ke_bins))
+        ke_cov = (jacobian @ unfold_cov) @ jacobian.T
+        int_err = np.sqrt(np.diagonal(ke_cov)[:ke_nbins])
 
-        yerr = np.diagonal(cov)[:nbins] if err_pos == 1 else np.diagonal(cov)[nbins:]
+        inc_err = -beam_inc_err * prefactor * unfold_hist.sum(axis=1) / (beam_inc * beam_inc * bin_width_np(ke_bins))
 
-        idx = np.arange(nbins)
-        jacobian[idx, idx] = deriv_inc_hist  # ∂σ/∂Ninc
-        jacobian[idx, idx + nbins] = deriv_int_hist  # ∂σ/∂Nint
+        # Combine incident and interacting errors in quadrature
+        ke_yerr = np.sqrt(inc_err * inc_err + int_err * int_err)
 
-        unfolded_xsec_cov = (jacobian @ cov) @ jacobian.T
+        # Cos errors
+        idx = np.arange(cos_nbins)
+        jacobian = np.zeros([cos_nbins, ke_nbins + cos_nbins])
+        jacobian[idx, cos_nbins + idx] = prefactor / (beam_inc * bin_width_np(cos_bins))
+        cos_cov = (jacobian @ unfold_cov) @ jacobian.T
+        int_err = np.sqrt(np.diagonal(cos_cov))
 
-        xsec_yerr = np.sqrt(yerr + inc_err)
+        inc_err = beam_inc_err * prefactor * unfold_hist.sum(axis=0)[1:-1] / (beam_inc * beam_inc * bin_width_np(cos_bins))
 
-        return unfolded_xsec_cov, xsec_yerr
+        # Combine incident and interacting errors in quadrature
+        cos_yerr = np.sqrt(inc_err * inc_err + int_err * int_err)
+
+        return ke_cov, cos_cov, ke_yerr, cos_yerr
 
     def load_geant_total_xsec(self, xsec_file):
 
@@ -272,8 +283,7 @@ class XSecDiff(XSecBase):
 
         return x, y
 
-    def plot_pi0_xsec(self, unfold_hist, yerr, beam_inc_hist, beam_eslices, diff_var, bin_array,
-                      xlim, xsec_file, show_plot):
+    def plot_pi0_xsec(self, unfold_hist, yerr, beam_inc_hist, beam_eslices, diff_var, bin_array, xlim, xsec_file, show_plot):
 
         if len(self.geant_diff_xsec) == 0:
             self.load_geant_total_xsec(xsec_file=xsec_file)

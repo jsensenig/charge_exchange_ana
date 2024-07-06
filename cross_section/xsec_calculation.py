@@ -206,20 +206,20 @@ class XSecDiff(XSecBase):
         self.local_config = self.config["XSecDiff"]
         self.geant_diff_xsec = {}
 
-    def calc_xsec(self, hist_dict, total_xsec, beam_eslice_edges=None, diff_edges=None):
+    def calc_xsec(self, hist_dict, beam_eslice_edges=None, diff_edges=None):
         # Get the requisite histograms
-        beam_int_hist = hist_dict["beam_int_hist"]
+        beam_inc_hist = hist_dict["beam_inc_hist"]
         int_hist = hist_dict["int_hist"]
 
-        # prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
+        prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
-        # The cross section result is going to be 1D, the same shape as the interacting histogram
+        # The cross section result is going to be 1D, with the same shape as the interacting histogram
         xsec_array = np.zeros_like(int_hist)
 
         # Loop over the y-axis of int hist, assumed to be dX
         for j in range(int_hist.shape[0]):
-            # xsec_array[j] = prefactor * (1. / bin_width_np(diff_edges)) * (int_hist[j] / inc_hist)
-            xsec_array[j] = (1. / bin_width_np(diff_edges)) * (int_hist[j] / beam_int_hist) * total_xsec
+            xsec_array[j] = prefactor * (1. / bin_width_np(diff_edges)) * (int_hist[j] / beam_inc_hist)
+            # xsec_array[j] = (1. / bin_width_np(diff_edges)) * (int_hist[j] / beam_int_hist) * total_xsec
 
         return xsec_array
 
@@ -272,7 +272,7 @@ class XSecDiff(XSecBase):
 
         return x, y
 
-    def plot_pi0_xsec(self, unfold_hist, yerr, beam_int_hist, total_xsec, beam_eslices, diff_var, bin_array,
+    def plot_pi0_xsec(self, unfold_hist, yerr, beam_inc_hist, beam_eslices, diff_var, bin_array,
                       xlim, xsec_file, show_plot):
 
         if len(self.geant_diff_xsec) == 0:
@@ -283,9 +283,8 @@ class XSecDiff(XSecBase):
         fig = plt.figure(figsize=(12, 5))
         ax = fig.add_subplot(111)
         if diff_var == "pi0_ke":
-            xsec_hist2d = {"beam_int_hist": beam_int_hist, "int_hist": unfold_hist.sum(axis=1)}
-            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, total_xsec=total_xsec, beam_eslice_edges=beam_eslices,
-                                       diff_edges=bin_array)
+            xsec_hist2d = {"beam_inc_hist": beam_inc_hist, "int_hist": unfold_hist.sum(axis=1)}
+            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices, diff_edges=bin_array)
             ax.errorbar(abs(bin_centers_np(bin_array)), diff_xsec, yerr, abs(bin_width_np(bin_array)) / 2,
                          capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
             ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dT_{\\pi^0}$')
@@ -294,9 +293,8 @@ class XSecDiff(XSecBase):
             ax.set_ylim(0, 0.3)
             ax.set_xticks(np.arange(xlim[0], xlim[1]+1, 100))
         elif diff_var == "pi0_cos":
-            xsec_hist2d = {"beam_int_hist": beam_int_hist, "int_hist": unfold_hist.sum(axis=0)}
-            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, total_xsec=total_xsec, beam_eslice_edges=beam_eslices,
-                                       diff_edges=bin_array)
+            xsec_hist2d = {"beam_inc_hist": beam_inc_hist, "int_hist": unfold_hist.sum(axis=0)}
+            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices, diff_edges=bin_array)
             ax.errorbar(bin_centers_np(bin_array), diff_xsec, yerr, bin_width_np(bin_array) / 2, capsize=2,
                          marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
             ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dcos\\theta_{\\pi^0}$')

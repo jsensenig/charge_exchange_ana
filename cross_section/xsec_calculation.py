@@ -272,7 +272,8 @@ class XSecDiff(XSecBase):
 
         return x, y
 
-    def plot_pi0_xsec(self, unfold_hist, yerr, inc_hist, beam_eslices, diff_var, bin_array, xlim, xsec_file, show_plot):
+    def plot_pi0_xsec(self, unfold_hist, yerr, beam_int_hist, total_xsec, beam_eslices, diff_var, bin_array,
+                      xlim, xsec_file, show_plot):
 
         if len(self.geant_diff_xsec) == 0:
             self.load_geant_total_xsec(xsec_file=xsec_file)
@@ -282,8 +283,9 @@ class XSecDiff(XSecBase):
         fig = plt.figure(figsize=(12, 5))
         ax = fig.add_subplot(111)
         if diff_var == "pi0_ke":
-            xsec_hist2d = {"inc_hist": inc_hist, "int_hist": unfold_hist.sum(axis=1)}
-            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices, diff_edges=bin_array)
+            xsec_hist2d = {"beam_int_hist": beam_int_hist, "int_hist": unfold_hist.sum(axis=1)}
+            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, total_xsec=total_xsec, beam_eslice_edges=beam_eslices,
+                                       diff_edges=bin_array)
             ax.errorbar(abs(bin_centers_np(bin_array)), diff_xsec, yerr, abs(bin_width_np(bin_array)) / 2,
                          capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
             ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dT_{\\pi^0}$')
@@ -292,8 +294,9 @@ class XSecDiff(XSecBase):
             ax.set_ylim(0, 0.3)
             ax.set_xticks(np.arange(xlim[0], xlim[1]+1, 100))
         elif diff_var == "pi0_cos":
-            xsec_hist2d = {"inc_hist": inc_hist, "int_hist": unfold_hist.sum(axis=0)}
-            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices, diff_edges=bin_array)
+            xsec_hist2d = {"beam_int_hist": beam_int_hist, "int_hist": unfold_hist.sum(axis=0)}
+            diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, total_xsec=total_xsec, beam_eslice_edges=beam_eslices,
+                                       diff_edges=bin_array)
             ax.errorbar(bin_centers_np(bin_array), diff_xsec, yerr, bin_width_np(bin_array) / 2, capsize=2,
                          marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
             ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dcos\\theta_{\\pi^0}$')

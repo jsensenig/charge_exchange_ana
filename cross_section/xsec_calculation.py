@@ -206,19 +206,20 @@ class XSecDiff(XSecBase):
         self.local_config = self.config["XSecDiff"]
         self.geant_diff_xsec = {}
 
-    def calc_xsec(self, hist_dict, beam_eslice_edges=None, diff_edges=None):
+    def calc_xsec(self, hist_dict, total_xsec, beam_eslice_edges=None, diff_edges=None):
         # Get the requisite histograms
-        inc_hist = hist_dict["inc_hist"]
+        beam_int_hist = hist_dict["beam_int_hist"]
         int_hist = hist_dict["int_hist"]
 
-        prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
+        # prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
         # The cross section result is going to be 1D, the same shape as the interacting histogram
         xsec_array = np.zeros_like(int_hist)
 
         # Loop over the y-axis of int hist, assumed to be dX
         for j in range(int_hist.shape[0]):
-            xsec_array[j] = prefactor * (1. / bin_width_np(diff_edges)) * (int_hist[j] / inc_hist)
+            # xsec_array[j] = prefactor * (1. / bin_width_np(diff_edges)) * (int_hist[j] / inc_hist)
+            xsec_array[j] = (1. / bin_width_np(diff_edges)) * (int_hist[j] / beam_int_hist) * total_xsec
 
         return xsec_array
 

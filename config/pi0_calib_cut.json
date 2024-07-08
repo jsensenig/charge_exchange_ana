@@ -13,7 +13,7 @@
     "shower_count_high": 3
   },
   "histograms": [
-    { "reco_daughter_PFP_trackScore_collection": ["track_score_cut", "TrackScore", "Count", 50, 0, 1] },
-    { "reco_beam_calo_endZ": ["apa3_fine_cut", "EndZ [cm]", "Count", 400, 200, 600] }
+    { "reco_daughter_PFP_trackScore_collection": ["daughter", "track_score_cut", "TrackScore", "Count", 50, 0, 1] },
+    { "reco_delta_beam_daughter_ke": ["beam","delta_ke_cut", "$\\Delta$KE [MeV]", "Count", 50, -1000, 1000] }
   ]
 }

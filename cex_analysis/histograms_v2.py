@@ -19,6 +19,8 @@ class HistogramV2:
         # Get the true process list
         # self.true_process_list = TrueProcess.get_process_list()
         self.true_process_list = TrueProcess.get_process_list_simple()
+        self.reco_beam_pdg = self.config["reco_beam_pdg"]
+        self.reco_daughter_pdg = self.config["reco_daughter_pdg"]
 
     def get_hist_map(self):
         return self.hist_data
@@ -100,7 +102,12 @@ class HistogramV2:
             print("Must use Awkward Arrays to plot!")
 
         # The name and binning should be the same for all particles
-        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
+        hist_params = list(self.hist_config[idx].values())[0]
+        if len(hist_params) == 6:
+            name, xlabel, ylabel, bins, lower_lim, upper_lim = hist_params
+        elif len(hist_params) == 7:
+            ptype, name, xlabel, ylabel, bins, lower_lim, upper_lim = hist_params
+            x_pdg = x[self.reco_beam_pdg] if ptype == "beam" else x[self.reco_daughter_pdg]
 
         # Flatten the array once
         x_flat = ak.flatten(x, axis=None)

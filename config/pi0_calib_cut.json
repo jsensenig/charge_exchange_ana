@@ -1,0 +1,19 @@
+{
+  "Pi0CalibCut": {
+    "optimize_cut": false,
+    "cut_variable": "reco_beam_calo_endZ",
+    "pip_mass": 139.57,
+    "dedx_lower": 0,
+    "dedx_upper": 10,
+    "reco_beam_ke_lower": 400,
+    "delta_ke_limit": 200,
+    "track_score_cut": 0.5,
+    "no_track_cut": 0,
+    "shower_count_low": 1,
+    "shower_count_high": 3
+  },
+  "histograms": [
+    { "reco_daughter_PFP_trackScore_collection": ["track_score_cut", "TrackScore", "Count", 50, 0, 1] },
+    { "reco_beam_calo_endZ": ["apa3_fine_cut", "EndZ [cm]", "Count", 400, 200, 600] }
+  ]
+}

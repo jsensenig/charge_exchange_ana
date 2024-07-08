@@ -1,3 +1,4 @@
+import awkward as ak
 import numpy as np
 
 
@@ -62,9 +63,17 @@ class TrueProcess:
         events["mcreco_charged_neutral_pion"] = pion_inelastic & self.mcreco_charged_neutral_pion(events)
 
         # other (fill "other" column with all zeroes)
-        events["other"] = np.zeros_like(events["pion_inelastic"])
+        # events["other"] = np.zeros_like(events["pion_inelastic"])
         # if event not already in a category, classify as "other"
-        #events["other"] = ~np.any(events[self.get_process_list()])
+        # events["other"] = ~np.any(events[self.get_process_list_simple()[:-1]])
+
+        proc_mask = np.zeros(len(events)).astype(bool)
+        for proc in self.get_process_list_simple():
+            if proc == 'other': continue
+            proc_mask |= ak.to_numpy(events[proc])
+
+        proc_mask |= ~ak.to_numpy(pion_inelastic)
+        events["other"] = ~proc_mask
 
         return events
 
@@ -81,8 +90,7 @@ class TrueProcess:
 
     @staticmethod
     def get_process_list_simple():
-        return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "other",
-                "all_pion_production"]
+        return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "all_pion_production", "other"]
 
     def get_reco_particle_counts(self, events):
         for pdg in self.pdg_dict:

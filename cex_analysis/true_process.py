@@ -17,6 +17,7 @@ class TrueProcess:
 
         # Count the number of daughter particles of each PDG type
         events = self.get_reco_particle_counts(events)
+        events["true_daughter_nKaon"] = ak.count_nonzero(events["true_beam_daughter_PDG"] == 321, axis=1)
 
         pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic")
 
@@ -120,18 +121,18 @@ class TrueProcess:
 
     @staticmethod
     def single_charge_exchange(events, piplus, piminus):
-        return (piplus == 0) & (piminus == 0) & (events["true_daughter_nPi0"] == 1) #& \
+        return (piplus == 0) & (piminus == 0) & (events["true_daughter_nPi0"] == 1) & (events["true_daughter_nKaon"] < 1)
                #((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 
     @staticmethod
     def double_charge_exchange(events, piplus, piminus):
-        return (piminus == 1) & (piplus == 0) & (events["true_daughter_nPi0"] == 0) #& \
+        return (piminus == 1) & (piplus == 0) & (events["true_daughter_nPi0"] == 0) & (events["true_daughter_nKaon"] < 1)
                #((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
 
     @staticmethod
     def absorption(events, piplus, piminus):
         return (piminus == 0) & (piplus == 0) & (events["true_daughter_nPi0"] == 0) & \
-               ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
+               ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0)) & (events["true_daughter_nKaon"] < 1)
 
     @staticmethod
     def quasi_elastic(events, piplus, piminus):

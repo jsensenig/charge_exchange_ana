@@ -28,6 +28,17 @@ class HistogramV2:
     def configure_hists(self, config):
         self.hist_config = config
 
+    def get_hist_params(self, x, idx, stack):
+        # The name and binning should be the same for all particles
+        hist_params = list(self.hist_config[idx].values())[0]
+
+        if len(hist_params) == 7 and stack:
+            ptype, name, xlabel, ylabel, bins, lower_lim, upper_lim = hist_params
+            x_pdg = x[self.reco_beam_pdg] if ptype == "beam" else x[self.reco_daughter_pdg]
+            return x_pdg, name, xlabel, ylabel, bins, lower_lim, upper_lim
+
+        return hist_params if len(hist_params) == 6 else hist_params[1:]
+
     @staticmethod
     def generate_name(hist_name, hist_type, precut):
         type_name = 'eff_' if hist_type == 'efficiency' else hist_type + '_'
@@ -58,7 +69,7 @@ class HistogramV2:
     def plot_efficiency(self, xtotal, xpassed, idx):
 
         # Get the config to create the plot for this cut
-        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
+        name, xlabel, ylabel, bins, lower_lim, upper_lim = self.get_hist_params(x=xtotal, idx=idx, stack=False)
 
         # If this is ndim array flatten it
         xtotal = ak.flatten(xtotal, axis=None)
@@ -76,7 +87,7 @@ class HistogramV2:
     def plot_particles(self, x, idx, precut):
 
         # Get the config to create the plot for this cut
-        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
+        name, xlabel, ylabel, bins, lower_lim, upper_lim = self.get_hist_params(x=x, idx=idx, stack=False)
 
         # If this is ndim array flatten it
         x = ak.flatten(x, axis=None)
@@ -102,12 +113,8 @@ class HistogramV2:
             print("Must use Awkward Arrays to plot!")
 
         # The name and binning should be the same for all particles
-        hist_params = list(self.hist_config[idx].values())[0]
-        if len(hist_params) == 6:
-            name, xlabel, ylabel, bins, lower_lim, upper_lim = hist_params
-        elif len(hist_params) == 7:
-            ptype, name, xlabel, ylabel, bins, lower_lim, upper_lim = hist_params
-            x_pdg = x[self.reco_beam_pdg] if ptype == "beam" else x[self.reco_daughter_pdg]
+        x_pdg, name, xlabel, ylabel, bins, lower_lim, upper_lim = self.get_hist_params(x=x, idx=idx, stack=True)
+
 
         # Flatten the array once
         x_flat = ak.flatten(x, axis=None)
@@ -146,7 +153,7 @@ class HistogramV2:
     def plot_process(self, x, precut):
 
         # Get the config to create the plot for this cut
-        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[0].values())[0]
+        name, xlabel, ylabel, bins, lower_lim, upper_lim = self.get_hist_params(x=x, idx=0, stack=False)
 
         # Fill the hists
         hist = Hist1d(num_bins=bins, bin_range=[lower_lim, upper_lim], xlabel=xlabel, ylabel=ylabel)
@@ -166,7 +173,7 @@ class HistogramV2:
         :return:
         """
         # The name and binning should be the same for all particles
-        name, xlabel, ylabel, bins, lower_lim, upper_lim = list(self.hist_config[idx].values())[0]
+        name, xlabel, ylabel, bins, lower_lim, upper_lim = self.get_hist_params(x=x, idx=idx, stack=False)
 
         # Invalid values default to -999 so mask out if it's less than -900
         valid_mask = ak.flatten(x[variable], axis=None) > -900.

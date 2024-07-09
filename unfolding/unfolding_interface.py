@@ -77,7 +77,8 @@ class BeamPionVariables(XSecVariablesBase):
 
         # Add the end energy
         if self.is_mc:
-            self.xsec_vars["true_beam_end_energy"] = ak.to_numpy(event_record["true_beam_traj_KE"][:, -2])
+            fiducial_zcut_mask = (event_record["true_beam_traj_Z"] <= self.beam_pip_zhigh) & (event_record["true_beam_traj_KE"] > 0)
+            self.xsec_vars["true_beam_end_energy"] = ak.to_numpy(event_record["true_beam_traj_KE"][fiducial_zcut_mask][:, -1])
         self.xsec_vars["reco_beam_end_energy"] = end_energy
 
         true_int, reco_int = self.make_beam_interacting(event_record=event_record, reco_mask=reco_mask)
@@ -132,7 +133,8 @@ class BeamPionVariables(XSecVariablesBase):
                 reco_beam_end_energy.append(-1)
                 continue
             inc_energy = self.bethe_bloch.ke_along_track(self.xsec_vars["reco_ff_energy"][evt], ak.to_numpy(event_record["reco_track_cumlen", evt]))
-            new_inc = xsec_utils.make_true_incident_energies(event_record["reco_beam_calo_Z", evt], inc_energy)
+            fiducial_zcut_mask = event_record["reco_beam_calo_Z", evt] <= self.beam_pip_zhigh
+            new_inc = xsec_utils.make_true_incident_energies(event_record["reco_beam_calo_Z", evt][fiducial_zcut_mask], inc_energy[fiducial_zcut_mask])
             reco_beam_new_init_energy.append(new_inc[0])
             reco_beam_end_energy.append(new_inc[-1])
         return np.asarray(reco_beam_new_init_energy), np.asarray(reco_beam_end_energy)
@@ -199,6 +201,9 @@ class BeamPionVariables(XSecVariablesBase):
 
         self.xsec_vars["reco_xsec_mask"] &= (init_bin_idx != end_bin_idx)
 
+        # FIXME I think it should be initial_E -= <the nearest lower bin edge>
+        # for histogram it doesn't matter as the current code ensures the initial_E ends up in the right bin
+        # but the value of initial_E will be wrong by 0 < Delta_initial_E < Eslice width
         self.xsec_vars["reco_beam_initial_energy"] -= bin_width_np(self.eslice_bin_array)
         self.xsec_vars["reco_beam_initial_energy"] = np.clip(self.xsec_vars["reco_beam_initial_energy"], a_min=-1e3,
                                                              a_max=self.eslice_bin_array[-1])

@@ -59,8 +59,8 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars = {}
 
     def get_xsec_variable(self, event_record, reco_mask, apply_cuts=True):
-        self.xsec_vars["true_xsec_mask"] = np.ones(len(event_record)).astype(bool) if self.is_mc else None
-        self.xsec_vars["reco_xsec_mask"] = np.ones(len(event_record)).astype(bool)
+        self.xsec_vars["true_complete_slice_mask"] = np.ones(len(event_record)).astype(bool) if self.is_mc else None
+        self.xsec_vars["reco_complete_slice_mask"] = np.ones(len(event_record)).astype(bool)
 
         # Calculate and add the requisite columns to the event record
         # Make masks for incomplete initial and through-going pions
@@ -93,6 +93,16 @@ class BeamPionVariables(XSecVariablesBase):
         # Mask out incomplete slices
         self.incomplete_energy_slice()
 
+        # Now set all 3 histograms to -1 for events with incomplete slices
+        if self.is_mc:
+            self.xsec_vars["true_beam_initial_energy"][~self.xsec_vars["true_complete_slice_mask"]] = -1.
+            self.xsec_vars["true_beam_end_energy"][~self.xsec_vars["true_complete_slice_mask"]] = -1.
+            self.xsec_vars["true_beam_sig_int_energy"][~self.xsec_vars["true_complete_slice_mask"]] = -1.
+
+        self.xsec_vars["reco_beam_initial_energy"][~self.xsec_vars["reco_complete_slice_mask"]] = -1.
+        self.xsec_vars["reco_beam_end_energy"][~self.xsec_vars["reco_complete_slice_mask"]] = -1.
+        self.xsec_vars["reco_beam_sig_int_energy"][~self.xsec_vars["reco_complete_slice_mask"]] = -1.
+
         # Add an end Z position
         if self.is_mc:
             self.xsec_vars["true_beam_endz"] = event_record["true_beam_traj_Z"][:, -1]
@@ -102,8 +112,8 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["reco_beam_endz"][empty_mask] = event_record["reco_beam_calo_Z"][empty_mask][:,-1]
 
         # Apply mask to events
-        true_mask = ~self.xsec_vars["true_upstream_mask"] & self.xsec_vars["true_xsec_mask"]
-        reco_mask = ~self.xsec_vars["reco_upstream_mask"] & self.xsec_vars["reco_xsec_mask"]
+        true_mask = ~self.xsec_vars["true_upstream_mask"]
+        reco_mask = ~self.xsec_vars["reco_upstream_mask"]
 
         self.xsec_vars["full_len_true_mask"] = true_mask
         self.xsec_vars["full_len_reco_mask"] = reco_mask
@@ -195,7 +205,7 @@ class BeamPionVariables(XSecVariablesBase):
         if self.is_mc:
             init_bin_idx = np.digitize(self.xsec_vars["true_beam_initial_energy"], bins=self.eslice_bin_array)
             end_bin_idx = np.digitize(self.xsec_vars["true_beam_end_energy"], bins=self.eslice_bin_array)
-            self.xsec_vars["true_xsec_mask"] &= (init_bin_idx != end_bin_idx)
+            self.xsec_vars["true_complete_slice_mask"] &= (init_bin_idx != end_bin_idx)
             self.xsec_vars["true_beam_initial_energy"] -= bin_width_np(self.eslice_bin_array)
             self.xsec_vars["true_beam_initial_energy"] = np.clip(self.xsec_vars["true_beam_initial_energy"], a_min=-1e3,
                                                                  a_max=self.eslice_bin_array[-1])
@@ -203,7 +213,7 @@ class BeamPionVariables(XSecVariablesBase):
         init_bin_idx = np.digitize(self.xsec_vars["reco_beam_initial_energy"], bins=self.eslice_bin_array)
         end_bin_idx = np.digitize(self.xsec_vars["reco_beam_end_energy"], bins=self.eslice_bin_array)
 
-        self.xsec_vars["reco_xsec_mask"] &= (init_bin_idx != end_bin_idx)
+        self.xsec_vars["reco_complete_slice_mask"] &= (init_bin_idx != end_bin_idx)
 
         # FIXME I think it should be initial_E -= <the nearest lower bin edge>
         # for histogram it doesn't matter as the current code ensures the initial_E ends up in the right bin
@@ -236,8 +246,8 @@ class BeamPionVariables(XSecVariablesBase):
         return true_int, reco_int
 
     def plot_beam_vars(self, unfold_hist, err_ax0, err_ax1, err_ax2, bin_array, h1_limits, h2_limits, h3_limits, plot_reco=True):
-        true_mask = ~self.xsec_vars["true_upstream_mask"] & self.xsec_vars["true_xsec_mask"]
-        reco_mask = ~self.xsec_vars["reco_upstream_mask"] & self.xsec_vars["reco_xsec_mask"]
+        true_mask = ~self.xsec_vars["true_upstream_mask"]
+        reco_mask = ~self.xsec_vars["reco_upstream_mask"]
 
         _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
         h1, bx1 , _ = ax1.hist(self.xsec_vars["true_beam_initial_energy"][true_mask], bins=bin_array[0],

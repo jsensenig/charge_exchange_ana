@@ -17,7 +17,7 @@ class XSecVariablesBase:
         self.xsec_vars = {}
 
     @abstractmethod
-    def get_xsec_variable(self, event_record, reco_mask, apply_cuts=False):
+    def get_xsec_variable(self, event_record, reco_mask, apply_cuts=True):
         """
         Get the specified cross-section's variable(s).
         """
@@ -58,7 +58,7 @@ class BeamPionVariables(XSecVariablesBase):
         # This is a very small subset of the original data
         self.xsec_vars = {}
 
-    def get_xsec_variable(self, event_record, reco_mask, apply_cuts=False):
+    def get_xsec_variable(self, event_record, reco_mask, apply_cuts=True):
         self.xsec_vars["true_xsec_mask"] = np.ones(len(event_record)).astype(bool) if self.is_mc else None
         self.xsec_vars["reco_xsec_mask"] = np.ones(len(event_record)).astype(bool)
 
@@ -112,9 +112,9 @@ class BeamPionVariables(XSecVariablesBase):
 
         for k in self.xsec_vars:
             if k.split('_')[0] == 'true':
-                self.xsec_vars[k] = self.xsec_vars[k][true_mask]
+                self.xsec_vars[k] = self.xsec_vars[k][true_mask & reco_mask]
             elif k.split('_')[0] == 'reco':
-                self.xsec_vars[k] = self.xsec_vars[k][reco_mask]
+                self.xsec_vars[k] = self.xsec_vars[k][true_mask & reco_mask]
 
         return self.xsec_vars
 
@@ -160,7 +160,7 @@ class BeamPionVariables(XSecVariablesBase):
         double ff_energy_reco = beam_inst_KE*1000 - Eloss;//12.74;
         double initialE_reco = bb.KEAtLength(ff_energy_reco, trackLenAccum[0]);
         """
-        beame = 1. # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
+        beame = 0. # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
 
         true_initial_energy = None
         if self.is_mc:
@@ -276,7 +276,7 @@ class Pi0Variables(XSecVariablesBase):
         self.config = self.configure(config_file=config_file)
         self.signal_proc = self.config["signal_proc"]
 
-    def get_xsec_variable(self, event_record, reco_mask, apply_cuts=False):
+    def get_xsec_variable(self, event_record, reco_mask, apply_cuts=True):
         true_pi0_energy, reco_pi0_energy = self.make_pi0_energy(event_record=event_record, reco_mask=reco_mask)
         self.xsec_vars["true_pi0_energy"] = true_pi0_energy
         self.xsec_vars["reco_pi0_energy"] = reco_pi0_energy

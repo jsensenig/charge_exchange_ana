@@ -132,9 +132,13 @@ class BeamPionVariables(XSecVariablesBase):
                 reco_beam_new_init_energy.append(-1)
                 reco_beam_end_energy.append(-1)
                 continue
+            fiducial_zcut_mask = event_record["reco_beam_calo_Z", evt][1:] <= self.beam_pip_zhigh
+            if np.count_nonzero(fiducial_zcut_mask) < 1:
+                reco_beam_new_init_energy.append(-1)
+                reco_beam_end_energy.append(-1)
+                continue
             inc_energy = self.bethe_bloch.ke_along_track(self.xsec_vars["reco_ff_energy"][evt], ak.to_numpy(event_record["reco_track_cumlen", evt]))
-            fiducial_zcut_mask = event_record["reco_beam_calo_Z", evt] <= self.beam_pip_zhigh
-            new_inc = xsec_utils.make_true_incident_energies(event_record["reco_beam_calo_Z", evt][fiducial_zcut_mask], inc_energy[fiducial_zcut_mask])
+            new_inc = xsec_utils.make_true_incident_energies(event_record["reco_beam_calo_Z", evt][1:][fiducial_zcut_mask], inc_energy[fiducial_zcut_mask])
             reco_beam_new_init_energy.append(new_inc[0])
             reco_beam_end_energy.append(new_inc[-1])
         return np.asarray(reco_beam_new_init_energy), np.asarray(reco_beam_end_energy)

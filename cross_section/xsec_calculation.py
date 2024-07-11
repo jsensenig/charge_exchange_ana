@@ -109,7 +109,8 @@ class XSecTotal(XSecBase):
 
         # The Eslice cross-section calculation
         #xsec = int_hist * (self.sigma_factor / ( end_hist * self.delta_e)) * dedx * np.log(inc_hist / (inc_hist - end_hist))
-        xsec = prefactor * np.log(inc_hist / (inc_hist - int_hist))
+        xsec = prefactor * (int_hist / end_hist) * np.log(inc_hist / (inc_hist - end_hist))
+        #xsec = prefactor * np.log(inc_hist / (inc_hist - int_hist))
 
         return xsec
 
@@ -229,7 +230,7 @@ class XSecDiff(XSecBase):
         Since the incident and diff variables are unfolded seperately they are treated as uncorrelated errors.
         So add them in quadrature.
         """
-        ke_nbins, cos_nbins = np.ma.count(bin_list, axis=1) - 3
+        ke_nbins, cos_nbins = [len(b) - 3 for b in bin_list] #np.ma.count(bin_list, axis=1) - 3
         ke_bins, cos_bins = bin_list[0][1:-1], bin_list[1][1:-1]
         prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
@@ -252,7 +253,7 @@ class XSecDiff(XSecBase):
         cos_cov = (jacobian @ unfold_cov) @ jacobian.T
         int_err = np.sqrt(np.diagonal(cos_cov))
 
-        inc_err = beam_inc_err * prefactor * unfold_hist.sum(axis=0)[1:-1] / (beam_inc * beam_inc * bin_width_np(cos_bins))
+        inc_err = beam_inc_err * prefactor * unfold_hist.sum(axis=0) / (beam_inc * beam_inc * bin_width_np(cos_bins))
 
         # Combine incident and interacting errors in quadrature
         cos_yerr = np.sqrt(inc_err * inc_err + int_err * int_err)

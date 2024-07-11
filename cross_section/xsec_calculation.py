@@ -58,15 +58,19 @@ class XSecBase:
         """
         The number incident on a slice is the total start number - the number which ended
         in all preceding bins.
+        #FIXME Taken from Yinrui Liu <cite paper>
         """
-        inc_hist = np.zeros(len(init_hist))
-        for ibin in range(num_eslices):
-            for itmp in range(ibin, len(init_hist)):
-                inc_hist[ibin] += init_hist[itmp]
-            for itmp in range(ibin+1, len(init_hist)):
-                inc_hist[ibin] -= end_hist[itmp]
+        flipped_init = np.flip(init_hist)
+        flipped_end = np.flip(end_hist)
 
-        return inc_hist
+        inc_hist = np.zeros_like(flipped_init)
+        for ibin in range(len(flipped_init)):
+            for itmp in range(0, ibin + 1):
+                inc_hist[ibin] += flipped_init[itmp]
+            for itmp in range(0, ibin):
+                inc_hist[ibin] -= flipped_end[itmp]
+
+        return np.flip(inc_hist)
 
     @staticmethod
     def configure(config_file):

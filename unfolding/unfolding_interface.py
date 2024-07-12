@@ -123,9 +123,9 @@ class BeamPionVariables(XSecVariablesBase):
 
         for k in self.xsec_vars:
             if k.split('_')[0] == 'true':
-                self.xsec_vars[k] = self.xsec_vars[k][true_mask & reco_mask]
+                self.xsec_vars[k] = self.xsec_vars[k][true_mask]
             elif k.split('_')[0] == 'reco':
-                self.xsec_vars[k] = self.xsec_vars[k][true_mask & reco_mask]
+                self.xsec_vars[k] = self.xsec_vars[k][reco_mask]
 
         return self.xsec_vars
 
@@ -205,22 +205,22 @@ class BeamPionVariables(XSecVariablesBase):
         if self.is_mc:
             init_bin_idx = np.digitize(self.xsec_vars["true_beam_initial_energy"], bins=self.eslice_bin_array)
             end_bin_idx = np.digitize(self.xsec_vars["true_beam_end_energy"], bins=self.eslice_bin_array)
-            self.xsec_vars["true_complete_slice_mask"] &= (init_bin_idx != end_bin_idx)
+            self.xsec_vars["true_complete_slice_mask"] &= (init_bin_idx > end_bin_idx)
             self.xsec_vars["true_beam_initial_energy"] -= bin_width_np(self.eslice_bin_array)
             self.xsec_vars["true_beam_initial_energy"] = np.clip(self.xsec_vars["true_beam_initial_energy"], a_min=-1e3,
-                                                                 a_max=self.eslice_bin_array[-1])
+                                                                 a_max=self.eslice_bin_array[-1]-1) # make sure its in the bin if upper edge is not inclusive
 
         init_bin_idx = np.digitize(self.xsec_vars["reco_beam_initial_energy"], bins=self.eslice_bin_array)
         end_bin_idx = np.digitize(self.xsec_vars["reco_beam_end_energy"], bins=self.eslice_bin_array)
 
-        self.xsec_vars["reco_complete_slice_mask"] &= (init_bin_idx != end_bin_idx)
+        self.xsec_vars["reco_complete_slice_mask"] &= (init_bin_idx > end_bin_idx)
 
         # FIXME I think it should be initial_E -= <the nearest lower bin edge>
         # for histogram it doesn't matter as the current code ensures the initial_E ends up in the right bin
         # but the value of initial_E will be wrong by 0 < Delta_initial_E < Eslice width
         self.xsec_vars["reco_beam_initial_energy"] -= bin_width_np(self.eslice_bin_array)
         self.xsec_vars["reco_beam_initial_energy"] = np.clip(self.xsec_vars["reco_beam_initial_energy"], a_min=-1e3,
-                                                             a_max=self.eslice_bin_array[-1])
+                                                             a_max=self.eslice_bin_array[-1]-1)
 
     def make_beam_interacting(self, event_record, reco_mask):
         """

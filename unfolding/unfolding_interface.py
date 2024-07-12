@@ -246,21 +246,18 @@ class BeamPionVariables(XSecVariablesBase):
         return true_int, reco_int
 
     def plot_beam_vars(self, unfold_hist, err_ax0, err_ax1, err_ax2, bin_array, h1_limits, h2_limits, h3_limits, plot_reco=True):
-        true_mask = ~self.xsec_vars["true_upstream_mask"]
-        reco_mask = ~self.xsec_vars["reco_upstream_mask"]
 
         _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
-        h1, bx1 , _ = ax1.hist(self.xsec_vars["true_beam_initial_energy"][true_mask], bins=bin_array[0],
+        h1, bx1 , _ = ax1.hist(self.xsec_vars["true_beam_initial_energy"], bins=bin_array[0],
                                edgecolor='black', label='True')
-        if plot_reco: ax1.hist(self.xsec_vars["reco_beam_initial_energy"][reco_mask], bins=bin_array[0], alpha=0.8,
+        if plot_reco: ax1.hist(self.xsec_vars["reco_beam_initial_energy"], bins=bin_array[0], alpha=0.8,
                                color='indianred',edgecolor='black', label='Reco')
-        h2, bx2, _ = ax2.hist(self.xsec_vars["true_beam_end_energy"][true_mask], bins=bin_array[1],
-                              edgecolor='black', label='True')
-        if plot_reco: ax2.hist(self.xsec_vars["reco_beam_end_energy"][reco_mask], bins=bin_array[1], alpha=0.8,
+        h2, bx2, _ = ax2.hist(self.xsec_vars["true_beam_end_energy"], bins=bin_array[1], edgecolor='black', label='True')
+        if plot_reco: ax2.hist(self.xsec_vars["reco_beam_end_energy"], bins=bin_array[1], alpha=0.8,
                                color='indianred', edgecolor='black', label='Reco')
-        h3, bx3, _ = ax3.hist(self.xsec_vars["true_beam_sig_int_energy"][true_mask], bins=bin_array[2],
+        h3, bx3, _ = ax3.hist(self.xsec_vars["true_beam_sig_int_energy"], bins=bin_array[2],
                               edgecolor='black', label='True')
-        if plot_reco: ax3.hist(self.xsec_vars["reco_beam_sig_int_energy"][reco_mask], bins=bin_array[2], alpha=0.8,
+        if plot_reco: ax3.hist(self.xsec_vars["reco_beam_sig_int_energy"], bins=bin_array[2], alpha=0.8,
                                color='indianred', edgecolor='black', label='Reco')
 
         ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=2).sum(axis=1), err_ax0, bin_width_np(bx1[2:4]) / 2,

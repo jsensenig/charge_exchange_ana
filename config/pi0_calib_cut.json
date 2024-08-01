@@ -5,11 +5,11 @@
     "pip_mass": 139.57,
     "dedx_lower": 0,
     "dedx_upper": 10,
-    "reco_beam_ke_lower": 400,
-    "delta_ke_limit": 200,
+    "reco_beam_ke_lower": 1000,
+    "delta_ke_limit": 400,
     "track_score_cut": 0.5,
     "no_track_cut": 0,
-    "shower_count_low": 1,
+    "shower_count_low": 0,
     "shower_count_high": 3
   },
   "histograms": [

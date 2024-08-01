@@ -1,5 +1,5 @@
 {
-  "cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut", "MaxShowerEnergyCut", "ShowerPreCut", "DaughterPionCut", "MichelDaughterCut"],
+  "cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut", "MaxShowerEnergyCut", "ShowerPreCut", "DaughterPionCut", "MichelDaughterCut", "TruncatedDedxCut", "Pi0CalibCut"],
   "beam_cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut"],
   "hist_list": ["TOF"],
   "reco_beam_pdg": "reco_beam_true_byHits_PDG",
@@ -37,5 +37,8 @@
   },
   "RecoShowerDirection": {
     "config_file": "config/reco_shower_direction.json"
+  },
+  "Pi0CalibCut": {
+    "config_file": "config/pi0_calib_cut.json"
   }
 }

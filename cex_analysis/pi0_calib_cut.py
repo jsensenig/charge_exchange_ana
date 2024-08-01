@@ -27,7 +27,7 @@ class Pi0CalibCut(EventSelectionBase):
         Use the Bethe Bloch formula to calculate the KE loss as function of track length
         Makes reco: incident and end energy
         """
-        beame = 0.  # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
+        beame = 1.  # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
         reco_ff_energy = np.sqrt(np.square(self.pip_mass) + np.square(ak.to_numpy(events["beam_inst_P"] + beame) * 1.e3)) \
                          - self.pip_mass
 
@@ -73,11 +73,11 @@ class Pi0CalibCut(EventSelectionBase):
 
         # ==0, >0, <3
         selected_mask = \
-         (ak.count_nonzero(events["reco_daughter_PFP_trackScore_collection"][beam_end_ke_mask & delta_ke_mask] > ts_cut,
+         (ak.count_nonzero(events["reco_daughter_PFP_trackScore_collection"] > ts_cut,
                            axis=1) == self.local_config["no_track_cut"]) & \
-         (ak.count_nonzero(events["reco_daughter_PFP_trackScore_collection"][beam_end_ke_mask & delta_ke_mask] < ts_cut,
+         (ak.count_nonzero(events["reco_daughter_PFP_trackScore_collection"] < ts_cut,
                            axis=1) > self.local_config["shower_count_low"]) & \
-         (ak.count_nonzero(events["reco_daughter_PFP_trackScore_collection"][beam_end_ke_mask & delta_ke_mask] < ts_cut,
+         (ak.count_nonzero(events["reco_daughter_PFP_trackScore_collection"] < ts_cut,
                            axis=1) < self.local_config["shower_count_high"])
 
         # Plot the variable before after cut
@@ -88,13 +88,13 @@ class Pi0CalibCut(EventSelectionBase):
             self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)
 
         # Return event selection mask
-        return selected_mask
+        return selected_mask & beam_end_ke_mask & delta_ke_mask
 
     def plot_particles_base(self, events, pdg, precut, hists):
         # hists.plot_process(x=events, precut=precut)
         for idx, plot in enumerate(self.local_hist_config):
             hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
-            hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
+            hists.plot_particles_stack(x=events[plot], x_pdg=events, idx=idx, precut=precut)
             hists.plot_particles(x=events[plot], idx=idx, precut=precut)
 
     def efficiency(self, total_events, passed_events, cut, hists):

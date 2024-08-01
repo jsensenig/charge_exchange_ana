@@ -106,7 +106,7 @@ void BetheBloch::CreateSplineAtKE(int iKE){
 double BetheBloch::ke_from_range_spline(double range) {
 
   if ( !sp_range_KE ) {
-    std::cout << "Spline does not exit." << std::endl;
+    py::print("Spline does not exit.");
     exit(1);
   }
   return sp_range_KE->Eval(range);
@@ -115,11 +115,11 @@ double BetheBloch::ke_from_range_spline(double range) {
 
 void BetheBloch::create_splines(int np, double min_ke, double max_ke) {
 
-  if (sp_KE_range) delete sp_KE_range;
-  if (sp_range_KE) delete sp_range_KE;
+  //if (sp_KE_range != nullptr) delete sp_KE_range;
+  //if (sp_range_KE != nullptr) delete sp_range_KE;
 
   for (const auto & x : spmap){
-    if (x.second) delete x.second;
+    if (x.second != nullptr) delete x.second;
   }
   spmap.clear();
   

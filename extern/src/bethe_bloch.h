@@ -7,6 +7,8 @@
 //class TSPline3;
 namespace py = pybind11;
 
+class TSpline3;
+
 class BetheBloch {
 
  public:
@@ -29,15 +31,18 @@ class BetheBloch {
 
   void CreateSplineAtKE(int iKE);
 
-  void create_splines(int np = 1000, double minke = .01, double maxke = 2e5);
+  void create_splines(int np, double minke, double maxke); // (1e3, 0.01, 2e5)
+
+ protected:
+
+  TSpline3 *sp_KE_range;
+  TSpline3 *sp_range_KE;
+
 
  private:
 
   double _mass;
   int _charge;
-
-  TSpline3 *sp_KE_range;
-  TSpline3 *sp_range_KE;
 
   std::map<int, TSpline3*> spmap;
 

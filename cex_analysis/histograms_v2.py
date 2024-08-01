@@ -113,7 +113,10 @@ class HistogramV2:
             print("Must use Awkward Arrays to plot!")
 
         # The name and binning should be the same for all particles
-        x_pdg, name, xlabel, ylabel, bins, lower_lim, upper_lim = self.get_hist_params(x=x, idx=idx, stack=True)
+        if len(list(self.hist_config[idx].values())[0]) == 7:
+            x_pdg, name, xlabel, ylabel, bins, lower_lim, upper_lim = self.get_hist_params(x=x_pdg, idx=idx, stack=True)
+        else:
+            name, xlabel, ylabel, bins, lower_lim, upper_lim = self.get_hist_params(x=x, idx=idx, stack=False)
 
 
         # Flatten the array once

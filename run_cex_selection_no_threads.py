@@ -34,26 +34,37 @@ def calculate_efficiency(selected_true, selected_total, true_count_list):
               "S/sqrt(S+B):", '{:.4f}'.format(l), "Selection:", s, "True/Total")
 
 
-def save_results(results):
+def save_results(results, is_mc):
 
     hist_map, event_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
 
-    calculate_efficiency(cut_signal_selected, cut_total_selected, signal_total)
 
-    *_, num_last_cut = cut_signal_selected.items()
-    print("Selected", num_last_cut, " events out of", signal_total, "true CEX events")
+    cut_names = []
+    cut_total = np.count_nonzero(event_mask)
+    cut_signal = 0
+
+    if is_mc:
+        calculate_efficiency(cut_signal_selected, cut_total_selected, signal_total)
+
+        *_, num_last_cut = cut_signal_selected.items()
+        print("Selected", num_last_cut, " events out of", signal_total, "true CEX events")
+
+        cut_names = list(cut_total_selected.keys())
+        cut_total = list(cut_total_selected.values())
+        cut_signal = list(cut_signal_selected.values())
 
     hist_file = 'test_hist_file.hdf5'
     cut_file = 'test_cut_file.hdf5'
     os.remove(hist_file) if os.path.exists(hist_file) else None
     os.remove(cut_file) if os.path.exists(cut_file) else None
 
+
     # Write cut efficiency and purity
     h5_file = h5py.File('test_cut_file.hdf5', 'w')
-    h5_file.create_dataset('cut_names', data=list(cut_total_selected.keys()))
+    h5_file.create_dataset('cut_names', data=cut_names)
     h5_file.create_dataset('total_signal', data=signal_total)
-    h5_file.create_dataset('cut_total', data=list(cut_total_selected.values()))
-    h5_file.create_dataset('cut_signal', data=list(cut_signal_selected.values()))
+    h5_file.create_dataset('cut_total', data=cut_total)
+    h5_file.create_dataset('cut_signal', data=cut_signal)
     h5_file.create_dataset('selection_mask', data=event_mask)
     h5_file.close()
 
@@ -105,11 +116,11 @@ def event_selection(config, data):
     return event_handler_instance.run_selection(events=data)
 
 
-def start_analysis(flist, config, branches):
+def start_analysis(flist, config, branches, is_mc):
 
     data = uproot.concatenate(files={flist}, expressions=branches)
     results = event_selection(config=config, data=data)
-    save_results(results=results)
+    save_results(results=results, is_mc=is_mc)
 
 
 def configure(config_file):
@@ -175,7 +186,7 @@ if __name__ == "__main__":
     # Start the analysis threads
     print("Starting threads")
     start = timer()
-    start_analysis(file_list, config, branches)
+    start_analysis(file_list, config, branches, is_mc=config["is_mc"])
 
     end = timer()
     print("Completed Analysis! (", round((end - start), 4), "s)")

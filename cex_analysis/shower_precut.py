@@ -25,6 +25,7 @@ class ShowerPreCut(EventSelectionBase):
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
         self.optimize = self.local_config["optimize_cut"]
+        self.is_mc = self.config["is_mc"]
 
     def cnn_shower_cut(self, events):
         # Create a mask for all daughters with CNN EM-like score <0.5
@@ -51,23 +52,24 @@ class ShowerPreCut(EventSelectionBase):
         # We want to count the number of potential showers in each event
         shower_count = np.count_nonzero(events[self.local_config["shower_energy_var"], shower_mask], axis=1)
 
-        shower_print_cex = shower_count[events["single_charge_exchange"]]
-        print("sCEX Old Shower Count: 0/1/2/3/4/5 =",
-              ak.count_nonzero(shower_print_cex == 0), "/",
-              ak.sum(shower_print_cex == 1), "/",
-              ak.sum(shower_print_cex == 2), "/",
-              ak.sum(shower_print_cex == 3), "/",
-              ak.sum(shower_print_cex == 4), "/",
-              ak.sum(shower_print_cex == 5))
+        if self.is_mc:
+            shower_print_cex = shower_count[events["single_charge_exchange"]]
+            print("sCEX Old Shower Count: 0/1/2/3/4/5 =",
+                  ak.count_nonzero(shower_print_cex == 0), "/",
+                  ak.sum(shower_print_cex == 1), "/",
+                  ak.sum(shower_print_cex == 2), "/",
+                  ak.sum(shower_print_cex == 3), "/",
+                  ak.sum(shower_print_cex == 4), "/",
+                  ak.sum(shower_print_cex == 5))
 
-        shower_print_pi0_prod = shower_count[events["pi0_production"]]
-        print("Pi0 Prod Old Shower Count: 0/1/2/3/4/5 =",
-              ak.count_nonzero(shower_print_pi0_prod == 0), "/",
-              ak.sum(shower_print_pi0_prod == 1), "/",
-              ak.sum(shower_print_pi0_prod == 2), "/",
-              ak.sum(shower_print_pi0_prod == 3), "/",
-              ak.sum(shower_print_pi0_prod == 4), "/",
-              ak.sum(shower_print_pi0_prod == 5))
+            shower_print_pi0_prod = shower_count[events["pi0_production"]]
+            print("Pi0 Prod Old Shower Count: 0/1/2/3/4/5 =",
+                  ak.count_nonzero(shower_print_pi0_prod == 0), "/",
+                  ak.sum(shower_print_pi0_prod == 1), "/",
+                  ak.sum(shower_print_pi0_prod == 2), "/",
+                  ak.sum(shower_print_pi0_prod == 3), "/",
+                  ak.sum(shower_print_pi0_prod == 4), "/",
+                  ak.sum(shower_print_pi0_prod == 5))
 
         # Create the event mask, true if there are 2 candidate showers
         return (shower_count > 0) #& (shower_count < 3)
@@ -105,10 +107,12 @@ class ShowerPreCut(EventSelectionBase):
     def plot_particles_base(self, events, pdg, precut, hists):
         # hists.plot_process(x=events, precut=precut)
         for idx, plot in enumerate(self.local_hist_config):
-            hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
+            if self.is_mc:
+                hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
             if list(plot.keys())[0] == "max_shower_energy":
                 continue
-            hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
+            if self.is_mc:
+                hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
             hists.plot_particles(x=events[plot], idx=idx, precut=precut)
 
     def efficiency(self, total_events, passed_events, cut, hists):

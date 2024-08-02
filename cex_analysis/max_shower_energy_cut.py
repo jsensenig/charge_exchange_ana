@@ -15,6 +15,7 @@ class MaxShowerEnergyCut(EventSelectionBase):
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
         self.optimize = self.local_config["optimize_cut"]
+        self.is_mc = self.config["is_mc"]
 
     def cnn_shower_cut(self, events):
         # Create a mask for all daughters with CNN EM-like score <0.5
@@ -57,10 +58,12 @@ class MaxShowerEnergyCut(EventSelectionBase):
     def plot_particles_base(self, events, pdg, precut, hists):
         # hists.plot_process(x=events, precut=precut)
         for idx, plot in enumerate(self.local_hist_config):
-            hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
+            if self.is_mc:
+                hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
             if list(plot.keys())[0] == "max_shower_energy":
                 continue
-            hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
+            if self.is_mc:
+                hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
             hists.plot_particles(x=events[plot], idx=idx, precut=precut)
 
     def efficiency(self, total_events, passed_events, cut, hists):

@@ -9,6 +9,7 @@ class TOFCut(EventSelectionBase):
         self.cut_name = "TOFCut"
         self.config = config
         self.reco_daughter_pdf = self.config["reco_beam_pdg"]
+        self.is_mc = self.config["is_mc"]
 
         # Configure class
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
@@ -30,14 +31,15 @@ class TOFCut(EventSelectionBase):
 
         # Perform the actual cut on TOF
         # also cut out positrons since they are vetoed in the data
-        #selected_mask = (self.local_config["lower"] < events[cut_variable][:, 0]) & \
-        #                (events[cut_variable][:, 0] < self.local_config["upper"]) & \
+        selected_mask = (self.local_config["lower"] < events[cut_variable][:, 0]) & \
+                        (events[cut_variable][:, 0] < self.local_config["upper"])
         #                (events["true_beam_PDG"] != -11)
 
-        selected_mask = (events[cut_variable][:, 0] < 97.) & (events["true_beam_PDG"] != -11)
+        # selected_mask = (events[cut_variable][:, 0] < 97.) & (events["true_beam_PDG"] != -11)
 
-        print("TOF Selected Events True Beam PDG: ", np.unique(events["true_beam_PDG", selected_mask], return_counts=True))
-        print("TOF Selected Events True nPi0: ", np.unique(events["true_daughter_nPi0", selected_mask], return_counts=True))
+        if self.is_mc:
+            print("TOF Selected Events True Beam PDG: ", np.unique(events["true_beam_PDG", selected_mask], return_counts=True))
+            print("TOF Selected Events True nPi0: ", np.unique(events["true_daughter_nPi0", selected_mask], return_counts=True))
 
         # Plot the variable before after cut
         if not optimizing:
@@ -52,8 +54,9 @@ class TOFCut(EventSelectionBase):
     def plot_particles_base(self, events, pdg, precut, hists):
         # hists.plot_process(x=events, precut=precut)
         for idx, plot in enumerate(self.local_hist_config):
-            hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
-            hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
+            if self.is_mc:
+                hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
+                hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
             hists.plot_particles(x=events[plot], idx=idx, precut=precut)
 
     def efficiency(self, total_events, passed_events, cut, hists):

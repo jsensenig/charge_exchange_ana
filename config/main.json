@@ -1,4 +1,5 @@
 {
+  "is_mc": false,
   "cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut", "MaxShowerEnergyCut", "ShowerPreCut", "DaughterPionCut", "MichelDaughterCut", "TruncatedDedxCut", "Pi0CalibCut"],
   "beam_cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut"],
   "hist_list": ["TOF"],

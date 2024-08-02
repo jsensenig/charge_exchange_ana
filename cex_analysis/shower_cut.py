@@ -27,6 +27,7 @@ class ShowerCut(EventSelectionBase):
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
         self.optimize = self.local_config["optimize_cut"]
+        self.is_mc = self.config["is_mc"]
 
         # FIXME test shower counting, make local class object
         self.dir = sdir.ShowerDirection()

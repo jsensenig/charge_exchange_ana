@@ -34,6 +34,8 @@ class EventHandler:
         # Initialize the efficiency data class
         self.efficiency = EfficiencyData(num_true_process=0, cut_efficiency_dict={}, cut_total_dict={})
 
+        self.is_mc = config["is_mc"]
+
     def get_all_cut_classes(self):
         """
         1. Get all the modules located in the package directory so we can import them
@@ -108,12 +110,15 @@ class EventHandler:
         :return:
         """
         # Add the interaction process columns
-        classify_process = TrueProcess()
-        events = classify_process.classify_event_process(events=events)
+        if self.is_mc:
+            classify_process = TrueProcess()
+            events = classify_process.classify_event_process(events=events)
 
         # Get total number of true signal events
-        true_total_single_cex = ak.count_nonzero(events["single_charge_exchange"], axis=0)
-        self.efficiency.set_num_true_process(true_total_single_cex)
+        if self.is_mc:
+            true_total_single_cex = ak.count_nonzero(events["single_charge_exchange"], axis=0)
+            self.efficiency.set_num_true_process(true_total_single_cex)
+
         total_event_mask = np.zeros(len(events)).astype(bool)
         selection_idx = np.arange(len(events)).astype(int)
         beam_events = None
@@ -128,15 +133,16 @@ class EventHandler:
             event_mask = self.cut_map[cut].selection(events, self.Hist_object)
 
             # Keep track of selection efficiency
-            num_true_selected = ak.count_nonzero(events["single_charge_exchange", event_mask], axis=0)
-            num_total_selected = ak.count_nonzero(event_mask, axis=0)
+            if self.is_mc:
+                num_true_selected = ak.count_nonzero(events["single_charge_exchange", event_mask], axis=0)
+                num_total_selected = ak.count_nonzero(event_mask, axis=0)
 
-            self.efficiency.add_cut_selection(cut_name=cut,
-                                              num_true_selected=num_true_selected,
-                                              num_total_selected=num_total_selected)
+                self.efficiency.add_cut_selection(cut_name=cut,
+                                                  num_true_selected=num_true_selected,
+                                                  num_total_selected=num_total_selected)
 
-            print("True signal events selected:", num_true_selected, " Total events:", num_total_selected,
-                  "(", true_total_single_cex, "Total True sCEX)")
+                print("True signal events selected:", num_true_selected, " Total events:", num_total_selected,
+                      "(", true_total_single_cex, "Total True sCEX)")
 
             # Mask out events not selected
             events = events[event_mask]

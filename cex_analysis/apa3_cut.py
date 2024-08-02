@@ -15,6 +15,7 @@ class APA3Cut(EventSelectionBase):
         self.local_config, self.local_hist_config = super().configure(config_file=self.config[self.cut_name]["config_file"],
                                                                       cut_name=self.cut_name)
         self.optimize = self.local_config["optimize_cut"]
+        self.is_mc = self.config["is_mc"]
 
     def beam_angle(self, events):
         # Now check the angle between beam start/end direction
@@ -74,8 +75,9 @@ class APA3Cut(EventSelectionBase):
     def plot_particles_base(self, events, pdg, precut, hists):
         # hists.plot_process(x=events, precut=precut)
         for idx, plot in enumerate(self.local_hist_config):
-            hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
-            hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
+            if self.is_mc:
+                hists.plot_process_stack(x=events, idx=idx, variable=plot, precut=precut)
+                hists.plot_particles_stack(x=events[plot], x_pdg=pdg, idx=idx, precut=precut)
             hists.plot_particles(x=events[plot], idx=idx, precut=precut)
 
     def efficiency(self, total_events, passed_events, cut, hists):

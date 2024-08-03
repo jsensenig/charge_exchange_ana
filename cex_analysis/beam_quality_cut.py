@@ -17,46 +17,19 @@ class BeamQualityCut(EventSelectionBase):
         self.optimize = self.local_config["optimize_cut"]
         self.is_mc = self.config["is_mc"]
 
-    def beam_to_tpc_cut(self, events):
-
-        """
-        1. Calculate the difference between beam particle and the average divided by its RMS for X, Y, Z, XY
-        """
+    def beam_direction(self, events):
 
         if self.is_mc:
-            beam_startx_mean = self.local_config["beam_startX_MC"]
-            beam_starty_mean = self.local_config["beam_startY_MC"]
-            beam_startz_mean = self.local_config["beam_startZ_MC"]
-            beam_startx_sigma = self.local_config["beam_startX_rms_MC"]
-            beam_starty_sigma = self.local_config["beam_startY_rms_MC"]
-            beam_startz_sigma = self.local_config["beam_startZ_rms_MC"]
             beam_anglex_mean = self.local_config["beam_anglex_deg_mc"]
             beam_angley_mean = self.local_config["beam_angley_deg_mc"]
             beam_anglez_mean = self.local_config["beam_anglez_deg_mc"]
         else:
-            beam_startx_mean = self.local_config["beam_startX_Data"]
-            beam_starty_mean = self.local_config["beam_startY_Data"]
-            beam_startz_mean = self.local_config["beam_startZ_Data"]
-            beam_startx_sigma = self.local_config["beam_startX_rms_Data"]
-            beam_starty_sigma = self.local_config["beam_startY_rms_Data"]
-            beam_startz_sigma = self.local_config["beam_startZ_rms_Data"]
             beam_anglex_mean = self.local_config["beam_anglex_deg_data"]
             beam_angley_mean = self.local_config["beam_angley_deg_data"]
             beam_anglez_mean = self.local_config["beam_anglez_deg_data"]
 
-        # Shift the start to the mean and normalize by the RMS for each dimension
-        beam_dx = (events[self.local_config["beam_startX"]] - beam_startx_mean) / beam_startx_sigma
-        beam_dy = (events[self.local_config["beam_startY"]] - beam_starty_mean) / beam_starty_sigma
-        beam_dz = (events[self.local_config["beam_startZ"]] - beam_startz_mean) / beam_startz_sigma
-
-        # Convert to numpy array with shape (2,N) where N is number of events
-        beam_xy = np.vstack((ak.to_numpy(beam_dx), ak.to_numpy(beam_dy))).T
-        # Get the length of the pairs in the xy plane
-        #beam_dxy = np.linalg.norm(beam_xy, axis=1)
-        beam_dxy = np.sqrt(np.sum(beam_xy*beam_xy, axis=1))
-
         """ 
-        2. Calculate the dot product between beam particle direction and the average beam direction
+        Calculate the dot product between beam particle direction and the average beam direction
         """
 
         # Now check the angle between MC and the beam direction
@@ -92,20 +65,42 @@ class BeamQualityCut(EventSelectionBase):
             beam_dot[prev_idx:step] = np.diag(beam_dir_unit[prev_idx:step] @ beam_dir_mc_unit[prev_idx:step].T)
             prev_idx = step
 
-        """ 
-        3. Apply cuts to the calculations above and combine the resulting masks
+        events["beam_direction"] = beam_dot
+
+        return events
+
+    def beam_to_tpc_cut(self, events):
+
+        """
+        1. Calculate the difference between beam particle and the average divided by its RMS for X, Y, Z, XY
         """
 
-        # Now apply cuts to \Delta{x,y,z} / \sigma_{x,y,z} and dot product
-        mask_dx = (beam_dx > self.local_config["beam_start_min_dx"]) & (beam_dx < self.local_config["beam_start_max_dx"])
-        mask_dy = (beam_dy > self.local_config["beam_start_min_dy"]) & (beam_dy < self.local_config["beam_start_max_dy"])
-        mask_dz = (beam_dz > self.local_config["beam_start_min_dz"]) & (beam_dz < self.local_config["beam_start_max_dz"])
-        mask_dxy = (beam_dxy > self.local_config["beam_start_min_dxy"]) & (beam_dxy < self.local_config["beam_start_max_dxy"])
-        mask_angle = (beam_dot > self.local_config["min_angle"]) & (beam_dot < self.local_config["max_angle"])
+        if self.is_mc:
+            beam_startx_mean = self.local_config["beam_startX_MC"]
+            beam_starty_mean = self.local_config["beam_startY_MC"]
+            beam_startz_mean = self.local_config["beam_startZ_MC"]
+            beam_startx_sigma = self.local_config["beam_startX_rms_MC"]
+            beam_starty_sigma = self.local_config["beam_startY_rms_MC"]
+            beam_startz_sigma = self.local_config["beam_startZ_rms_MC"]
+        else:
+            beam_startx_mean = self.local_config["beam_startX_Data"]
+            beam_starty_mean = self.local_config["beam_startY_Data"]
+            beam_startz_mean = self.local_config["beam_startZ_Data"]
+            beam_startx_sigma = self.local_config["beam_startX_rms_Data"]
+            beam_starty_sigma = self.local_config["beam_startY_rms_Data"]
+            beam_startz_sigma = self.local_config["beam_startZ_rms_Data"]
 
-        # Combine the masks together for the final selection
-        return mask_dz & mask_dxy & mask_angle
-        #return mask_dx & mask_dy & mask_dz & mask_angle
+        # Shift the start to the mean and normalize by the RMS for each dimension
+        events["beam_dx"] = (events[self.local_config["beam_startX"]] - beam_startx_mean) / beam_startx_sigma
+        events["beam_dy"] = (events[self.local_config["beam_startY"]] - beam_starty_mean) / beam_starty_sigma
+        events["beam_dz"] = (events[self.local_config["beam_startZ"]] - beam_startz_mean) / beam_startz_sigma
+
+        # Convert to numpy array with shape (2,N) where N is number of events
+        beam_xy = np.vstack((ak.to_numpy(events["beam_dx"]), ak.to_numpy(events["beam_dy"]))).T
+        # Get the length of the pairs in the xy plane
+        events["beam_dxy"] = np.sqrt(np.sum(beam_xy*beam_xy, axis=1))
+
+        return events
 
     def selection(self, events, hists, optimizing=False):
         # First we configure the histograms we want to make
@@ -123,7 +118,16 @@ class BeamQualityCut(EventSelectionBase):
         # also these are already at the event level so it's okay as is
         # The first is the old cut and second the updated one
         selected_mask_old = events[cut_variable]
-        selected_mask = self.beam_to_tpc_cut(events)
+        events = self.beam_to_tpc_cut(events)
+
+        selected_mask = (events["beam_dz"] > self.local_config["beam_start_min_dz"]) & \
+                        (events["beam_dz"] < self.local_config["beam_start_max_dz"])
+        selected_mask &= (events["beam_dxy"] > self.local_config["beam_start_min_dxy"]) & \
+                         (events["beam_dxy"] < self.local_config["beam_start_max_dxy"])
+
+        events = self.beam_direction(events=events)
+        selected_mask &= (events["beam_direction"] > self.local_config["min_angle"]) & \
+                         (events["beam_direction"] < self.local_config["max_angle"])
 
         print("Selected new/old", np.sum(selected_mask), " ", np.sum(selected_mask_old))
 

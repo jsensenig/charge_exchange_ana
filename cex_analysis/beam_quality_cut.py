@@ -80,7 +80,17 @@ class BeamQualityCut(EventSelectionBase):
         beam_dir_mc_unit = np.full_like(beam_dir_unit, mc_direction_unit)
         # Take dot product. Not sure if there is a better way, here we matrix multiply the directions and
         # get the diagonal of resulting matrix which is the dot product of the vectors
-        beam_dot = np.diag(beam_dir_unit @ beam_dir_mc_unit.T)
+
+        # Takes too much memory to do all at once so calculate in chunks of 10k events
+        # beam_dot = np.diag(beam_dir_unit @ beam_dir_mc_unit.T)
+
+        beam_dot = np.empty(len(events))
+
+        proc_steps = list(np.arange(0, len(events), 10000)) + [-1]
+        prev_idx = 0
+        for step in proc_steps:
+            beam_dot[prev_idx:step] = np.diag(beam_dir_unit[prev_idx:step] @ beam_dir_mc_unit[prev_idx:step].T)
+            prev_idx = step
 
         """ 
         3. Apply cuts to the calculations above and combine the resulting masks

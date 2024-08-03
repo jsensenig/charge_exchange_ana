@@ -23,15 +23,31 @@ class BeamQualityCut(EventSelectionBase):
         1. Calculate the difference between beam particle and the average divided by its RMS for X, Y, Z, XY
         """
 
+        if self.is_mc:
+            beam_startx_mean = self.local_config["beam_startX_MC"]
+            beam_starty_mean = self.local_config["beam_startY_MC"]
+            beam_startz_mean = self.local_config["beam_startZ_MC"]
+            beam_startx_sigma = self.local_config["beam_startX_rms_MC"]
+            beam_starty_sigma = self.local_config["beam_startY_rms_MC"]
+            beam_startz_sigma = self.local_config["beam_startZ_rms_MC"]
+            beam_anglex_mean = self.local_config["beam_anglex_deg_mc"]
+            beam_angley_mean = self.local_config["beam_angley_deg_mc"]
+            beam_anglez_mean = self.local_config["beam_anglez_deg_mc"]
+        else:
+            beam_startx_mean = self.local_config["beam_startX_Data"]
+            beam_starty_mean = self.local_config["beam_startY_Data"]
+            beam_startz_mean = self.local_config["beam_startZ_Data"]
+            beam_startx_sigma = self.local_config["beam_startX_rms_Data"]
+            beam_starty_sigma = self.local_config["beam_startY_rms_Data"]
+            beam_startz_sigma = self.local_config["beam_startZ_rms_Data"]
+            beam_anglex_mean = self.local_config["beam_anglex_deg_data"]
+            beam_angley_mean = self.local_config["beam_angley_deg_data"]
+            beam_anglez_mean = self.local_config["beam_anglez_deg_data"]
+
         # Shift the start to the mean and normalize by the RMS for each dimension
-        beam_dx = (events[self.local_config["beam_startX"]] - self.local_config["beam_startX_MC"]) \
-                  / self.local_config["beam_startX_rms_MC"]
-
-        beam_dy = (events[self.local_config["beam_startY"]] - self.local_config["beam_startY_MC"]) \
-                  / self.local_config["beam_startY_rms_MC"]
-
-        beam_dz = (events[self.local_config["beam_startZ"]] - self.local_config["beam_startZ_MC"]) \
-                  / self.local_config["beam_startZ_rms_MC"]
+        beam_dx = (events[self.local_config["beam_startX"]] - beam_startx_mean) / beam_startx_sigma
+        beam_dy = (events[self.local_config["beam_startY"]] - beam_starty_mean) / beam_starty_sigma
+        beam_dz = (events[self.local_config["beam_startZ"]] - beam_startz_mean) / beam_startz_sigma
 
         # Convert to numpy array with shape (2,N) where N is number of events
         beam_xy = np.vstack((ak.to_numpy(beam_dx), ak.to_numpy(beam_dy))).T
@@ -55,9 +71,7 @@ class BeamQualityCut(EventSelectionBase):
         beam_dir_unit = beam_dir / np.stack((norm, norm, norm), axis=1)
 
         # Define the MC direction vector
-        mc_direction_unit = np.cos(np.radians(np.array([self.local_config["beam_anglex_deg_mc"],
-                                                        self.local_config["beam_angley_deg_mc"],
-                                                        self.local_config["beam_anglez_deg_mc"]])))
+        mc_direction_unit = np.cos(np.radians(np.array([beam_anglex_mean, beam_angley_mean, beam_anglez_mean])))
         # ...and normalize it
         #mc_direction_unit = mc_direction_unit / np.linalg.norm(mc_direction_unit)
         mc_direction_unit = mc_direction_unit / np.sqrt(np.sum(mc_direction_unit * mc_direction_unit))

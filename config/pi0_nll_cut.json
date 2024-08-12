@@ -1,0 +1,15 @@
+{
+  "Pi0NLLCut": {
+    "optimize_cut": false,
+    "nll_cut": 0.5,
+    "inv_mass_cut": 100
+  },
+  "histograms": [
+    { "fit_pi0_oa_nll": ["oa_nll", "-ln$\\mathcal{L}_{\\alpha}$", "Count", 50, -10, 20] },
+    { "pi0_invariant_mass": ["pi0_mgg", "$M_{\gamma\gamma}$ [MeV/$c^2$]", "Count", 50, 0, 150] },
+    { "fit_pi0_energy": ["epi0", "$E_{\pi^0}$ [MeV]", "Count", 50, 0, 2000] },
+    { "fit_pi0_gamma_oa": ["oa", "$\alpha$ [deg]", "Count", 50, 0, 180] },
+    { "fit_pi0_gamma_energy1": ["epi0", "$E_{\gamma 1}$ [MeV]", "Count", 50, 0, 1500] },
+    { "fit_pi0_gamma_energy2": ["epi0", "$E_{\gamma 2}$ [MeV]", "Count", 50, 0, 1500] }
+  ]
+}

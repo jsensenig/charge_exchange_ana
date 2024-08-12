@@ -1,4 +1,5 @@
 {
+  "metric": "D",
   "cut_list": ["MaxShowerEnergyCut", "ShowerPreCut", "ShowerCut", "DaughterPionCut", "MichelDaughterCut", "TruncatedDedxCut"],
   "beam_cut_list": ["TOFCut", "BeamQualityCut", "APA3Cut", "MichelBeamCut"],
   "hist_list": ["TOF"],

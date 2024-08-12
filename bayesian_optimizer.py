@@ -3,6 +3,7 @@ from cex_analysis.true_process import TrueProcess
 import awkward as ak
 from uproot import concatenate
 import json
+import numpy as np
 
 from bayes_opt import BayesianOptimization
 
@@ -21,6 +22,21 @@ class OptimizationHandler:
 
         self._events = None
         self._total_true_scex_events = 0
+
+    def optimum_metric(self, num_true_selected, num_total_selected):
+        # FIXME metric naming bad
+        if self.config["metric"] == "A": # Return S/sqrt(B)
+            return num_true_selected / np.sqrt(num_total_selected - num_true_selected)
+        if self.config["metric"] == "B":  # Return S/B
+            return num_true_selected / (num_total_selected - num_true_selected)
+        if self.config["metric"] == "C": # Return S/sqrt(S+B)
+            return num_true_selected / np.sqrt(num_total_selected)
+        if self.config["metric"] == "D": # Return e*p
+            return (num_true_selected / self._total_true_scex_events) * (num_true_selected / num_total_selected)
+        if self.config["metric"] == "E": # Full FOM from likelihood
+            bkgd = num_total_selected - num_true_selected
+            return np.sqrt(
+            2. * (num_true_selected + bkgd) * np.log(1 + (num_true_selected / bkgd)) - 2. * num_true_selected)
 
     def get_analysis_parameters(self):
         for cut in self.cut_map:
@@ -80,17 +96,8 @@ class OptimizationHandler:
         print("TRUE/TOTAL", num_true_selected, "/", num_total_selected)
         print("Eff:", (num_true_selected/self._total_true_scex_events), "Purity:", (num_true_selected/num_total_selected))
 
-        # Return S/sqrt(B)
-        #return num_true_selected / ak.numpy.sqrt(num_total_selected - num_true_selected)
-        # Return S/B
-        #return num_true_selected / (num_total_selected - num_true_selected)
-        # Return S/sqrt(S+B)
-        #return num_true_selected / ak.numpy.sqrt(num_total_selected)
-        # Return e*p
-        #return (num_true_selected / self._total_true_scex_events) * (num_true_selected / num_total_selected)
-        # Full FOM from likelihood
-        bkgd = num_total_selected - num_true_selected
-        return ak.numpy.sqrt(2.*(num_true_selected + bkgd)*ak.numpy.log(1+(num_true_selected/bkgd))-2.*num_true_selected)
+        # Return selection metric
+        return self.optimum_metric(num_true_selected=num_true_selected, num_total_selected=num_total_selected)
 
     def load_data(self):
 
@@ -155,7 +162,8 @@ class OptimizationHandler:
          'ShowerCut_likelihood_l10_param': (0.5, 1.5), 'ShowerCut_likelihood_l12_param': (0.5, 2.0),
          'DaughterPionCut_chi2_ndof_cut_param': (50, 150), 'DaughterPionCut_cnn_track_cut_param': (0.2, 0.7),
          'MichelDaughterCut_cnn_michel_cut_param': (0.6, 0.95), 'TruncatedDedxCut_cnn_track_cut_param': (0.2, 0.6),
-         'TruncatedDedxCut_lower_trunc_mean_param': (0.5, 1.5), 'TruncatedDedxCut_upper_trunc_mean_param': (2.0, 3.0)}
+         'TruncatedDedxCut_lower_trunc_mean_param': (0.5, 1.5), 'TruncatedDedxCut_upper_trunc_mean_param': (2.0, 3.0),
+         'Pi0NLLCut_nll_cut_param': (-1, 1), 'Pi0NLLCut_inv_mass_cut_param': (50, 110)}
 
         optimizer = BayesianOptimization(f=self.run_selection_optimization,
                                          pbounds=pbounds,

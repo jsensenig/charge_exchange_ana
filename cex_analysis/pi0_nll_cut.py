@@ -1,6 +1,7 @@
 from cex_analysis.event_selection_base import EventSelectionBase
 import awkward  as ak
 import numpy as np
+from itertools import product
 
 
 class Pi0NLLCut(EventSelectionBase):
@@ -16,6 +17,15 @@ class Pi0NLLCut(EventSelectionBase):
                                                                       cut_name=self.cut_name)
         self.optimize = self.local_config["optimize_cut"]
         self.is_mc = self.config["is_mc"]
+
+        # Optimization rules
+        self.opt_dict = {"nll_cut_param": [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1],
+                         "inv_mass_cut_param": [50., 60., 70., 80., 90., 100., 110.]}
+        self.optimization_values = product(self.opt_dict["nll_cut_param"], self.opt_dict["inv_mass_cut_param"])
+
+        self.num_optimizations = 0
+        if self.opt_dict:
+            self.num_optimizations = np.cumprod([len(opt) for opt in self.opt_dict.values()])[-1]
 
     def dn_dalpha_distribution_mod(self, alpha, epi0):
         offset = 0.1
@@ -55,8 +65,8 @@ class Pi0NLLCut(EventSelectionBase):
             self.plot_particles_base(events=events, pdg=events[self.reco_daughter_pdf], precut=True, hists=hists)
 
         # Perform the cut on the beam particle endpoint
-        selected_mask = (ak.to_numpy(events["fit_pi0_oa_nll"]) < self.local_config["nll_cut"]) & \
-                        (ak.to_numpy(events["pi0_invariant_mass"]) > self.local_config["inv_mass_cut"])
+        selected_mask = (ak.to_numpy(events["fit_pi0_oa_nll"]) < self.local_config["nll_cut_param"]) & \
+                        (ak.to_numpy(events["pi0_invariant_mass"]) > self.local_config["inv_mass_cut_param"])
 
 
         # Plot the variable before after cut

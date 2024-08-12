@@ -1,8 +1,8 @@
 {
   "Pi0NLLCut": {
     "optimize_cut": false,
-    "nll_cut": 0.5,
-    "inv_mass_cut": 100
+    "nll_cut_param": 0.5,
+    "inv_mass_cut_param": 100
   },
   "histograms": [
     { "fit_pi0_oa_nll": ["oa_nll", "-ln$\\mathcal{L}_{\\alpha}$", "Count", 50, -10, 20] },

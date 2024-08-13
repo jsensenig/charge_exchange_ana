@@ -241,7 +241,11 @@ class BeamPionVariables(XSecVariablesBase):
             end_bin_idx = np.digitize(self.xsec_vars["true_beam_end_energy"], bins=self.eslice_bin_array)
             alt_end_bin_idx = np.digitize(self.xsec_vars["true_beam_alt_end_energy"], bins=self.eslice_bin_array)
             self.xsec_vars["true_complete_slice_mask"] &= (init_bin_idx > end_bin_idx)
-            self.xsec_vars["true_alt_complete_slice_mask"] &= (init_bin_idx > alt_end_bin_idx)
+            self.xsec_vars["true_alt_complete_slice_mask"] = (init_bin_idx > alt_end_bin_idx)
+            #overflow_mask = self.xsec_vars["true_beam_initial_energy"] < self.eslice_bin_array[-1]
+            #self.xsec_vars["true_beam_initial_energy"][overflow_mask] -= bin_width_np(self.eslice_bin_array)
+            #self.xsec_vars["true_complete_slice_mask"] &= overflow_mask
+
             self.xsec_vars["true_beam_initial_energy"] -= bin_width_np(self.eslice_bin_array)
             self.xsec_vars["true_beam_initial_energy"] = np.clip(self.xsec_vars["true_beam_initial_energy"], a_min=-1e3,
                                                                  a_max=self.eslice_bin_array[-1]-1) # make sure its in the bin if upper edge is not inclusive

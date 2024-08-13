@@ -353,7 +353,7 @@ class Pi0Variables(XSecVariablesBase):
             true_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][true_mask], axis=1) * 1.e3) - 135.
             self.xsec_vars["true_gamma_energy"] = event_record["true_beam_Pi0_decay_startP"][true_mask]
 
-        reco_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][reco_mask], axis=1) * 1.e3) - 135.
+        reco_pi0_energy = ak.to_numpy(event_record["fit_pi0_energy"][reco_mask]) - 135.0
 
         return true_pi0_energy, reco_pi0_energy
 
@@ -387,7 +387,9 @@ class Pi0Variables(XSecVariablesBase):
         # respective direction unit vectors
         true_cos_theta = np.diag(beam_dir_unit @ full_len_daughter_dir.T)
 
-        return true_cos_theta[true_mask], true_cos_theta[reco_mask]
+        reco_cos_theta = ak.to_numpy(event_record["fit_pi0_cos_theta"][reco_mask])
+
+        return true_cos_theta[true_mask], reco_cos_theta
 
     def plot_pi0_vars(self, unfold_hist, err_ax0, err_ax1, bin_array, h1_limits, h2_limits, plot_reco=True):
 

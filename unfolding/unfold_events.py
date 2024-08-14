@@ -14,7 +14,7 @@ from unfolding.unfolding_interface import XSecVariablesBase
 
 class Unfold:
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, response_file=None):
         self.config = self.configure(config_file=config_file)
         self.show_plots = self.config["show_plots"]
         self.figs_path = self.config["figure_path"]
@@ -26,10 +26,6 @@ class Unfold:
         self.true_bin_array, self.reco_bin_array = self.get_bin_config()
         self.compile_cpp_helpers()
 
-        self.response = None
-        if not self.is_training:
-            self.load_response()
-
         self.remap_evts = Remapping(var_names=self.config["var_names"])
 
         self.true_record_var = self.config["true_record_var"]
@@ -39,8 +35,12 @@ class Unfold:
         var_cls = {cls.__name__: cls for cls in XSecVariablesBase.__subclasses__()}
         self.vars = var_cls[self.config["xsec_vars"]](config_file=self.config["interface_config"],
                                                       is_mc=self.is_training,
-                                                      energy_slices=self.reco_bin_array)
+                                                      energy_slices=self.reco_bin_array[0][1:-1])
         self.beam_vars = self.config["xsec_vars"] == "BeamPionVariables"
+
+        self.response = None
+        if not self.is_training:
+            self.load_response(response_file=response_file)
 
 
     @staticmethod
@@ -354,8 +354,12 @@ class Unfold:
 
         return true_array, reco_array
 
-    def load_response(self):
-        with open(self.config["response_file"], 'rb') as f:
+    def load_response(self, response_file):
+
+        if response_file is None:
+            response_file = self.config["response_file"]
+
+        with open(response_file, 'rb') as f:
             unfold_param_dict = pickle.load(f)
 
         self.response = unfold_param_dict["response"]
@@ -364,7 +368,7 @@ class Unfold:
         self.true_bin_array = unfold_param_dict["true_bin_array"]
         self.reco_bin_array = unfold_param_dict["reco_bin_array"]
         self.reco_nbins_sparse = unfold_param_dict["reco_nbins_sparse"]
-        print("Loaded unfold param file:", self.config["response_file"])
+        print("Loaded unfold param file:", response_file)
 
     def save_response(self, file_name):
         unfold_param_dict = {"response": self.response,

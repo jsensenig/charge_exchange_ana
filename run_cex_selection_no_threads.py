@@ -1,6 +1,10 @@
 from timeit import default_timer as timer
 from cex_analysis.event_handler import EventHandler
 import cex_analysis.efficiency_data as eff_data
+from unfolding.unfolding_interface import BeamPionVariables, Pi0Variables
+from unfolding.unfold_events import Unfold
+
+
 import numpy as np
 import uproot
 import time
@@ -111,17 +115,35 @@ def save_results(results, is_mc):
     h5_file.close()
 
 
+def save_unfold_variables(results, beam_var, pi0_var, file_name):
+
+    hist_map, event_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
+
+    bool_event_mask = np.arange(len(event_mask)) == event_mask
+
+    # Beam variables should be pi+
+    print("Getting beam cross section variables!")
+    beam_var_dict = beam_var.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=bool_event_mask)
+
+    # Pi0 variables should be from CeX
+    print("Getting pi0 cross section variables!")
+    pi0_var_dict = pi0_var.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
+
+    print("Saving variables to file")
+    np.save(file_name, beam_var_dict)
+    np.save(file_name, pi0_var_dict)
+
+
 def event_selection(config, data):
     event_handler_instance = EventHandler(config)
     time.sleep(0.1)
     return event_handler_instance.run_selection(events=data)
 
 
-def start_analysis(flist, config, branches, is_mc):
+def start_analysis(flist, config, branches):
 
     data = uproot.concatenate(files=flist, expressions=branches)
-    results = event_selection(config=config, data=data)
-    save_results(results=results, is_mc=is_mc)
+    return event_selection(config=config, data=data)
 
 
 def configure(config_file):
@@ -189,9 +211,13 @@ if __name__ == "__main__":
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pduneana_*.root:beamana;3"
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/to_ana/run*/pduneana_*.root:beamana"
 
-    # Number of threads
-    # num_workers = 1
-    # num_workers = check_thread_count(num_workers)
+    cfg_file = "config/unfolding.json"
+    beam_config = configure(cfg_file)
+    cfg_file = "config/pi0_unfolding.json"
+    pi0_config = configure(cfg_file)
+
+    beam_unfold = Unfold(config_file=beam_config)
+    pi0_unfold = Unfold(config_file=pi0_config)
 
     # Get main configuration
     cfg_file = "config/main.json"
@@ -203,7 +229,10 @@ if __name__ == "__main__":
     # Start the analysis threads
     print("Starting threads")
     start = timer()
-    start_analysis(file_list, config, branches, is_mc=config["is_mc"])
+    results = start_analysis(file_list, config, branches)
+
+    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold)
+    save_results(results=results, is_mc=config["is_mc"])
 
     end = timer()
     print("Completed Analysis! (", round((end - start), 4), "s)")

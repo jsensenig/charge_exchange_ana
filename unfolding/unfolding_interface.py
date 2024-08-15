@@ -12,8 +12,8 @@ from cex_analysis.plot_utils import bin_width_np, bin_centers_np
 
 class XSecVariablesBase:
 
-    def __init__(self, is_mc):
-        self.is_mc = is_mc
+    def __init__(self, is_training):
+        self.is_training = is_training
         self.xsec_vars = {}
 
     @abstractmethod
@@ -43,8 +43,8 @@ class XSecVariablesBase:
 
 
 class BeamPionVariables(XSecVariablesBase):
-    def __init__(self, config_file, is_mc, energy_slices):
-        super().__init__(is_mc=is_mc)
+    def __init__(self, config_file, is_training, energy_slices):
+        super().__init__(is_training=is_training)
 
         self.config = self.configure(config_file=config_file)
         self.signal_proc = self.config["signal_proc"]
@@ -58,8 +58,8 @@ class BeamPionVariables(XSecVariablesBase):
         # This is a very small subset of the original data
         self.xsec_vars = {}
 
-    def get_xsec_variable(self, event_record, reco_mask, apply_cuts=True):
-        self.xsec_vars["true_complete_slice_mask"] = np.ones(len(event_record)).astype(bool) if self.is_mc else None
+    def get_xsec_variable(self, event_record, reco_int_mask, apply_cuts=True):
+        self.xsec_vars["true_complete_slice_mask"] = np.ones(len(event_record)).astype(bool) if self.is_training else None
         self.xsec_vars["reco_complete_slice_mask"] = np.ones(len(event_record)).astype(bool)
 
         # Calculate and add the requisite columns to the event record
@@ -80,14 +80,14 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["true_beam_alt_end_energy"] = true_beam_alt_end
 
         # Add the end energy
-        if self.is_mc:
+        if self.is_training:
             fiducial_zcut_mask = (event_record["true_beam_traj_Z"] <= self.beam_pip_zhigh) & (event_record["true_beam_traj_KE"] > 0)
             self.xsec_vars["true_beam_end_energy"] = ak.to_numpy(event_record["true_beam_traj_KE"][fiducial_zcut_mask][:, -1])
         self.xsec_vars["reco_beam_end_energy"] = end_energy
 
-        true_int, alt_true_int, reco_int = self.make_beam_interacting(event_record=event_record, reco_mask=reco_mask)
+        true_int, alt_true_int, reco_int = self.make_beam_interacting(event_record=event_record, reco_int_mask=reco_int_mask)
 
-        if self.is_mc:
+        if self.is_training:
             self.xsec_vars["true_beam_sig_int_energy"] = true_int
             self.xsec_vars["true_beam_sig_int_energy"][self.xsec_vars["true_downstream_mask"]] = -1.
             self.xsec_vars["true_beam_alt_sig_int_energy"] = alt_true_int
@@ -100,7 +100,7 @@ class BeamPionVariables(XSecVariablesBase):
         self.incomplete_energy_slice()
 
         # Now set all 3 histograms to -1 for events with incomplete slices
-        if self.is_mc:
+        if self.is_training:
             self.xsec_vars["true_beam_alt_initial_energy"] = self.xsec_vars["true_beam_initial_energy"]
             self.xsec_vars["true_beam_initial_energy"][~self.xsec_vars["true_complete_slice_mask"]] = -1.
             self.xsec_vars["true_beam_end_energy"][~self.xsec_vars["true_complete_slice_mask"]] = -1.
@@ -114,7 +114,7 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["reco_beam_sig_int_energy"][~self.xsec_vars["reco_complete_slice_mask"]] = -1.
 
         # Add an end Z position
-        if self.is_mc:
+        if self.is_training:
             self.xsec_vars["true_beam_endz"] = event_record["true_beam_traj_Z"][:, -1]
 
         self.xsec_vars["reco_beam_endz"] = np.ones(len(event_record)) * -999
@@ -123,7 +123,7 @@ class BeamPionVariables(XSecVariablesBase):
 
         # Apply mask to events
         true_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["reco_upstream_mask"]
-        reco_mask = true_mask if self.is_mc else ~self.xsec_vars["reco_upstream_mask"]
+        reco_mask = true_mask if self.is_training else ~self.xsec_vars["reco_upstream_mask"]
 
         self.xsec_vars["full_len_true_mask"] = true_mask
         self.xsec_vars["full_len_reco_mask"] = reco_mask
@@ -192,7 +192,7 @@ class BeamPionVariables(XSecVariablesBase):
         Check whether an event is within the fiducial volume
         """
         true_up, true_down = None, None
-        if self.is_mc:
+        if self.is_training:
             true_up = ak.to_numpy(event_record["true_beam_traj_Z"][:, -1]) < self.beam_pip_zlow
             true_down = ak.to_numpy(event_record["true_beam_traj_Z"][:, -1]) > self.beam_pip_zhigh
 
@@ -213,7 +213,7 @@ class BeamPionVariables(XSecVariablesBase):
         beame = 1. # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
 
         true_initial_energy = None
-        if self.is_mc:
+        if self.is_training:
             max_pt = ak.max(event_record["true_beam_traj_Z"][event_record["true_beam_traj_Z"] < self.beam_pip_zlow], axis=1)
             ff_mask = event_record["true_beam_traj_Z"] == max_pt
             true_initial_energy = ak.to_numpy(event_record["true_beam_traj_KE"][ff_mask][:, 0])
@@ -238,7 +238,7 @@ class BeamPionVariables(XSecVariablesBase):
 
     def incomplete_energy_slice(self):
 
-        if self.is_mc:
+        if self.is_training:
             init_bin_idx = np.digitize(self.xsec_vars["true_beam_initial_energy"], bins=self.eslice_bin_array)
             end_bin_idx = np.digitize(self.xsec_vars["true_beam_end_energy"], bins=self.eslice_bin_array)
             alt_end_bin_idx = np.digitize(self.xsec_vars["true_beam_alt_end_energy"], bins=self.eslice_bin_array)
@@ -264,7 +264,7 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["reco_beam_initial_energy"] = np.clip(self.xsec_vars["reco_beam_initial_energy"], a_min=-1e3,
                                                              a_max=self.eslice_bin_array[-1]-1)
 
-    def make_beam_interacting(self, event_record, reco_mask):
+    def make_beam_interacting(self, event_record, reco_int_mask):
         """
         N_end: *Any* pi+ that interacts within the fiducial volume
         N_int: The signal definition interaction energy, CeX or all pion inelastic
@@ -274,7 +274,7 @@ class BeamPionVariables(XSecVariablesBase):
         """
         true_int = None
         alt_true_int = None
-        if self.is_mc:
+        if self.is_training:
             # Exclusive interaction
             true_int_mask = ak.to_numpy(event_record[self.signal_proc])
             true_int = np.ones(len(event_record)) * -1.
@@ -284,7 +284,6 @@ class BeamPionVariables(XSecVariablesBase):
 
         # Exclusive interactions
         # For interacting just apply mask to end KE to extract the interacting
-        reco_int_mask = reco_mask
         reco_int = np.ones(len(event_record)) * -1.
         reco_int[reco_int_mask] = self.xsec_vars["reco_beam_end_energy"][reco_int_mask]
 
@@ -331,8 +330,8 @@ class BeamPionVariables(XSecVariablesBase):
 
 
 class Pi0Variables(XSecVariablesBase):
-    def __init__(self, config_file, is_mc, energy_slices=None):
-        super().__init__(is_mc=is_mc)
+    def __init__(self, config_file, is_training, energy_slices=None):
+        super().__init__(is_training=is_training)
 
         self.config = self.configure(config_file=config_file)
         self.signal_proc = self.config["signal_proc"]
@@ -350,7 +349,7 @@ class Pi0Variables(XSecVariablesBase):
 
     def make_pi0_energy(self, event_record, reco_mask):
         true_pi0_energy = None
-        if self.is_mc:
+        if self.is_training:
             true_mask = event_record[self.signal_proc]
             true_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][true_mask], axis=1) * 1.e3) - 135.
             self.xsec_vars["true_gamma_energy"] = event_record["true_beam_Pi0_decay_startP"][true_mask]

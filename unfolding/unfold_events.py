@@ -34,7 +34,7 @@ class Unfold:
         # Get the classes to interface the data to the unfolding
         var_cls = {cls.__name__: cls for cls in XSecVariablesBase.__subclasses__()}
         self.vars = var_cls[self.config["xsec_vars"]](config_file=self.config["interface_config"],
-                                                      is_mc=self.is_training,
+                                                      is_training=self.is_training,
                                                       energy_slices=self.reco_bin_array[0][1:-1])
         self.beam_vars = self.config["xsec_vars"] == "BeamPionVariables"
 
@@ -67,8 +67,7 @@ class Unfold:
 
         if not test_func:
             # self.vars.get_xsec_variable(event_record=event_record, reco_mask=data_mask)
-            true_var_list, reco_var_list = self.get_unfold_variables(event_record=event_record,
-                                                                     true_mask=train_mask, reco_mask=data_mask)
+            true_var_list, reco_var_list = self.get_unfold_variables(event_record=event_record, reco_int_mask=data_mask)
 
         if self.is_training:
             nd_binned_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
@@ -153,10 +152,10 @@ class Unfold:
         self.reco_hist = ROOT.TH1D("data", "Data", self.reco_nbins_sparse, 0, self.reco_nbins_sparse)
         _ = [self.reco_hist.SetBinContent(i + 1, sparse_data_hist[i]) for i in range(self.reco_nbins_sparse)]
 
-    def get_unfold_variables(self, event_record, true_mask, reco_mask):
+    def get_unfold_variables(self, event_record, reco_int_mask):
 
         # Get the variables of interest
-        var_dict = self.vars.get_xsec_variable(event_record=event_record, reco_mask=reco_mask)
+        var_dict = self.vars.get_xsec_variable(event_record=event_record, reco_int_mask=reco_int_mask)
         print("Loaded variables:", list(var_dict))
 
         true_var_list = None

@@ -122,8 +122,8 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["reco_beam_endz"][empty_mask] = event_record["reco_beam_calo_Z"][empty_mask][:, -1]
 
         # Apply mask to events
-        true_mask = ~self.xsec_vars["true_upstream_mask"]
-        reco_mask = ~self.xsec_vars["reco_upstream_mask"]
+        true_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["reco_upstream_mask"]
+        reco_mask = true_mask if self.is_mc else ~self.xsec_vars["reco_upstream_mask"]
 
         self.xsec_vars["full_len_true_mask"] = true_mask
         self.xsec_vars["full_len_reco_mask"] = reco_mask
@@ -210,7 +210,7 @@ class BeamPionVariables(XSecVariablesBase):
         double ff_energy_reco = beam_inst_KE*1000 - Eloss;//12.74;
         double initialE_reco = bb.KEAtLength(ff_energy_reco, trackLenAccum[0]);
         """
-        beame = 0. # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
+        beame = 1. # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
 
         true_initial_energy = None
         if self.is_mc:
@@ -219,11 +219,13 @@ class BeamPionVariables(XSecVariablesBase):
             true_initial_energy = ak.to_numpy(event_record["true_beam_traj_KE"][ff_mask][:, 0])
 
         # Note the beam momentum is converted GeV -> MeV
-        reco_ff_energy = np.sqrt(np.square(self.pip_mass) + np.square(ak.to_numpy(event_record["beam_inst_P"] + beame)*1.e3)) \
-                       - self.pip_mass        
-        reco_ff_energy -= 12.74 # FIXME temporary Eloss
+        energy_smear = 0.
         if beame == 1:
-            reco_ff_energy += np.random.normal(0,70,len(reco_ff_energy))
+            energy_smear = 1. + np.random.normal(0,0.1,len(event_record["beam_inst_P"]))
+
+        reco_ff_energy = np.sqrt(np.square(self.pip_mass) + np.square(ak.to_numpy(event_record["beam_inst_P"] + energy_smear)*1.e3)) \
+                       - self.pip_mass        
+        reco_ff_energy -= 0.#12.74 # FIXME temporary Eloss
 
         nz_mask = ak.to_numpy(ak.count(event_record["reco_track_cumlen"], axis=1) > 0)
         reco_initial_energy = np.ones(len(event_record)).astype('d') * -1.

@@ -38,7 +38,6 @@ def save_results(results, is_mc):
 
     hist_map, event_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
 
-
     cut_names = []
     cut_total = np.count_nonzero(event_mask)
     cut_signal = 0
@@ -52,6 +51,8 @@ def save_results(results, is_mc):
         cut_names = list(cut_total_selected.keys())
         cut_total = list(cut_total_selected.values())
         cut_signal = list(cut_signal_selected.values())
+
+    print("Total events selected:", cut_total)
 
     hist_file = 'test_hist_file.hdf5'
     cut_file = 'test_cut_file.hdf5'
@@ -118,7 +119,7 @@ def event_selection(config, data):
 
 def start_analysis(flist, config, branches, is_mc):
 
-    data = uproot.concatenate(files={flist}, expressions=branches)
+    data = uproot.concatenate(files=flist, expressions=branches)
     results = event_selection(config=config, data=data)
     save_results(results=results, is_mc=is_mc)
 
@@ -134,16 +135,21 @@ def get_branches(is_mc):
     branches = ["event", "reco_daughter_PFP_true_byHits_startZ", "reco_daughter_PFP_true_byHits_PDG", "reco_beam_passes_beam_cuts",
                 "reco_daughter_PFP_true_byHits_parPDG",
                 "reco_beam_true_byHits_PDG", "reco_daughter_allShower_energy", "reco_daughter_PFP_trackScore_collection",
-                "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof", "beam_inst_TOF",
+                "reco_daughter_allTrack_Chi2_proton", "reco_daughter_allTrack_Chi2_ndof",
                 "reco_daughter_PFP_michelScore_collection", "reco_beam_calo_startX",  "reco_beam_calo_startY",
                 "reco_beam_calo_startZ", "reco_beam_calo_endX", "reco_beam_calo_endY", "reco_beam_calo_endZ",
-                "reco_beam_true_byHits_endProcess", "reco_daughter_PFP_nHits", "beam_inst_P",
+                "reco_beam_true_byHits_endProcess", "reco_daughter_PFP_nHits",
                 "reco_beam_vertex_michel_score", "reco_beam_vertex_nHits", "reco_daughter_allTrack_dEdX_SCE",
                 "reco_beam_endX", "reco_beam_endY", "reco_beam_endZ", "reco_beam_trackEndDirX", "reco_beam_trackEndDirY",
                 "reco_beam_trackEndDirZ", "dEdX_truncated_mean", "reco_beam_calo_startDirX", "reco_beam_calo_startDirY",
                 "reco_beam_calo_startDirZ", "reco_beam_calo_endDirX", "reco_beam_calo_endDirY", "reco_beam_calo_endDirZ"]
 
-    branches += ["reco_all_spacePts_X", "reco_all_spacePts_Y", "reco_all_spacePts_Z", "reco_all_spacePts_Integral"]
+    branches += ["beam_inst_C0", "beam_inst_valid", "beam_inst_trigger", "beam_inst_nMomenta", "beam_inst_nTracks", 
+                 "beam_inst_TOF", "beam_inst_P", "reco_reconstructable_beam_event"]
+
+    branches += ["fit_pi0_energy", "fit_pi0_cos_theta", "fit_pi0_gamma_energy1", "fit_pi0_gamma_energy2", "fit_pi0_gamma_oa"]
+
+    #branches += ["reco_all_spacePts_X", "reco_all_spacePts_Y", "reco_all_spacePts_Z", "reco_all_spacePts_Integral"]
 
     #################
     # Truth variables
@@ -167,10 +173,21 @@ if __name__ == "__main__":
 
 
     # Provide a text file with one file per line
-    files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
+   # files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
 
-    file_list = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_9.root:pduneana/beamana"
-    file_list = "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset0/pduneana*.root:beamana"
+   # file_list = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_9.root:pduneana/beamana"
+    #file_list = "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset*/pduneana*.root:beamana"
+
+    ## Official ntupeles
+    #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/2gev/data/PDSPProd4_data_2GeV_reco2_ntuple_v09_42_03_01.root:beamana"
+    #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/2gev/mc/PDSPProd4a_MC_2GeV_reco1_sce_datadriven_v1_ntuple_v09_41_00_03.root:beamana"
+    
+    #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pi0_reco/pduneana_*.root:beamana;3" 
+    #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco/pduneana_*.root:beamana;3" 
+
+    file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco*/pduneana_*.root:beamana"
+    #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pduneana_*.root:beamana;3"
+    #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/to_ana/run*/pduneana_*.root:beamana"
 
     # Number of threads
     # num_workers = 1

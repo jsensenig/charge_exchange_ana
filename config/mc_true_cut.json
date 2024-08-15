@@ -1,0 +1,11 @@
+{
+  "MCTrueCut": {
+    "optimize_cut": false,
+    "true_signal": "single_charge_exchange"
+  },
+  "histograms": [
+    { "true_beam_endZ": ["beam_endz", "EndZ [cm]", "Count", 50, 0, 600] },
+    { "beam_inst_P": ["beam_inst_mom", "P [GeV/c]", "Count", 100, 0.5, 2.5] },
+    { "true_beam_startP": ["true_beam_mom", "P [GeV/c]", "Count", 100, 0.5, 2.5] }
+  ]
+}

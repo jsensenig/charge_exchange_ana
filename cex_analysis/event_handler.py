@@ -148,11 +148,11 @@ class EventHandler:
             # Mask out events not selected
             events = events[event_mask]
 
+            selection_idx = selection_idx[event_mask]
+
             if cut in self.config["beam_cut_list"]:
                 total_beam_mask = np.zeros(len(events)).astype(bool)
                 beam_events = events
-
-            selection_idx = selection_idx[event_mask]
 
         # Global selection mask
         total_event_mask[selection_idx] = True

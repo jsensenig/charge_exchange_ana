@@ -40,7 +40,7 @@ def calculate_efficiency(selected_true, selected_total, true_count_list):
 
 def save_results(results, is_mc):
 
-    hist_map, event_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
+    hist_map, event_mask, _, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
 
     cut_names = []
     cut_total = np.count_nonzero(event_mask)
@@ -117,13 +117,11 @@ def save_results(results, is_mc):
 
 def save_unfold_variables(results, beam_var, pi0_var, file_name):
 
-    hist_map, event_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
-
-    bool_event_mask = np.arange(len(event_mask)) == event_mask
+    hist_map, event_mask, beam_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
 
     # Beam variables should be pi+
     print("Getting beam cross section variables!")
-    beam_var_dict = beam_var.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=bool_event_mask)
+    beam_var_dict = beam_var.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=beam_mask)
 
     # Pi0 variables should be from CeX
     print("Getting pi0 cross section variables!")
@@ -164,7 +162,8 @@ def get_branches(is_mc):
                 "reco_beam_vertex_michel_score", "reco_beam_vertex_nHits", "reco_daughter_allTrack_dEdX_SCE",
                 "reco_beam_endX", "reco_beam_endY", "reco_beam_endZ", "reco_beam_trackEndDirX", "reco_beam_trackEndDirY",
                 "reco_beam_trackEndDirZ", "dEdX_truncated_mean", "reco_beam_calo_startDirX", "reco_beam_calo_startDirY",
-                "reco_beam_calo_startDirZ", "reco_beam_calo_endDirX", "reco_beam_calo_endDirY", "reco_beam_calo_endDirZ"]
+                "reco_beam_calo_startDirZ", "reco_beam_calo_endDirX", "reco_beam_calo_endDirY", "reco_beam_calo_endDirZ",
+                "reco_beam_calo_X", "reco_beam_calo_Y", "reco_beam_calo_Z", "reco_track_cumlen"]
 
     branches += ["beam_inst_C0", "beam_inst_valid", "beam_inst_trigger", "beam_inst_nMomenta", "beam_inst_nTracks", 
                  "beam_inst_TOF", "beam_inst_P", "reco_reconstructable_beam_event"]
@@ -181,7 +180,7 @@ def get_branches(is_mc):
                      "true_beam_endProcess","true_beam_endZ","true_beam_endP","true_beam_endPx", "true_beam_endPy",
                      "true_beam_endPz", "true_beam_daughter_startPx", "true_beam_daughter_startPy", "true_beam_daughter_startPz"]
 
-        branches += ["true_beam_interactingEnergy", "true_beam_incidentEnergies", "true_beam_traj_Z", "true_beam_traj_KE"]
+        branches += ["true_beam_traj_Z", "true_beam_traj_KE"]
 
         branches += ["true_beam_Pi0_decay_startPx", "true_beam_Pi0_decay_startPy", "true_beam_Pi0_decay_startPz",
                      "true_beam_Pi0_decay_PDG", "true_beam_Pi0_decay_ID", "true_beam_Pi0_decay_startP",
@@ -211,13 +210,11 @@ if __name__ == "__main__":
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pduneana_*.root:beamana;3"
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/to_ana/run*/pduneana_*.root:beamana"
 
-    cfg_file = "config/unfolding.json"
-    beam_config = configure(cfg_file)
-    cfg_file = "config/pi0_unfolding.json"
-    pi0_config = configure(cfg_file)
+    beam_cfg_file = "config/unfolding_2gev.json"
+    pi0_cfg_file = "config/pi0_unfolding.json"
 
-    beam_unfold = Unfold(config_file=beam_config)
-    pi0_unfold = Unfold(config_file=pi0_config)
+    beam_unfold = Unfold(config_file=beam_cfg_file)
+    pi0_unfold = Unfold(config_file=pi0_cfg_file)
 
     # Get main configuration
     cfg_file = "config/main.json"
@@ -231,7 +228,7 @@ if __name__ == "__main__":
     start = timer()
     results = start_analysis(file_list, config, branches)
 
-    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold)
+    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold, file_name="test_vars.npy")
     save_results(results=results, is_mc=config["is_mc"])
 
     end = timer()

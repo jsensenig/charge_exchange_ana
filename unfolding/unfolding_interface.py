@@ -74,7 +74,9 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["reco_beam_initial_energy"] = reco_initial_energy
 
         new_init_energy, end_energy = self.make_reco_beam_incident(event_record=event_record)
-        true_beam_alt_init, true_beam_alt_end = self.make_true_beam_incident(event_record=event_record)
+        true_beam_alt_init, true_beam_alt_end = None, None
+        if self.is_training:
+            true_beam_alt_init, true_beam_alt_end = self.make_true_beam_incident(event_record=event_record)
 
         self.xsec_vars["true_beam_alt_initial_energy"] = true_beam_alt_init
         self.xsec_vars["true_beam_alt_end_energy"] = true_beam_alt_end
@@ -83,14 +85,18 @@ class BeamPionVariables(XSecVariablesBase):
         if self.is_training:
             fiducial_zcut_mask = (event_record["true_beam_traj_Z"] <= self.beam_pip_zhigh) & (event_record["true_beam_traj_KE"] > 0)
             self.xsec_vars["true_beam_end_energy"] = ak.to_numpy(event_record["true_beam_traj_KE"][fiducial_zcut_mask][:, -1])
+        else:
+            self.xsec_vars["true_beam_end_energy"] = None
+
         self.xsec_vars["reco_beam_end_energy"] = end_energy
 
         true_int, alt_true_int, reco_int = self.make_beam_interacting(event_record=event_record, reco_int_mask=reco_int_mask)
 
+        self.xsec_vars["true_beam_sig_int_energy"] = true_int
+        self.xsec_vars["true_beam_alt_sig_int_energy"] = alt_true_int
+
         if self.is_training:
-            self.xsec_vars["true_beam_sig_int_energy"] = true_int
             self.xsec_vars["true_beam_sig_int_energy"][self.xsec_vars["true_downstream_mask"]] = -1.
-            self.xsec_vars["true_beam_alt_sig_int_energy"] = alt_true_int
             self.xsec_vars["true_beam_alt_sig_int_energy"][self.xsec_vars["true_downstream_mask"]] = -1.
 
         self.xsec_vars["reco_beam_sig_int_energy"] = reco_int
@@ -122,17 +128,18 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["reco_beam_endz"][empty_mask] = event_record["reco_beam_calo_Z"][empty_mask][:, -1]
 
         # Apply mask to events
-        true_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["reco_upstream_mask"]
+        if self.is_training:
+            true_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["reco_upstream_mask"]
         reco_mask = true_mask if self.is_training else ~self.xsec_vars["reco_upstream_mask"]
 
-        self.xsec_vars["full_len_true_mask"] = true_mask
+        self.xsec_vars["full_len_true_mask"] = true_mask if self.is_training else None
         self.xsec_vars["full_len_reco_mask"] = reco_mask
 
         if not apply_cuts:
             return self.xsec_vars
 
         for k in self.xsec_vars:
-            if k.split('_')[0] == 'true':
+            if k.split('_')[0] == 'true' and self.is_training:
                 self.xsec_vars[k] = self.xsec_vars[k][true_mask]
             elif k.split('_')[0] == 'reco':
                 self.xsec_vars[k] = self.xsec_vars[k][reco_mask]
@@ -359,34 +366,37 @@ class Pi0Variables(XSecVariablesBase):
         return true_pi0_energy, reco_pi0_energy
 
     def make_pi0_cos_theta(self, event_record, reco_mask):
-        true_mask = event_record[self.signal_proc]
-        # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector and normalize
-        beam_dir = np.vstack((ak.to_numpy(event_record["true_beam_endPx"]),
-                              ak.to_numpy(event_record["true_beam_endPy"]),
-                              ak.to_numpy(event_record["true_beam_endPz"]))).T
-        beam_norm = np.linalg.norm(beam_dir, axis=1)
-        beam_dir_unit = beam_dir / np.stack((beam_norm, beam_norm, beam_norm), axis=1)
 
-        # Calculate the pi0 direction
-        full_len_daughter_dir = np.zeros(shape=(len(event_record), 3))
-        one_pi0_mask = ak.count_nonzero(event_record["true_beam_daughter_PDG"] == 111, axis=1) == 1
+        true_cos_theta = None
+        if self.is_training:
+            true_mask = event_record[self.signal_proc]
+            # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector and normalize
+            beam_dir = np.vstack((ak.to_numpy(event_record["true_beam_endPx"]),
+                                  ak.to_numpy(event_record["true_beam_endPy"]),
+                                  ak.to_numpy(event_record["true_beam_endPz"]))).T
+            beam_norm = np.linalg.norm(beam_dir, axis=1)
+            beam_dir_unit = beam_dir / np.stack((beam_norm, beam_norm, beam_norm), axis=1)
 
-        pi0_daughter_mask = event_record["true_beam_daughter_PDG"][one_pi0_mask] == 111
-        pi0_dir_px = ak.to_numpy(event_record["true_beam_daughter_startPx"][one_pi0_mask][pi0_daughter_mask])[:, 0]
-        pi0_dir_py = ak.to_numpy(event_record["true_beam_daughter_startPy"][one_pi0_mask][pi0_daughter_mask])[:, 0]
-        pi0_dir_pz = ak.to_numpy(event_record["true_beam_daughter_startPz"][one_pi0_mask][pi0_daughter_mask])[:, 0]
+            # Calculate the pi0 direction
+            full_len_daughter_dir = np.zeros(shape=(len(event_record), 3))
+            one_pi0_mask = ak.count_nonzero(event_record["true_beam_daughter_PDG"] == 111, axis=1) == 1
 
-        # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector
-        # and normalize
-        pi0_dir = np.vstack((pi0_dir_px, pi0_dir_py, pi0_dir_pz)).T
-        pi0_norm = np.linalg.norm(pi0_dir, axis=1)
-        pi0_dir_unit = pi0_dir / np.stack((pi0_norm, pi0_norm, pi0_norm), axis=1)
+            pi0_daughter_mask = event_record["true_beam_daughter_PDG"][one_pi0_mask] == 111
+            pi0_dir_px = ak.to_numpy(event_record["true_beam_daughter_startPx"][one_pi0_mask][pi0_daughter_mask])[:, 0]
+            pi0_dir_py = ak.to_numpy(event_record["true_beam_daughter_startPy"][one_pi0_mask][pi0_daughter_mask])[:, 0]
+            pi0_dir_pz = ak.to_numpy(event_record["true_beam_daughter_startPz"][one_pi0_mask][pi0_daughter_mask])[:, 0]
 
-        full_len_daughter_dir[one_pi0_mask] = pi0_dir_unit
+            # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector
+            # and normalize
+            pi0_dir = np.vstack((pi0_dir_px, pi0_dir_py, pi0_dir_pz)).T
+            pi0_norm = np.linalg.norm(pi0_dir, axis=1)
+            pi0_dir_unit = pi0_dir / np.stack((pi0_norm, pi0_norm, pi0_norm), axis=1)
 
-        # Calculate the cos angle between beam and pi0 direction by taking the dot product of their
-        # respective direction unit vectors
-        true_cos_theta = np.diag(beam_dir_unit @ full_len_daughter_dir.T)
+            full_len_daughter_dir[one_pi0_mask] = pi0_dir_unit
+
+            # Calculate the cos angle between beam and pi0 direction by taking the dot product of their
+            # respective direction unit vectors
+            true_cos_theta = np.diag(beam_dir_unit @ full_len_daughter_dir.T)
 
         reco_cos_theta = ak.to_numpy(event_record["fit_pi0_cos_theta"][reco_mask])
 

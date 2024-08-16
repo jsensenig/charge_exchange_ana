@@ -336,12 +336,12 @@ class Pi0Variables(XSecVariablesBase):
         self.config = self.configure(config_file=config_file)
         self.signal_proc = self.config["signal_proc"]
 
-    def get_xsec_variable(self, event_record, reco_mask, apply_cuts=True):
-        true_pi0_energy, reco_pi0_energy = self.make_pi0_energy(event_record=event_record, reco_mask=reco_mask)
+    def get_xsec_variable(self, event_record, reco_int_mask, apply_cuts=True):
+        true_pi0_energy, reco_pi0_energy = self.make_pi0_energy(event_record=event_record, reco_mask=reco_int_mask)
         self.xsec_vars["true_pi0_energy"] = true_pi0_energy
         self.xsec_vars["reco_pi0_energy"] = reco_pi0_energy
 
-        true_cos_theta, reco_cos_theta = self.make_pi0_cos_theta(event_record=event_record, reco_mask=reco_mask)
+        true_cos_theta, reco_cos_theta = self.make_pi0_cos_theta(event_record=event_record, reco_mask=reco_int_mask)
         self.xsec_vars["true_pi0_cos_theta"] = true_cos_theta
         self.xsec_vars["reco_pi0_cos_theta"] = reco_cos_theta
 

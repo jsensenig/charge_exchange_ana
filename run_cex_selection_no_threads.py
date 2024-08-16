@@ -10,6 +10,7 @@ import uproot
 import time
 import json
 import h5py
+import pickle
 import os
 
 
@@ -128,8 +129,8 @@ def save_unfold_variables(results, beam_var, pi0_var, file_name):
     pi0_var_dict = pi0_var.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
 
     print("Saving variables to file")
-    np.save(file_name, beam_var_dict)
-    np.save(file_name, pi0_var_dict)
+    with open(file_name, 'wb') as f:
+        pickle.dump([beam_var_dict, pi0_var_dict], f)
 
 
 def event_selection(config, data):
@@ -206,15 +207,16 @@ if __name__ == "__main__":
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pi0_reco/pduneana_*.root:beamana;3" 
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco/pduneana_*.root:beamana;3" 
 
-    file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco*/pduneana_*.root:beamana"
+    #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco*/pduneana_*.root:beamana"
+    #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco2/pduneana_129.root:beamana"
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pduneana_*.root:beamana;3"
-    #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/to_ana/run*/pduneana_*.root:beamana"
+    file_list = "/nfs/disk1/users/jon/custom_ntuples/data/to_ana/run*/pduneana_*.root:beamana"
 
     beam_cfg_file = "config/unfolding_2gev.json"
     pi0_cfg_file = "config/pi0_unfolding.json"
 
-    beam_unfold = Unfold(config_file=beam_cfg_file)
-    pi0_unfold = Unfold(config_file=pi0_cfg_file)
+    beam_unfold = Unfold(config_file=beam_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
+    pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
 
     # Get main configuration
     cfg_file = "config/main.json"
@@ -228,7 +230,7 @@ if __name__ == "__main__":
     start = timer()
     results = start_analysis(file_list, config, branches)
 
-    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold, file_name="test_vars.npy")
+    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold, file_name="test_vars.pkl")
     save_results(results=results, is_mc=config["is_mc"])
 
     end = timer()

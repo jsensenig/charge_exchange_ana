@@ -66,7 +66,7 @@ class TrueProcess:
         ## Daughter backgrounds
         events["daughter_one_pi0_bkgd"] = pion_inelastic & self.daughter_one_pi0_bkgd(events, valid_piplus, valid_piminus)
         events["daughter_two_pi0_bkgd"] = pion_inelastic & self.daughter_two_pi0_bkgd(events, valid_piplus, valid_piminus)
-        events["daughter_other_bkgd"] = ~events["daughter_two_pi0_bkgd"] & ~events["daughter_two_pi0_bkgd"] & ~events["single_charge_exchange"]
+        events["daughter_other_bkgd"] = ~events["daughter_one_pi0_bkgd"] & ~events["daughter_two_pi0_bkgd"] & ~events["single_charge_exchange"]
 
         # other (fill "other" column with all zeroes)
         # events["other"] = np.zeros_like(events["pion_inelastic"])

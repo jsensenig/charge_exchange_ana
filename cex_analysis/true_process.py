@@ -63,6 +63,11 @@ class TrueProcess:
         # 1 charged and neutral pion, charged pion IS reconstructed (in truth AND reco)
         events["mcreco_charged_neutral_pion"] = pion_inelastic & self.mcreco_charged_neutral_pion(events)
 
+        ## Daughter backgrounds
+        events["daughter_one_pi0_bkgd"] = pion_inelastic & self.daughter_one_pi0_bkgd(events, valid_piplus, valid_piminus)
+        events["daughter_two_pi0_bkgd"] = pion_inelastic & self.daughter_two_pi0_bkgd(events, valid_piplus, valid_piminus)
+        events["daughter_other_bkgd"] = ~events["daughter_two_pi0_bkgd"] & ~events["daughter_two_pi0_bkgd"] & ~events["single_charge_exchange"]
+
         # other (fill "other" column with all zeroes)
         # events["other"] = np.zeros_like(events["pion_inelastic"])
         # if event not already in a category, classify as "other"
@@ -93,14 +98,18 @@ class TrueProcess:
     def get_process_list_simple():
         return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "all_pion_production", "other"]
 
-    def get_reco_particle_counts(self, events):
-        for pdg in self.pdg_dict:
-            if pdg == "pi-zero":
-                events["mcreco-" + pdg + "-count"] = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
-            else:
-                events["mcreco-" + pdg + "-count"] = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
+    @staticmethod
+    def get_daughter_bkgd_list():
+        return ["single_charge_exchange", "daughter_one_pi0_bkgd", "daughter_two_pi0_bkgd", "daughter_other_bkgd"]
 
-        return events
+    def get_reco_particle_counts(self, events):
+            for pdg in self.pdg_dict:
+                if pdg == "pi-zero":
+                    events["mcreco-" + pdg + "-count"] = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
+                else:
+                    events["mcreco-" + pdg + "-count"] = np.count_nonzero(events["reco_daughter_PFP_true_byHits_PDG"] == self.pdg_dict[pdg], axis=1)
+
+            return events
 
     @staticmethod
     def mask_daughter_momentum(events, momentum_threshold, pdg_select):
@@ -180,3 +189,11 @@ class TrueProcess:
     def mcreco_charged_neutral_pion(events):
         return ((events["mcreco-pi-minus-count"] == 1) | (events["mcreco-pi-plus-count"] == 1)) & \
                (events["true_daughter_nPi0"] == 1)
+
+    @staticmethod
+    def daughter_one_pi0_bkgd(events, piplus, piminus):
+        return ((piplus > 0) | (piminus > 0) | (events["true_daughter_nKaon"] > 0)) & (events["true_daughter_nPi0"] == 1)
+
+    @staticmethod
+    def daughter_two_pi0_bkgd(events, piplus, piminus):
+        return ((piplus > 0) | (piminus > 0) | (events["true_daughter_nKaon"] > 0)) & (events["true_daughter_nPi0"] == 2)

@@ -64,9 +64,11 @@ class TrueProcess:
         events["mcreco_charged_neutral_pion"] = pion_inelastic & self.mcreco_charged_neutral_pion(events)
 
         ## Daughter backgrounds
+        events["daughter_zero_pi0_bkgd"] = pion_inelastic & self.daughter_charged_pion_prod(events, valid_piplus, valid_piminus)
         events["daughter_one_pi0_bkgd"] = pion_inelastic & self.daughter_one_pi0_bkgd(events, valid_piplus, valid_piminus)
-        events["daughter_two_pi0_bkgd"] = pion_inelastic & self.daughter_two_pi0_bkgd(events, valid_piplus, valid_piminus)
-        events["daughter_other_bkgd"] = ~events["daughter_one_pi0_bkgd"] & ~events["daughter_two_pi0_bkgd"] & ~events["single_charge_exchange"]
+        events["daughter_n_pi0_bkgd"] = pion_inelastic & self.daughter_n_pi0_bkgd(events, valid_piplus, valid_piminus)
+        events["daughter_other_bkgd"] =  (~events["daughter_zero_pi0_bkgd"] & ~events["daughter_one_pi0_bkgd"] &
+                                          ~events["daughter_n_pi0_bkgd"] & ~events["single_charge_exchange"])
 
         # other (fill "other" column with all zeroes)
         # events["other"] = np.zeros_like(events["pion_inelastic"])
@@ -192,8 +194,12 @@ class TrueProcess:
 
     @staticmethod
     def daughter_one_pi0_bkgd(events, piplus, piminus):
-        return ((piplus > 0) | (piminus > 0) | (events["true_daughter_nKaon"] > 0)) & (events["true_daughter_nPi0"] == 1)
+        return ((piplus > 0) | (piminus > 0)) & (events["true_daughter_nPi0"] == 1)
 
     @staticmethod
-    def daughter_two_pi0_bkgd(events, piplus, piminus):
-        return ((piplus > 0) | (piminus > 0) | (events["true_daughter_nKaon"] > 0)) & (events["true_daughter_nPi0"] == 2)
+    def daughter_n_pi0_bkgd(events, piplus, piminus):
+        return (events["true_daughter_nPi0"] > 1)
+
+    @staticmethod
+    def daughter_charged_pion_prod(events, piplus, piminus):
+        return ((piminus > 0) & (piplus > 0)) & (events["true_daughter_nPi0"] == 0)

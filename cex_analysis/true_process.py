@@ -19,7 +19,7 @@ class TrueProcess:
         events = self.get_reco_particle_counts(events)
         events["true_daughter_nKaon"] = ak.count_nonzero(events["true_beam_daughter_PDG"] == 321, axis=1)
 
-        pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic")
+
 
         beam_matched = events["reco_beam_true_byE_matched"]
         # cosmic_origin = events["reco_beam_true_byE_origin"]
@@ -36,9 +36,12 @@ class TrueProcess:
         valid_piplus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.1, pdg_select=211)
         valid_piminus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.1, pdg_select=-211)
 
+        # Pion inelastic
+        pion_inelastic = ((events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic") &
+                         ~events["misid_beam"])
+
         # Pion elastic
-        events["pion_elastic"] = ((events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+elastic") &
-                                  ~events["misid_beam"])
+        events["pion_elastic"] = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+elastic")
 
         # Pion In-elastic
         events["pion_inelastic"] = pion_inelastic

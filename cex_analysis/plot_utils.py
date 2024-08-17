@@ -33,9 +33,11 @@ code2prettystring = {-11:  '$e^+$',
                10012: 'Other',
                10013: '$\\pi^{\\pm, 0}$ Production',
                10014: 'Daughter 1$\\pi^{0}$ Bkgd',
-               10015: 'Daughter 2$\\pi^{0}$ Bkgd',
+               10015: 'Daughter >1$\\pi^{0}$ Bkgd',
                10016: "Daughter Other Bkgd",
-               10017: 'Daughter 0$\\pi^{0}$ Bkgd'}
+               10017: 'Daughter 0$\\pi^{0}$ Bkgd',
+               10018: 'MisIs Beam',
+               10019: 'Other'}
 
 code2string = {-11:  '$e^+$',
                 11:   'e^-$',
@@ -63,9 +65,11 @@ code2string = {-11:  '$e^+$',
                10012: 'other',
                10013: 'all_pion_production',
                10014: 'daughter_one_pi0_bkgd',
-               10015: "daughter_two_pi0_bkgd",
+               10015: "daughter_n_pi0_bkgd",
                10016: "daughter_other_bkgd",
-               10017: 'daughter_zero_pi0_bkgd'}
+               10017: 'daughter_zero_pi0_bkgd',
+               10018: 'misid_beam',
+               10019: 'simple_other'}
 
 string2code = {code2string[-11]: -11,
                code2string[11]: 11,
@@ -95,7 +99,9 @@ string2code = {code2string[-11]: -11,
                code2string[10014]: 10014,
                code2string[10015]: 10015,
                code2string[10016]: 10016,
-               code2string[10017]: 10017}
+               code2string[10017]: 10017,
+               code2string[10018]: 10018,
+               code2string[10019]: 10019}
 
 # matplotlib colors
 colors = {-11:  'indianred',  # red
@@ -124,7 +130,9 @@ colors = {-11:  'indianred',  # red
         10014: 'goldenrod',
         10015: 'indianred',
         10016: 'olivedrab',
-        10017: 'seagreen'}
+        10017: 'seagreen',
+        10018: 'darkmagenta',
+        10019: 'olivedrab'}
 
 # ROOT color palette: https://root-forum.cern.ch/t/what-is-your-best-way-to-increment-colors/13809/2
 # colors = {-11:  46,  # red

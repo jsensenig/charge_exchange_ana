@@ -21,13 +21,24 @@ class TrueProcess:
 
         pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic")
 
+        beam_matched = events["reco_beam_true_byE_matched"]
+        # cosmic_origin = events["reco_beam_true_byE_origin"]
+        events["misid_pion"] = ~beam_matched & (np.abs(events["true_beam_PDG"]) == 211)
+        events["misid_proton"] = ~beam_matched & (events["true_beam_PDG"] == 2212)
+        events["misid_muon"] = ~beam_matched & (np.abs(events["true_beam_PDG"]) == 13)
+        events["misid_electron_gamma"] = ~beam_matched & ((np.abs(events["true_beam_PDG"]) == 11) | (events["true_beam_PDG"]) == 22)
+        events["matched_pion"] = (np.abs(events["true_beam_PDG"]) == 211)
+        events["matched_muon"] = (np.abs(events["true_beam_PDG"]) == 13)
+        events["misid_beam"] = events["misid_pion"] | events["misid_proton"] | events["misid_muon"] | events["misid_electron_gamma"]
+
         # Momentum cut on true charged pions, i.e., pions with momentum < cut momentum are indistinguishable from say
         # protons and other charged particles. set to 0.125
         valid_piplus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.1, pdg_select=211)
         valid_piminus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.1, pdg_select=-211)
 
         # Pion elastic
-        events["pion_elastic"] = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+elastic")
+        events["pion_elastic"] = ((events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+elastic") &
+                                  ~events["misid_beam"])
 
         # Pion In-elastic
         events["pion_inelastic"] = pion_inelastic
@@ -77,11 +88,10 @@ class TrueProcess:
 
         proc_mask = np.zeros(len(events)).astype(bool)
         for proc in self.get_process_list_simple():
-            if proc == 'other': continue
+            if proc == 'simple_other': continue
             proc_mask |= ak.to_numpy(events[proc])
 
-        proc_mask |= ~ak.to_numpy(pion_inelastic)
-        events["other"] = ~proc_mask
+        events["simple_other"] = ~proc_mask
 
         return events
 
@@ -98,11 +108,12 @@ class TrueProcess:
 
     @staticmethod
     def get_process_list_simple():
-        return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "all_pion_production", "other"]
+        return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "pi0_production",
+                "daughter_zero_pi0_bkgd", "misid_beam", "simple_other"]
 
     @staticmethod
     def get_daughter_bkgd_list():
-        return ["single_charge_exchange", "daughter_one_pi0_bkgd", "daughter_two_pi0_bkgd", "daughter_other_bkgd"]
+        return ["single_charge_exchange", "daughter_zero_pi0_bkgd", "daughter_one_pi0_bkgd", "daughter_n_pi0_bkgd", "daughter_other_bkgd"]
 
     def get_reco_particle_counts(self, events):
             for pdg in self.pdg_dict:
@@ -168,8 +179,7 @@ class TrueProcess:
 
     @staticmethod
     def pi0_production(events, piplus, piminus):
-        return (piminus == 0) & (piplus == 0) & (events["true_daughter_nPi0"] > 1) & \
-               ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
+        return (piminus == 0) & (piplus == 0) & (events["true_daughter_nPi0"] > 1)
 
     @staticmethod
     def pi0_and_pion(events, piplus, piminus):
@@ -203,3 +213,5 @@ class TrueProcess:
     @staticmethod
     def daughter_charged_pion_prod(events, piplus, piminus):
         return ((piminus > 0) & (piplus > 0)) & (events["true_daughter_nPi0"] == 0)
+
+

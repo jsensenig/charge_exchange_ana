@@ -27,8 +27,8 @@ class TrueProcess:
         events["misid_proton"] = ~beam_matched & (events["true_beam_PDG"] == 2212)
         events["misid_muon"] = ~beam_matched & (np.abs(events["true_beam_PDG"]) == 13)
         events["misid_electron_gamma"] = ~beam_matched & ((np.abs(events["true_beam_PDG"]) == 11) | (events["true_beam_PDG"]) == 22)
-        events["matched_pion"] = (np.abs(events["true_beam_PDG"]) == 211)
-        events["matched_muon"] = (np.abs(events["true_beam_PDG"]) == 13)
+        events["matched_pion"] = beam_matched & (np.abs(events["true_beam_PDG"]) == 211)
+        events["matched_muon"] = beam_matched & (np.abs(events["true_beam_PDG"]) == 13)
         events["misid_beam"] = events["misid_pion"] | events["misid_proton"] | events["misid_muon"] | events["misid_electron_gamma"]
 
         # Momentum cut on true charged pions, i.e., pions with momentum < cut momentum are indistinguishable from say

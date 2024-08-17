@@ -36,8 +36,15 @@ code2prettystring = {-11:  '$e^+$',
                10015: 'Daughter >1$\\pi^{0}$ Bkgd',
                10016: "Daughter Other Bkgd",
                10017: 'Daughter 0$\\pi^{0}$ Bkgd',
-               10018: 'MisIs Beam',
-               10019: 'Other'}
+               10018: 'MisId Beam',
+               10019: 'Other',
+               10020: 'MisId $\\pi^{\\pm}$',
+               10021: 'MisId $p$',
+               10022: 'MisId $\\mu^{+}$',
+               10023: 'MisId $e$/$\\gamma$',
+               10024: '$\\pi^{\\pm}$',
+               10025: '$\\mu^{+}$',
+               10026: 'Other'}
 
 code2string = {-11:  '$e^+$',
                 11:   'e^-$',
@@ -69,7 +76,14 @@ code2string = {-11:  '$e^+$',
                10016: "daughter_other_bkgd",
                10017: 'daughter_zero_pi0_bkgd',
                10018: 'misid_beam',
-               10019: 'simple_other'}
+               10019: 'simple_other',
+               10020: 'misid_pion',
+               10021: 'misid_proton',
+               10022: 'misid_muon',
+               10023: 'misid_electron_gamma',
+               10024: 'matched_pion',
+               10025: 'matched_muon',
+               10026: 'beam_other',}
 
 string2code = {code2string[-11]: -11,
                code2string[11]: 11,
@@ -101,7 +115,14 @@ string2code = {code2string[-11]: -11,
                code2string[10016]: 10016,
                code2string[10017]: 10017,
                code2string[10018]: 10018,
-               code2string[10019]: 10019}
+               code2string[10019]: 10019,
+               code2string[10020]: 10020,
+               code2string[10021]: 10021,
+               code2string[10022]: 10022,
+               code2string[10023]: 10023,
+               code2string[10024]: 10024,
+               code2string[10025]: 10025,
+               code2string[10026]: 10026}
 
 # matplotlib colors
 colors = {-11:  'indianred',  # red
@@ -132,7 +153,14 @@ colors = {-11:  'indianred',  # red
         10016: 'olivedrab',
         10017: 'seagreen',
         10018: 'darkmagenta',
-        10019: 'olivedrab'}
+        10019: 'olivedrab',
+        10020: 'indianred',
+        10021: 'paleturquoise',
+        10022: 'goldenrod',
+        10023: 'olivedrab',
+        10024: 'royalblue',
+        10025: 'peru',
+        10026: 'olivedrab'}
 
 # ROOT color palette: https://root-forum.cern.ch/t/what-is-your-best-way-to-increment-colors/13809/2
 # colors = {-11:  46,  # red

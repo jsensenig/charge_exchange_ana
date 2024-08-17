@@ -96,6 +96,13 @@ class TrueProcess:
 
         events["simple_other"] = ~proc_mask
 
+        proc_mask = np.zeros(len(events)).astype(bool)
+        for proc in self.get_beam_particle_list():
+            if proc == 'beam_other': continue
+            proc_mask |= ak.to_numpy(events[proc])
+
+        events["beam_other"] = ~proc_mask
+
         return events
 
     '''
@@ -106,7 +113,7 @@ class TrueProcess:
     def get_process_list():
         # return ["single_charge_exchange", "double_charge_exchange", "absorption",
         #         "quasi_elastic", "pion_production", "pi0_production", "pion_and_pi0"]
-        return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "other",
+        return ["single_charge_exchange", "double_charge_exchange", "absorption", "quasi_elastic", "simple_other",
                 "pion_production", "pi0_production", "mctruth_charged_neutral_pion", "mcreco_charged_neutral_pion"]
 
     @staticmethod
@@ -117,6 +124,11 @@ class TrueProcess:
     @staticmethod
     def get_daughter_bkgd_list():
         return ["single_charge_exchange", "daughter_zero_pi0_bkgd", "daughter_one_pi0_bkgd", "daughter_n_pi0_bkgd", "daughter_other_bkgd"]
+
+    @staticmethod
+    def get_beam_particle_list():
+        return ["misid_pion", "misid_proton", "misid_muon", "misid_electron_gamma", "matched_pion",
+                "matched_muon", "beam_other"]
 
     def get_reco_particle_counts(self, events):
             for pdg in self.pdg_dict:

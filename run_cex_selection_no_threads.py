@@ -126,6 +126,8 @@ def get_event_process(events, plist):
         proc_list = true_process.get_process_list_simple()
     elif plist == "daughter":
         proc_list = true_process.get_daughter_bkgd_list()
+    elif plist == "beam":
+        proc_list = true_process.get_beam_particle_list()
     else:
         return None
 
@@ -144,15 +146,16 @@ def save_unfold_variables(results, beam_var, pi0_var, file_name, is_mc):
     # Beam variables should be pi+
     print("Getting beam cross section variables!")
     beam_var_dict = beam_var.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=beam_mask)
-    beam_var_dict['event_interation_process'] = get_event_process(events=beam_events, plist="all") if is_mc else None
-    beam_var_dict['event_interation_process_simple'] = get_event_process(events=beam_events, plist="simple") if is_mc else None
+    beam_var_dict['event_interaction_process'] = get_event_process(events=beam_events, plist="all") if is_mc else None
+    beam_var_dict['event_interaction_process_simple'] = get_event_process(events=beam_events, plist="simple") if is_mc else None
+    beam_var_dict['event_interaction_process_beam'] = get_event_process(events=beam_events, plist="beam") if is_mc else None
 
     # Pi0 variables should be from CeX
     print("Getting pi0 cross section variables!")
     pi0_var_dict = pi0_var.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
-    pi0_var_dict['event_interation_process'] = get_event_process(events=events, plist="all") if is_mc else None
-    pi0_var_dict['event_interation_process_simple'] = get_event_process(events=events, plist="simple") if is_mc else None
-    pi0_var_dict['daughter_interation_process'] = get_event_process(events=events, plist="daughter") if is_mc else None
+    pi0_var_dict['event_interaction_process'] = get_event_process(events=events, plist="all") if is_mc else None
+    pi0_var_dict['event_interaction_process_simple'] = get_event_process(events=events, plist="simple") if is_mc else None
+    pi0_var_dict['daughter_interaction_process'] = get_event_process(events=events, plist="daughter") if is_mc else None
 
     print("Saving variables to file")
     with open(file_name, 'wb') as f:

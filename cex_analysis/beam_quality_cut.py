@@ -93,7 +93,7 @@ class BeamQualityCut(EventSelectionBase):
         # Shift the start to the mean and normalize by the RMS for each dimension
         events["beam_dx"] = (events[self.local_config["beam_startX"]] - beam_startx_mean) / beam_startx_sigma
         events["beam_dy"] = (events[self.local_config["beam_startY"]] - beam_starty_mean) / beam_starty_sigma
-        events["beam_dz"] = (events[self.local_config["beam_startZ"]] - beam_startz_mean) / beam_startz_sigma
+        events["beam_dz"] = ak.to_numpy((events[self.local_config["beam_startZ"]] - beam_startz_mean) / beam_startz_sigma)
 
         # Convert to numpy array with shape (2,N) where N is number of events
         beam_xy = np.vstack((ak.to_numpy(events["beam_dx"]), ak.to_numpy(events["beam_dy"]))).T
@@ -120,7 +120,11 @@ class BeamQualityCut(EventSelectionBase):
         selected_mask_old = events[cut_variable]
         events = self.beam_to_tpc_cut(events)
 
-        selected_mask = (events["beam_dz"] > self.local_config["beam_start_min_dz"]) & \
+        # Pandora cuts: check if it's a beam type (13) and has >0 calo hits
+        selected_mask = events["reco_beam_type"] == 13
+        selected_mask &= ak.count(events["reco_beam_calo_wire"], axis=1) > 0
+
+        selected_mask &= (events["beam_dz"] > self.local_config["beam_start_min_dz"]) & \
                         (events["beam_dz"] < self.local_config["beam_start_max_dz"])
         selected_mask &= (events["beam_dxy"] > self.local_config["beam_start_min_dxy"]) & \
                          (events["beam_dxy"] < self.local_config["beam_start_max_dxy"])

@@ -1,9 +1,9 @@
 from timeit import default_timer as timer
 from cex_analysis.event_handler import EventHandler
 import cex_analysis.efficiency_data as eff_data
-from unfolding.unfolding_interface import BeamPionVariables, Pi0Variables
 from unfolding.unfold_events import Unfold
-
+from cex_analysis.true_process import TrueProcess
+from cex_analysis.plot_utils import string2code
 
 import numpy as np
 import uproot
@@ -116,17 +116,29 @@ def save_results(results, is_mc):
     h5_file.close()
 
 
-def save_unfold_variables(results, beam_var, pi0_var, file_name):
+def get_event_process(events):
+    true_process = TrueProcess()
+    event_int_proc = np.zeros(len(events))
+    for proc in true_process.get_process_list():
+        proc_mask = events[proc]
+        event_int_proc[proc_mask] = string2code[proc]
+
+    return event_int_proc
+
+
+def save_unfold_variables(results, beam_var, pi0_var, file_name, is_mc):
 
     hist_map, event_mask, beam_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
 
     # Beam variables should be pi+
     print("Getting beam cross section variables!")
     beam_var_dict = beam_var.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=beam_mask)
+    beam_var_dict['event_interation_process'] = get_event_process(events=beam_events) if is_mc else None
 
     # Pi0 variables should be from CeX
     print("Getting pi0 cross section variables!")
     pi0_var_dict = pi0_var.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
+    pi0_var_dict['event_interation_process'] = get_event_process(events=events) if is_mc else None
 
     print("Saving variables to file")
     with open(file_name, 'wb') as f:
@@ -230,7 +242,7 @@ if __name__ == "__main__":
     start = timer()
     results = start_analysis(file_list, config, branches)
 
-    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold, file_name="test_vars.pkl")
+    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold, file_name="test_vars.pkl", is_mc=config["is_mc"])
     save_results(results=results, is_mc=config["is_mc"])
 
     end = timer()

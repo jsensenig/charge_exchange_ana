@@ -137,7 +137,7 @@ class TrueProcess:
     @staticmethod
     def quasi_elastic(events, piplus, piminus):
         return (piminus == 0) & (piplus == 1) & (events["true_daughter_nPi0"] == 0) & \
-               ((events["true_daughter_nProton"] > 0) | (events["true_daughter_nNeutron"] > 0))
+               (events["true_daughter_nProton"] > 0)
 
     @staticmethod
     def pion_production(events, piplus, piminus):
@@ -147,7 +147,13 @@ class TrueProcess:
 
     @staticmethod
     def pion_production_v2(events, piplus, piminus):
-        return (piminus + piplus + (events["true_daughter_nPi0"] == 0)) > 1
+        # return (piminus + piplus + (events["true_daughter_nPi0"] == 0)) > 1
+        return ( (((piminus > 0) | (piplus > 0)) & events["true_daughter_nPi0"] > 0) |
+                 ((piminus == 0) & (piplus == 0) & events["true_daughter_nPi0"] > 1) |
+                 ((piminus > 1) & (piplus == 0)) |
+                 ((piminus == 0) & (piplus > 1)) |
+                 ((piminus == 1) & (piplus == 1))
+              )
 
     @staticmethod
     def pi0_production(events, piplus, piminus):

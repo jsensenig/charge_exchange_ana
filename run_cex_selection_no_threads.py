@@ -116,10 +116,11 @@ def save_results(results, is_mc):
     h5_file.close()
 
 
-def get_event_process(events):
+def get_event_process(events, simple):
     true_process = TrueProcess()
     event_int_proc = np.zeros(len(events))
-    for proc in true_process.get_process_list():
+    proc_list = true_process.get_process_list_simple() if simple else true_process.get_process_list()
+    for proc in proc_list:
         proc_mask = events[proc]
         event_int_proc[proc_mask] = string2code[proc]
 
@@ -133,12 +134,14 @@ def save_unfold_variables(results, beam_var, pi0_var, file_name, is_mc):
     # Beam variables should be pi+
     print("Getting beam cross section variables!")
     beam_var_dict = beam_var.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=beam_mask)
-    beam_var_dict['event_interation_process'] = get_event_process(events=beam_events) if is_mc else None
+    beam_var_dict['event_interation_process'] = get_event_process(events=beam_events, simple=False) if is_mc else None
+    beam_var_dict['event_interation_process_simple'] = get_event_process(events=beam_events, simple=True) if is_mc else None
 
     # Pi0 variables should be from CeX
     print("Getting pi0 cross section variables!")
     pi0_var_dict = pi0_var.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
-    pi0_var_dict['event_interation_process'] = get_event_process(events=events) if is_mc else None
+    pi0_var_dict['event_interation_process'] = get_event_process(events=events, simple=False) if is_mc else None
+    pi0_var_dict['event_interation_process_simple'] = get_event_process(events=events, simple=True) if is_mc else None
 
     print("Saving variables to file")
     with open(file_name, 'wb') as f:

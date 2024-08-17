@@ -110,6 +110,10 @@ class BeamQualityCut(EventSelectionBase):
         # The variable on which we cut
         cut_variable = self.local_config["cut_variable"]
 
+        # Add the beam-to-TPC mathcing variables
+        events = self.beam_direction(events=events)
+        events = self.beam_to_tpc_cut(events)
+
         # Plot the variable before making cut
         if not optimizing:
             self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdg], precut=True, hists=hists)
@@ -118,20 +122,18 @@ class BeamQualityCut(EventSelectionBase):
         # also these are already at the event level so it's okay as is
         # The first is the old cut and second the updated one
         selected_mask_old = events[cut_variable]
-        events = self.beam_to_tpc_cut(events)
 
         # Pandora cuts: check if it's a beam type (13) and has >0 calo hits
-        selected_mask = events["reco_beam_type"] == 13
-        selected_mask &= ak.count(events["reco_beam_calo_wire"], axis=1) > 0
+        selected_mask = ak.to_numpy(events["reco_beam_type"] == 13)
+        selected_mask &= ak.to_numpy(ak.count(events["reco_beam_calo_wire"], axis=1) > 0)
 
-        selected_mask &= (events["beam_dz"] > self.local_config["beam_start_min_dz"]) & \
-                        (events["beam_dz"] < self.local_config["beam_start_max_dz"])
-        selected_mask &= (events["beam_dxy"] > self.local_config["beam_start_min_dxy"]) & \
-                         (events["beam_dxy"] < self.local_config["beam_start_max_dxy"])
+        selected_mask &= (ak.to_numpy(events["beam_dz"]) > self.local_config["beam_start_min_dz"]) & \
+                        (ak.to_numpy(events["beam_dz"]) < self.local_config["beam_start_max_dz"])
+        selected_mask &= (ak.to_numpy(events["beam_dxy"]) > self.local_config["beam_start_min_dxy"]) & \
+                         (ak.to_numpy(events["beam_dxy"]) < self.local_config["beam_start_max_dxy"])
 
-        events = self.beam_direction(events=events)
-        selected_mask &= (events["beam_direction"] > self.local_config["min_angle"]) & \
-                         (events["beam_direction"] < self.local_config["max_angle"])
+        selected_mask &= (ak.to_numpy(events["beam_direction"]) > self.local_config["min_angle"]) & \
+                         (ak.to_numpy(events["beam_direction"]) < self.local_config["max_angle"])
 
         print("Selected new/old", np.sum(selected_mask), " ", np.sum(selected_mask_old))
 

@@ -1,0 +1,20 @@
+{
+  "UpstreamEnergyLoss": {
+    "correction_var": "beam_inst_P",
+    "eloss_slope": 0.583,
+    "eloss_intercept": -1160
+  },
+  "BeamMomentumReweight": {
+    "correction_var": "beam_inst_P",
+    "mc_beam_mom_mu": 0,
+    "mc_beam_mom_sigma": 4,
+    "data_beam_mom_mu": 0,
+    "data_beam_mom_sigma": 4
+  },
+  "Pi0Energy": {
+
+  },
+  "Pi0Angle": {
+
+  }
+}

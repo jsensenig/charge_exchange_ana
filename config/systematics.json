@@ -1,0 +1,28 @@
+{
+  "Statistical": {
+
+  },
+  "GeantCrossSection": {
+
+  },
+  "UpstreamEnergyLoss": {
+    "correction_var": "beam_inst_P",
+    "eloss_mu": 0.0,
+    "eloss_sigma": 4.0
+  },
+  "BeamMomentum": {
+    "correction_var": "beam_inst_P",
+    "beam_mom_mu": 0,
+    "beam_mom_sigma": 4
+  },
+  "TrackLength": {
+    "length_mu": 0.0,
+    "length_sigma": 2.0
+  },
+  "Pi0Energy": {
+
+  },
+  "Pi0Angle": {
+
+  }
+}

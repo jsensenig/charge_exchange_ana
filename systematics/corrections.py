@@ -23,6 +23,13 @@ class CorrectionBase:
         """
         pass
 
+    @abstractmethod
+    def get_correction_variable(self):
+        """
+        Method to access the variable
+        """
+        pass
+
     @staticmethod
     def configure(config_file):
         """
@@ -37,7 +44,7 @@ class CorrectionBase:
 class UpstreamEnergyLoss(CorrectionBase):
     """
     Uncertainty from beam energy loss upstream of the active volume.
-    Potentially 4MeV uncertainty, flucuated and propagated to the xsec.
+    Potentially 4MeV uncertainty, fluctuated and propagated to the xsec.
      """
 
     def __init__(self, config):
@@ -50,6 +57,9 @@ class UpstreamEnergyLoss(CorrectionBase):
     def apply(self, to_correct):
         energy_loss = self.slope * to_correct + self.intercept
         return energy_loss
+
+    def get_correction_variable(self):
+        return self.local_config["correction_var"]
 
 
 class BeamMomentumReweight(CorrectionBase):
@@ -78,6 +88,9 @@ class BeamMomentumReweight(CorrectionBase):
         # smeared = events["beam_momentum"] + np.random.normal(loc=self.beam_mu, scale=self.beam_sigma, size=len(events))
         return event_weight
 
+    def get_correction_variable(self):
+        return self.local_config["correction_var"]
+
 
 class MuonFracReweight(CorrectionBase):
     """
@@ -96,6 +109,9 @@ class MuonFracReweight(CorrectionBase):
         weights[to_correct[self.correction_var]] *= self.muon_frac_weight
         return weights
 
+    def get_correction_variable(self):
+        return self.local_config["correction_var"]
+
 
 class Pi0Energy(CorrectionBase):
     """
@@ -110,15 +126,22 @@ class Pi0Energy(CorrectionBase):
     def apply(self, to_correct):
         pass
 
-    class Pi0Angle(CorrectionBase):
-        """
-        Uncertainty from beam energy loss upstream of the active volume.
-        Potentially 4MeV uncertainty, flucuated and propagated to the xsec.
-         """
+    def get_correction_variable(self):
+        return self.local_config["correction_var"]
 
-        def __init__(self, config):
-            super().__init__(config=config)
-            self.local_config = self.config["Pi0Angle"]
 
-        def apply(self, to_correct):
-            pass
+class Pi0Angle(CorrectionBase):
+    """
+    Uncertainty from beam energy loss upstream of the active volume.
+    Potentially 4MeV uncertainty, fluctuated and propagated to the xsec.
+     """
+
+    def __init__(self, config):
+        super().__init__(config=config)
+        self.local_config = self.config["Pi0Angle"]
+
+    def apply(self, to_correct):
+        pass
+
+    def get_correction_variable(self):
+        return self.local_config["correction_var"]

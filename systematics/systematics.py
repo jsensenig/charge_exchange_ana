@@ -23,6 +23,13 @@ class SystematicsBase:
         """
         pass
 
+    @abstractmethod
+    def get_systematic_variable(self):
+        """
+        Method to access the variable
+        """
+        pass
+
     @staticmethod
     def configure(config_file):
         """
@@ -37,7 +44,7 @@ class SystematicsBase:
 class Statistical(SystematicsBase):
     """
     To estimate the statistical uncertainty on the cross-section we can
-    Piosson flucuate both the response matrix R and efficiency. This is
+    Poisson fluctuate both the response matrix R and efficiency. This is
     done by weighting event counts in each bin and the missed events.
     """
     def __init__(self, config):
@@ -46,6 +53,9 @@ class Statistical(SystematicsBase):
 
     def apply(self, events):
         pass
+
+    def get_systematic_variable(self):
+        return self.local_config["correction_var"]
 
 
 class GeantCrossSection(SystematicsBase):
@@ -60,11 +70,14 @@ class GeantCrossSection(SystematicsBase):
     def apply(self, events):
         pass
 
+    def get_systematic_variable(self):
+        return self.local_config["correction_var"]
+
 
 class UpstreamEnergyLoss(SystematicsBase):
     """
     Uncertainty from beam energy loss upstream of the active volume.
-    Potentially 4MeV uncertainty, flucuated and propagated to the xsec.
+    Potentially 4MeV uncertainty, fluctuated and propagated to the xsec.
      """
 
     def __init__(self, config):
@@ -80,6 +93,9 @@ class UpstreamEnergyLoss(SystematicsBase):
         # energy_shift = self.slope * syst_var + self.intercept
         # return syst_var + energy_shift
         return syst_var + np.random.normal(loc=self.mu, scale=self.sigma, size=len(syst_var))
+
+    def get_systematic_variable(self):
+        return self.local_config["correction_var"]
 
 
 class BeamMomentum(SystematicsBase):
@@ -99,6 +115,9 @@ class BeamMomentum(SystematicsBase):
         # smeared = events["beam_momentum"] + np.random.normal(loc=self.beam_mu, scale=self.beam_sigma, size=len(events))
         return syst_var + np.random.normal(loc=0, scale=5, size=len(syst_var))
 
+    def get_systematic_variable(self):
+        return self.local_config["correction_var"]
+
 
 class TrackLength(SystematicsBase):
     """
@@ -117,11 +136,14 @@ class TrackLength(SystematicsBase):
     def apply(self, syst_var):
         return syst_var + np.random.normal(loc=self.mu, scale=self.sigma, size=len(syst_var))
 
+    def get_systematic_variable(self):
+        return self.local_config["correction_var"]
+
 
 class Pi0Energy(SystematicsBase):
     """
     Uncertainty from beam energy loss upstream of the active volume.
-    Potentially 4MeV uncertainty, flucuated and propagated to the xsec.
+    Potentially 4MeV uncertainty, fluctuated and propagated to the xsec.
      """
 
     def __init__(self, config):
@@ -131,15 +153,22 @@ class Pi0Energy(SystematicsBase):
     def apply(self, events):
         pass
 
-    class Pi0Angle(SystematicsBase):
-        """
-        Uncertainty from beam energy loss upstream of the active volume.
-        Potentially 4MeV uncertainty, flucuated and propagated to the xsec.
-         """
+    def get_systematic_variable(self):
+        return self.local_config["correction_var"]
 
-        def __init__(self, config):
-            super().__init__(config=config)
-            self.local_config = self.config["Pi0Angley"]
 
-        def apply(self, events):
-            pass
+class Pi0Angle(SystematicsBase):
+    """
+    Uncertainty from beam energy loss upstream of the active volume.
+    Potentially 4MeV uncertainty, fluctuated and propagated to the xsec.
+     """
+
+    def __init__(self, config):
+        super().__init__(config=config)
+        self.local_config = self.config["Pi0Angle"]
+
+    def apply(self, events):
+        pass
+
+    def get_systematic_variable(self):
+        return self.local_config["correction_var"]

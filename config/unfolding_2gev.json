@@ -20,7 +20,7 @@
   "correction_list": ["BeamMomentumReweight", "UpstreamEnergyLoss"],
   "systematic_list": ["BeamMomentum", "TrackLength"],
   "correction_config": "config/corrections.json",
-  "sysstematic_config": "config/systematics.json",
-  "figure_path": "figs",
-  "interface_config": "config/var_interface_2gev.json"
+  "systematic_config": "config/systematics.json",
+  "interface_config": "config/var_interface_2gev.json",
+  "figure_path": "figs"
 }

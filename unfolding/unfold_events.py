@@ -42,7 +42,6 @@ class Unfold:
         if not self.is_training:
             self.load_response(response_file=response_file)
 
-
     @staticmethod
     def compile_cpp_helpers():
 

@@ -15,7 +15,7 @@ from cex_analysis.plot_utils import bin_width_np, bin_centers_np
 
 class XSecVariablesBase:
 
-    def __init__(self, is_training):
+    def __init__(self, config, is_training):
         self.is_training = is_training
         self.xsec_vars = {}
 
@@ -26,14 +26,35 @@ class XSecVariablesBase:
 
         self.true_process = TrueProcess()
 
+        self.apply_correction = config["apply_correction"]
+        self.correction_list = config["correction_list"]
+        self.apply_systematic = config["apply_systematic"]
+        self.systematic_list = config["systematic_list"]
+
+        # Load the systematic and corrections
+        self.load_syst_classes(config=config, apply_corrections=self.apply_correction,
+                               apply_systematics=self.apply_systematic)
+
     @abstractmethod
     def get_xsec_variable(self, event_record, reco_mask, apply_cuts=True):
         """
         Get the specified cross-section's variable(s).
         """
         pass
+    
+    def apply_corrections_and_systematics(self, events):
 
-    def load_classes(self, config, apply_corrections, apply_systematics):
+        if self.apply_correction:
+            for corr in self.correction_list:
+                correction_var = self.correction_classes[corr].get_correction_variable()
+                self.xsec_vars[corr] = self.corrections[corr].apply(to_correct=events[correction_var])
+
+        if self.apply_systematic:
+            for syst in self.systematic_list:
+                syst_var = self.systematics[syst].get_systematic_variable()
+                self.systematics[syst].apply(syst_var=events[syst_var])
+
+    def load_syst_classes(self, config, apply_corrections, apply_systematics):
 
         if apply_corrections:
             for corr in self.correction_classes:
@@ -61,7 +82,6 @@ class XSecVariablesBase:
 
         for proc in proc_list:
             proc_mask = events[proc]
-            # print("Proc:", proc, "Num:", np.count_nonzero(proc_mask))
             event_int_proc[proc_mask] = string2code[proc]
 
         return event_int_proc
@@ -79,7 +99,7 @@ class XSecVariablesBase:
 
 class BeamPionVariables(XSecVariablesBase):
     def __init__(self, config_file, is_training, energy_slices):
-        super().__init__(is_training=is_training)
+        super().__init__(config=config_file, is_training=is_training)
 
         self.config = self.configure(config_file=config_file["interface_config"])
         self.signal_proc = self.config["signal_proc"]
@@ -87,29 +107,13 @@ class BeamPionVariables(XSecVariablesBase):
         self.pip_mass = self.config["pip_mass"] # pip_mass = 0.13957039  # pi+/- [GeV/c]
         self.eslice_bin_array = energy_slices #self.config["eslice_bin_edges"] # FIXME inherit this from xsec
 
+        self.beam_energy = self.config["beam_energy"]
+
         self.bethe_bloch = BetheBloch(mass=139.57, charge=1)
 
         # This is the dict that will hold the data being unfolded and used to calculate cross-section.
         # This is a very small subset of the original data
         self.xsec_vars = {}
-
-        self.apply_correction = config_file["apply_correction"]
-        self.correction_list =  config_file["correction_list"]
-        self.apply_systematic = config_file["apply_systematic"]
-        self.systematic_list =  config_file["systematic_list"]
-
-        # Load the systematic and corrections
-        self.load_classes(config=config_file, apply_corrections=self.apply_correction, apply_systematics=self.apply_systematic)
-
-    def apply_corrections_and_systematics(self, events):
-
-        if self.apply_correction:
-            for corr in self.correction_list:
-                self.xsec_vars[corr] = self.corrections[corr].apply(to_correct=events[self.config[corr]["correction_var"]])
-
-        if self.apply_systematic:
-            for corr in self.systematic_list:
-                self.systematics[corr].apply(syst_var=events[self.config[corr]["systematic_var"]])
 
     def get_xsec_variable(self, event_record, reco_int_mask, apply_cuts=True):
         self.xsec_vars["true_complete_slice_mask"] = np.ones(len(event_record)).astype(bool) if self.is_training else None
@@ -278,8 +282,6 @@ class BeamPionVariables(XSecVariablesBase):
         double ff_energy_reco = beam_inst_KE*1000 - Eloss;//12.74;
         double initialE_reco = bb.KEAtLength(ff_energy_reco, trackLenAccum[0]);
         """
-        beame = 1. # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
-
         true_initial_energy = None
         if self.is_training:
             max_pt = ak.max(event_record["true_beam_traj_Z"][event_record["true_beam_traj_Z"] < self.beam_pip_zlow], axis=1)
@@ -287,8 +289,9 @@ class BeamPionVariables(XSecVariablesBase):
             true_initial_energy = ak.to_numpy(event_record["true_beam_traj_KE"][ff_mask][:, 0])
 
         # Note the beam momentum is converted GeV -> MeV
+        # beam inst sim wrong, 2GeV = 1Gev so shift it by 1 for 2GeV and 0 for 1GeV
         energy_smear = 0.
-        if beame == 1 and self.is_training:
+        if self.beam_energy == 2 and self.is_training:
             energy_smear = 1. + np.random.normal(0,0.1,len(event_record["beam_inst_P"]))
 
         reco_ff_energy = np.sqrt(np.square(self.pip_mass) + np.square(ak.to_numpy(event_record["beam_inst_P"] + energy_smear)*1.e3)) \
@@ -399,18 +402,10 @@ class BeamPionVariables(XSecVariablesBase):
 
 class Pi0Variables(XSecVariablesBase):
     def __init__(self, config_file, is_training, energy_slices=None):
-        super().__init__(is_training=is_training)
+        super().__init__(config=config_file, is_training=is_training)
 
         self.config = self.configure(config_file=config_file["interface_config"])
         self.signal_proc = self.config["signal_proc"]
-
-        self.apply_correction = config_file["apply_correction"]
-        self.correction_list =  config_file["correction_list"]
-        self.apply_systematic = config_file["apply_systematic"]
-        self.systematic_list =  config_file["systematic_list"]
-
-        # Load the systematic and corrections
-        self.load_classes(config=config_file, apply_corrections=self.apply_correction, apply_systematics=self.apply_systematic)
 
     def get_xsec_variable(self, event_record, reco_int_mask, apply_cuts=True):
 
@@ -419,6 +414,7 @@ class Pi0Variables(XSecVariablesBase):
             self.xsec_vars["pi0_all_process"] = self.get_event_process(events=event_record, proc_list_name='all')
             self.xsec_vars["pi0_simple_process"] = self.get_event_process(events=event_record, proc_list_name='simple')
             self.xsec_vars["pi0_daughter_process"] = self.get_event_process(events=event_record, proc_list_name='daughter')
+            self.apply_corrections_and_systematics(events=event_record)
 
         true_pi0_energy, reco_pi0_energy = self.make_pi0_energy(event_record=event_record, reco_mask=reco_int_mask)
         self.xsec_vars["true_pi0_energy"] = true_pi0_energy

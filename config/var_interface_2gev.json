@@ -1,0 +1,6 @@
+{
+  "signal_proc": "single_charge_exchange",
+  "beam_pip_zlow": 0,
+  "beam_pip_zhigh": 220,
+  "pip_mass": 139.57
+}

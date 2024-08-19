@@ -89,7 +89,7 @@ class MuonFracReweight(CorrectionBase):
         super().__init__(config=config)
         self.local_config = self.config["MuonFracReweight"]
         self.correction_var = self.local_config["correction_var"]
-        self.muon_frac_weight = self.config["muon_frac_weight"]
+        self.muon_frac_weight = self.local_config["muon_frac_weight"]
 
     def apply(self, to_correct):
         weights = np.ones(len(to_correct)).astype(bool)
@@ -118,7 +118,7 @@ class Pi0Energy(CorrectionBase):
 
         def __init__(self, config):
             super().__init__(config=config)
-            self.local_config = self.config["Pi0Angley"]
+            self.local_config = self.config["Pi0Angle"]
 
         def apply(self, to_correct):
             pass

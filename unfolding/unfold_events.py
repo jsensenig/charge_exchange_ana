@@ -33,7 +33,7 @@ class Unfold:
 
         # Get the classes to interface the data to the unfolding
         var_cls = {cls.__name__: cls for cls in XSecVariablesBase.__subclasses__()}
-        self.vars = var_cls[self.config["xsec_vars"]](config_file=self.config["interface_config"],
+        self.vars = var_cls[self.config["xsec_vars"]](config_file=self.config,
                                                       is_training=self.is_training,
                                                       energy_slices=self.reco_bin_array[0][1:-1])
         self.beam_vars = self.config["xsec_vars"] == "BeamPionVariables"

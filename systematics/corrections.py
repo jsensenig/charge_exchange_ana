@@ -79,10 +79,28 @@ class BeamMomentumReweight(CorrectionBase):
         return event_weight
 
 
+class MuonFracReweight(CorrectionBase):
+    """
+    Uncertainty from beam energy loss upstream of the active volume.
+    Potentially 4MeV uncertainty, fluctuates and propagated to the xsec.
+     """
+
+    def __init__(self, config):
+        super().__init__(config=config)
+        self.local_config = self.config["MuonFracReweight"]
+        self.correction_var = self.local_config["correction_var"]
+        self.muon_frac_weight = self.config["muon_frac_weight"]
+
+    def apply(self, to_correct):
+        weights = np.ones(len(to_correct)).astype(bool)
+        weights[to_correct[self.correction_var]] *= self.muon_frac_weight
+        return weights
+
+
 class Pi0Energy(CorrectionBase):
     """
     Uncertainty from beam energy loss upstream of the active volume.
-    Potentially 4MeV uncertainty, flucuated and propagated to the xsec.
+    Potentially 4MeV uncertainty, fluctuated and propagated to the xsec.
      """
 
     def __init__(self, config):

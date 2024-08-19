@@ -5,8 +5,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import cross_section_utils as xsec_utils
-from cross_section.xsec_calculation import XSecTotal
+from cex_analysis.true_process import TrueProcess
+from cex_analysis.plot_utils import string2code
 from bethe_bloch_utils import BetheBloch
+from systematics.corrections import *
+from systematics.systematics import *
 from cex_analysis.plot_utils import bin_width_np, bin_centers_np
 
 
@@ -16,6 +19,13 @@ class XSecVariablesBase:
         self.is_training = is_training
         self.xsec_vars = {}
 
+        self.correction_classes = get_all_corrections()
+        self.syst_classes = get_all_systematics()
+        self.corrections = {}
+        self.systematics = {}
+
+        self.true_process = TrueProcess()
+
     @abstractmethod
     def get_xsec_variable(self, event_record, reco_mask, apply_cuts=True):
         """
@@ -23,13 +33,38 @@ class XSecVariablesBase:
         """
         pass
 
-    def mask_list(self, key, mask):
-        masked_list = []
-        for el, m in zip(self.xsec_vars[key], mask):
-            if not m: continue
-            masked_list.append(el)
+    def load_classes(self, config, apply_corrections, apply_systematics):
 
-        return masked_list
+        if apply_corrections:
+            for corr in self.correction_classes:
+                self.corrections[corr] = self.correction_classes[corr](config=config)
+
+        if apply_systematics:
+            for syst in self.syst_classes:
+                self.corrections[syst] = self.correction_classes[syst](config=config)
+
+    def get_event_process(self, events, proc_list_name):
+
+        event_int_proc = np.zeros(len(events))
+
+        if proc_list_name == "all":
+            proc_list = self.true_process.get_process_list()
+        elif proc_list_name == "simple":
+            proc_list = self.true_process.get_process_list_simple()
+        elif proc_list_name == "daughter":
+            proc_list = self.true_process.get_daughter_bkgd_list()
+        elif proc_list_name == "beam":
+            proc_list = self.true_process.get_beam_particle_list()
+        else:
+            print("Unknown process set:", proc_list_name)
+            raise ValueError
+
+        for proc in proc_list:
+            proc_mask = events[proc]
+            # print("Proc:", proc, "Num:", np.count_nonzero(proc_mask))
+            event_int_proc[proc_mask] = string2code[proc]
+
+        return event_int_proc
 
     @staticmethod
     def configure(config_file):
@@ -58,9 +93,33 @@ class BeamPionVariables(XSecVariablesBase):
         # This is a very small subset of the original data
         self.xsec_vars = {}
 
+        self.apply_correction = self.config["apply_correction"]
+        self.correction_list = self.config["correction_list"]
+        self.apply_systematic = self.config["apply_systematic"]
+        self.systematic_list = self.config["systematic_list"]
+
+        # Load the systematic and corrections
+        self.load_classes(config=config_file, apply_corrections=True, apply_systematics=True)
+
+    def apply_corrections_and_systematics(self, events):
+
+        if self.apply_correction:
+            for corr in self.correction_list:
+                self.corrections[corr].apply(to_correct=events[self.config[corr]["correction_var"]])
+
+        if self.apply_systematic:
+            for corr in self.systematic_list:
+                self.systematics[corr].apply(syst_var=events[self.config[corr]["systematic_var"]])
+
     def get_xsec_variable(self, event_record, reco_int_mask, apply_cuts=True):
         self.xsec_vars["true_complete_slice_mask"] = np.ones(len(event_record)).astype(bool) if self.is_training else None
         self.xsec_vars["reco_complete_slice_mask"] = np.ones(len(event_record)).astype(bool)
+
+        # Classify events
+        if self.is_training:
+            self.xsec_vars["true_all_process"] = self.get_event_process(events=event_record, proc_list_name='all')
+            self.xsec_vars["true_simple_process"] = self.get_event_process(events=event_record, proc_list_name='simple')
+            self.xsec_vars["true_beam_process"] = self.get_event_process(events=event_record, proc_list_name='beam')
 
         # Calculate and add the requisite columns to the event record
         # Make masks for incomplete initial and through-going pions
@@ -344,6 +403,13 @@ class Pi0Variables(XSecVariablesBase):
         self.signal_proc = self.config["signal_proc"]
 
     def get_xsec_variable(self, event_record, reco_int_mask, apply_cuts=True):
+
+        # Classify events
+        if self.is_training:
+            self.xsec_vars["true_all_process"] = self.get_event_process(events=event_record, proc_list_name='all')
+            self.xsec_vars["true_simple_process"] = self.get_event_process(events=event_record, proc_list_name='simple')
+            self.xsec_vars["true_daughter_process"] = self.get_event_process(events=event_record, proc_list_name='daughter')
+
         true_pi0_energy, reco_pi0_energy = self.make_pi0_energy(event_record=event_record, reco_mask=reco_int_mask)
         self.xsec_vars["true_pi0_energy"] = true_pi0_energy
         self.xsec_vars["reco_pi0_energy"] = reco_pi0_energy

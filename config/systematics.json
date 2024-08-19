@@ -1,5 +1,6 @@
 {
   "Statistical": {
+    "correction_var": ""
 
   },
   "GeantCrossSection": {
@@ -16,6 +17,7 @@
     "beam_mom_sigma": 4
   },
   "TrackLength": {
+    "correction_var": "",
     "length_mu": 0.0,
     "length_sigma": 2.0
   },

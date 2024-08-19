@@ -11,10 +11,14 @@
     "data_beam_mom_mu": 0,
     "data_beam_mom_sigma": 4
   },
+  "MuonFracReweight": {
+    "correction_var": "matched_beam_muon",
+    "muon_frac_weight": 1.71
+  },
   "Pi0Energy": {
-
+    "correction_var": ""
   },
   "Pi0Angle": {
-
+    "correction_var": ""
   }
 }

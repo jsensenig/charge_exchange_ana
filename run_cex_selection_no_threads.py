@@ -116,29 +116,6 @@ def save_results(results, is_mc):
     h5_file.close()
 
 
-def get_event_process(events, plist):
-    true_process = TrueProcess()
-    event_int_proc = np.zeros(len(events))
-
-    if plist == "all":
-        proc_list = true_process.get_process_list()
-    elif plist == "simple":
-        proc_list = true_process.get_process_list_simple()
-    elif plist == "daughter":
-        proc_list = true_process.get_daughter_bkgd_list()
-    elif plist == "beam":
-        proc_list = true_process.get_beam_particle_list()
-    else:
-        return None
-
-    for proc in proc_list:
-        proc_mask = events[proc]
-        print("Proc:", proc, "Num:", np.count_nonzero(proc_mask))
-        event_int_proc[proc_mask] = string2code[proc]
-
-    return event_int_proc
-
-
 def save_unfold_variables(results, beam_var, pi0_var, file_name, is_mc):
 
     hist_map, event_mask, beam_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
@@ -146,16 +123,10 @@ def save_unfold_variables(results, beam_var, pi0_var, file_name, is_mc):
     # Beam variables should be pi+
     print("Getting beam cross section variables!")
     beam_var_dict = beam_var.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=beam_mask)
-    beam_var_dict['event_interaction_process'] = get_event_process(events=beam_events, plist="all") if is_mc else None
-    beam_var_dict['event_interaction_process_simple'] = get_event_process(events=beam_events, plist="simple") if is_mc else None
-    beam_var_dict['event_interaction_process_beam'] = get_event_process(events=beam_events, plist="beam") if is_mc else None
 
     # Pi0 variables should be from CeX
     print("Getting pi0 cross section variables!")
     pi0_var_dict = pi0_var.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
-    pi0_var_dict['event_interaction_process'] = get_event_process(events=events, plist="all") if is_mc else None
-    pi0_var_dict['event_interaction_process_simple'] = get_event_process(events=events, plist="simple") if is_mc else None
-    pi0_var_dict['daughter_interaction_process'] = get_event_process(events=events, plist="daughter") if is_mc else None
 
     print("Saving variables to file")
     with open(file_name, 'wb') as f:
@@ -193,10 +164,12 @@ def get_branches(is_mc):
                 "reco_beam_endX", "reco_beam_endY", "reco_beam_endZ", "reco_beam_trackEndDirX", "reco_beam_trackEndDirY",
                 "reco_beam_trackEndDirZ", "dEdX_truncated_mean", "reco_beam_calo_startDirX", "reco_beam_calo_startDirY",
                 "reco_beam_calo_startDirZ", "reco_beam_calo_endDirX", "reco_beam_calo_endDirY", "reco_beam_calo_endDirZ",
-                "reco_beam_calo_X", "reco_beam_calo_Y", "reco_beam_calo_Z", "reco_track_cumlen"]
+                "reco_beam_calo_X", "reco_beam_calo_Y", "reco_beam_calo_Z", "reco_track_cumlen", "reco_beam_calo_wire",
+                "reco_beam_type"]
 
     branches += ["beam_inst_C0", "beam_inst_valid", "beam_inst_trigger", "beam_inst_nMomenta", "beam_inst_nTracks", 
-                 "beam_inst_TOF", "beam_inst_P", "reco_reconstructable_beam_event"]
+                 "beam_inst_TOF", "beam_inst_P", "reco_reconstructable_beam_event", "reco_beam_true_byE_matched",
+                 "reco_beam_true_byE_origin"]
 
     branches += ["fit_pi0_energy", "fit_pi0_cos_theta", "fit_pi0_gamma_energy1", "fit_pi0_gamma_energy2", "fit_pi0_gamma_oa"]
 

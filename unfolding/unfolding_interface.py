@@ -46,7 +46,7 @@ class XSecVariablesBase:
 
         if self.apply_correction:
             for corr in self.correction_list:
-                correction_var = self.correction_classes[corr].get_correction_variable()
+                correction_var = self.corrections[corr].get_correction_variable()
                 self.xsec_vars[corr] = self.corrections[corr].apply(to_correct=events[correction_var])
 
         if self.apply_systematic:
@@ -296,7 +296,9 @@ class BeamPionVariables(XSecVariablesBase):
 
         reco_ff_energy = np.sqrt(np.square(self.pip_mass) + np.square(ak.to_numpy(event_record["beam_inst_P"] + energy_smear)*1.e3)) \
                        - self.pip_mass        
-        reco_ff_energy -= 0.#12.74 # FIXME temporary Eloss
+        us_eloss_mom = self.xsec_vars["UpstreamEnergyLoss"] 
+        # np.sqrt(us_eloss_mom * us_eloss_mom + 139.5*139.5) - 139.5
+        reco_ff_energy -= np.sqrt(us_eloss_mom * us_eloss_mom + 139.5*139.5) - 139.5  #0.#12.74 # FIXME temporary Eloss
 
         nz_mask = ak.to_numpy(ak.count(event_record["reco_track_cumlen"], axis=1) > 0)
         reco_initial_energy = np.ones(len(event_record)).astype('d') * -1.

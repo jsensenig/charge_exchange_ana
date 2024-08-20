@@ -233,7 +233,7 @@ class BeamPionVariables(XSecVariablesBase):
                           + np.square(event_record["true_beam_traj_Y"][nz_ke_mask][:, 1:] - event_record["true_beam_traj_Y"][nz_ke_mask][:, :-1])
                           + np.square(event_record["true_beam_traj_Z"][nz_ke_mask][:, 1:] - event_record["true_beam_traj_Z"][nz_ke_mask][:, :-1]))
 
-        true_len = ak.to_numpy(np.sum(traj_dr, axis=1))
+        #true_len = ak.to_numpy(np.sum(traj_dr, axis=1))
 
         true_beam_end_energy = []
         for evt in range(len(event_record)):
@@ -244,11 +244,12 @@ class BeamPionVariables(XSecVariablesBase):
                 true_beam_end_energy.append(-1)
                 continue
             if event_record["true_beam_traj_Z", evt][-1] <= self.beam_pip_zhigh:
-                true_track_len = true_len[evt][-1]
+                true_track_len = ak.to_numpy(np.sum(traj_dr[evt]))
             else:
                 pts_in_fiducial_mask = event_record["true_beam_traj_Z", evt] < self.beam_pip_zhigh
                 idx_in_fiducial = ak.argmax(event_record["true_beam_traj_Z", evt][pts_in_fiducial_mask])
 
+                true_len = ak.to_numpy(np.cumsum(traj_dr[evt]))
                 delta_len = true_len[idx_in_fiducial + 1] - true_len[idx_in_fiducial]
                 delta_z = event_record["true_beam_traj_Z", evt][idx_in_fiducial + 1] - event_record["true_beam_traj_Z", evt][idx_in_fiducial]
 
@@ -271,7 +272,7 @@ class BeamPionVariables(XSecVariablesBase):
                           + np.square(event_record["reco_beam_calo_Y"][:, 1:] - event_record["reco_beam_calo_Y"][:, :-1])
                           + np.square(event_record["reco_beam_calo_Z"][:, 1:] - event_record["reco_beam_calo_Z"][:, :-1]))
 
-        reco_len = ak.to_numpy(np.sum(traj_dr, axis=1))
+        # reco_len = ak.to_numpy(np.sum(traj_dr, axis=1))
 
         # Find the index where the beam particle crosses into the fiducial volume
         start_fid_idx = ak.argmax(event_record["reco_beam_calo_Z"][event_record["reco_beam_calo_Z"] < self.beam_pip_zlow], axis=1)
@@ -296,11 +297,12 @@ class BeamPionVariables(XSecVariablesBase):
                 reco_beam_initial_energy.append(-999)
                 continue
 
+            reco_len = ak.to_numpy(np.cumsum(traj_dr[evt]))
             initial_energy = self.bethe_bloch.ke_at_length(reco_ff_energy, reco_len[start_fid_idx])
             reco_beam_initial_energy.append(initial_energy)
 
             if event_record["reco_beam_calo_Z", evt][-1] <= self.beam_pip_zhigh:
-                reco_track_len = reco_len[evt][-1]
+                reco_track_len = reco_len[-1]
             else:
                 pts_in_fiducial_mask = event_record["reco_beam_calo_Z", evt] < self.beam_pip_zhigh
                 idx_in_fiducial = ak.argmax(event_record["reco_beam_calo_Z", evt][pts_in_fiducial_mask])

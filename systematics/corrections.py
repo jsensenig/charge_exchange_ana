@@ -62,6 +62,29 @@ class UpstreamEnergyLoss(CorrectionBase):
         return self.local_config["correction_var"]
 
 
+class MCShiftSmearBeam(CorrectionBase):
+    """
+    The 2GeV/c MC has the beam_inst_P simulated incorrectly as 1GeV/c mean
+    and sigma. Reweighting fixes this but it's originally too far from data
+    to reweight so shift and smear it first.
+     """
+
+    def __init__(self, config):
+        super().__init__(config=config)
+        self.local_config = self.config["MCShiftSmearBeam"]
+        self.correction_var = self.local_config["correction_var"]
+
+        self.beam_shift = self.local_config["mc_beam_shift"] # 1.
+        self.sigma = self.local_config["mc_beam_inst_sigma"] # 0.1
+
+    def apply(self, to_correct):
+        energy_smear = self.beam_shift + np.random.normal(0, self.sigma, len(to_correct))
+        return energy_smear
+
+    def get_correction_variable(self):
+        return self.local_config["correction_var"]
+
+
 class BeamMomentumReweight(CorrectionBase):
     """
     The simulated beam momenta as of prod4a has variance which is underestimated.

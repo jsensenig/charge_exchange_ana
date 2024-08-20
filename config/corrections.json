@@ -1,4 +1,9 @@
 {
+  "MCShiftSmearBeam": {
+    "correction_var": "beam_inst_P",
+    "mc_beam_shift": 1.0,
+    "mc_beam_inst_sigma": 0.1
+  },
   "UpstreamEnergyLoss": {
     "correction_var": "beam_inst_P",
     "eloss_slope": 0.583,

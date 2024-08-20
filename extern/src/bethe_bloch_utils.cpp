@@ -12,6 +12,7 @@ PYBIND11_MODULE(bethe_bloch_utils, m) {
         .def("range_from_ke", &BetheBloch::range_from_ke)
         .def("create_splines", &BetheBloch::create_splines)
         .def("ke_from_range_spline", &BetheBloch::ke_from_range_spline)
+        .def("ke_at_length", &BetheBloch::KEAtLength)
         .def("meandEdx", &BetheBloch::meandEdx);
 }
 

@@ -252,20 +252,23 @@ class BeamPionVariables(XSecVariablesBase):
             if true_initial_energy[evt] == 0 and ff_idx[evt] > 0:
                 true_initial_energy[evt] = ak.to_numpy(event_record["true_beam_traj_KE", evt][ff_idx[evt] - 1])
             z_infiducial_low_mask = (event_record["true_beam_traj_Z", evt] >= self.beam_pip_zlow)[1:]
+            # ff_idx_dr = ff_idx[evt] - 1
+            delta_r = np.insert(traj_dr[evt], 0, 0.0) # add 0 add beginning to make consistent with traj_XYZ
             if event_record["true_beam_traj_Z", evt][-1] <= self.beam_pip_zhigh:
-                true_track_len = ak.to_numpy(np.sum(traj_dr[evt][z_infiducial_low_mask]))
+                true_track_len = ak.to_numpy(np.sum(delta_r[evt][ff_idx[evt]:]))
             else:
                 down_stream_int[evt] = True
-                pts_in_fiducial_mask = event_record["true_beam_traj_Z", evt][z_infiducial_low_mask] < self.beam_pip_zhigh
-                idx_in_fiducial = ak.argmax(event_record["true_beam_traj_Z", evt][z_infiducial_low_mask][pts_in_fiducial_mask])
+                pts_in_fiducial_mask = event_record["true_beam_traj_Z", evt][ff_idx[evt]:] < self.beam_pip_zhigh
+                idx_in_fiducial = ak.argmax(event_record["true_beam_traj_Z", evt][ff_idx[evt]:][pts_in_fiducial_mask])
 
                 # Note this is of length N-1 where true_beam_traj_{X,Y,Z} is length N. From shift to get Delta R
-                true_len = ak.to_numpy(np.cumsum(traj_dr[evt][z_infiducial_low_mask]))
-                delta_len = true_len[idx_in_fiducial] - true_len[idx_in_fiducial-1]
-                delta_z = event_record["true_beam_traj_Z", evt][z_infiducial_low_mask][idx_in_fiducial] - event_record["true_beam_traj_Z", evt][z_infiducial_low_mask][idx_in_fiducial-1] # FIXME gotta be +1,+0
+                true_len = ak.to_numpy(np.cumsum(delta_r[ff_idx[evt]:]))
+                delta_len = true_len[idx_in_fiducial+1] - true_len[idx_in_fiducial]
+                delta_z = (event_record["true_beam_traj_Z", evt][ff_idx[evt]:][idx_in_fiducial+1] -
+                           event_record["true_beam_traj_Z", evt][ff_idx[evt]:][idx_in_fiducial]) # FIXME gotta be +1,+0
 
-                z_frac_in_fiducial = (self.beam_pip_zhigh - event_record["true_beam_traj_Z", evt][z_infiducial_low_mask][idx_in_fiducial]) / delta_z
-                true_track_len = true_len[idx_in_fiducial-1] + delta_len * z_frac_in_fiducial
+                z_frac_in_fiducial = (self.beam_pip_zhigh - event_record["true_beam_traj_Z", evt][ff_idx[evt]:][idx_in_fiducial]) / delta_z
+                true_track_len = true_len[idx_in_fiducial] + delta_len * z_frac_in_fiducial
 
             end_energy = self.bethe_bloch.ke_at_length(true_initial_energy[evt], true_track_len)
             true_beam_end_energy.append(end_energy)
@@ -295,7 +298,7 @@ class BeamPionVariables(XSecVariablesBase):
         #if self.beam_energy == 2 and self.is_training:
         #    energy_smear = 1. + np.random.normal(0,0.1,len(event_record["shift_smear_beam_inst"]))
 
-        reco_beam_energy = ak.to_numpy(event_record["shift_smear_beam_inst"] + energy_smear) - 30. #ak.to_numpy(self.xsec_vars["UpstreamEnergyLoss"])
+        reco_beam_energy = ak.to_numpy(event_record["shift_smear_beam_inst"] + energy_smear) - #30. #ak.to_numpy(self.xsec_vars["UpstreamEnergyLoss"])
         reco_ff_energy = np.sqrt(np.square(self.pip_mass) + np.square(reco_beam_energy)) - self.pip_mass
 
         down_stream_int = np.zeros(len(event_record)).astype(bool)
@@ -399,8 +402,8 @@ class BeamPionVariables(XSecVariablesBase):
             #self.xsec_vars["true_complete_slice_mask"] &= overflow_mask
 
             self.xsec_vars["true_beam_initial_energy"] -= bin_width_np(self.eslice_bin_array)
-            self.xsec_vars["true_beam_initial_energy"] = np.clip(self.xsec_vars["true_beam_initial_energy"], a_min=-1e3,
-                                                                 a_max=self.eslice_bin_array[-1]-1) # make sure its in the bin if upper edge is not inclusive
+            # self.xsec_vars["true_beam_initial_energy"] = np.clip(self.xsec_vars["true_beam_initial_energy"], a_min=-1e3,
+            #                                                      a_max=self.eslice_bin_array[-1]-1) # make sure its in the bin if upper edge is not inclusive
 
         init_bin_idx = np.digitize(self.xsec_vars["reco_beam_initial_energy"], bins=self.eslice_bin_array)
         end_bin_idx = np.digitize(self.xsec_vars["reco_beam_end_energy"], bins=self.eslice_bin_array)

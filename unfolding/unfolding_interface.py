@@ -136,19 +136,19 @@ class BeamPionVariables(XSecVariablesBase):
        
         # Calculate and add the requisite columns to the event record
         # Make masks for incomplete initial and through-going pions
-        true_up, true_down, reco_up, reco_down = self.beam_fiducial_volume(event_record=event_record)
-        self.xsec_vars["true_upstream_mask"], self.xsec_vars["true_downstream_mask"] = true_up, true_down
-        self.xsec_vars["reco_upstream_mask"], self.xsec_vars["reco_downstream_mask"] = reco_up, reco_down
+        # true_up, true_down, reco_up, reco_down = self.beam_fiducial_volume(event_record=event_record)
 
         # Make true beam initial and end energy
         self.xsec_vars["true_beam_initial_energy"], self.xsec_vars["true_beam_end_energy"] = None, None
         if self.is_training:
             self.xsec_vars["true_beam_initial_energy"], self.xsec_vars["true_beam_end_energy"] = (
                 self.make_true_beam_energy(event_record=event_record))
+            self.xsec_vars["true_upstream_mask"] = self.xsec_vars["true_beam_initial_energy"] == -999
 
         # Make reco beam initial and end energy
         self.xsec_vars["reco_beam_initial_energy"], self.xsec_vars["reco_beam_end_energy"] = (
             self.make_reco_beam_energy(event_record=event_record))
+        self.xsec_vars["reco_upstream_mask"] = self.xsec_vars["reco_beam_initial_energy"] == -999
 
         self.xsec_vars["true_beam_sig_int_energy"], self.xsec_vars["reco_beam_sig_int_energy"] = (
             self.make_beam_interacting(event_record=event_record, reco_int_mask=reco_int_mask))
@@ -181,7 +181,7 @@ class BeamPionVariables(XSecVariablesBase):
 
         # Apply mask to events
         if self.is_training:
-            true_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["reco_upstream_mask"]
+            true_mask = ~self.xsec_vars["true_upstream_mask"] #& ~self.xsec_vars["reco_upstream_mask"]
         reco_mask = ~self.xsec_vars["reco_upstream_mask"] #true_mask if self.is_training else ~self.xsec_vars["reco_upstream_mask"]
         #reco_mask = true_mask if self.is_training else ~self.xsec_vars["reco_upstream_mask"]
 
@@ -240,19 +240,22 @@ class BeamPionVariables(XSecVariablesBase):
                           + np.square(event_record["true_beam_traj_Z"][:, 1:] - event_record["true_beam_traj_Z"][:, :-1]))
 
         #true_len = ak.to_numpy(np.sum(traj_dr, axis=1))
-
+        down_stream_int = np.zeros(len(event_record)).astype(bool)
         true_beam_end_energy = []
         for evt in range(len(event_record)):
             if len(event_record["true_beam_traj_Z"][evt]) < 1:
                 true_beam_end_energy.append(-1)
+                true_initial_energy[evt] = -999
                 continue
-            if event_record["true_beam_traj_Z", evt][-1] <= self.beam_pip_zlow:
+            if event_record["true_beam_traj_Z", evt][-1] <= self.beam_pip_zlow or event_record["true_beam_traj_Z", evt][0] > self.beam_pip_zlow:
                 true_beam_end_energy.append(-1)
+                true_initial_energy[evt] = -999
                 continue
             z_infiducial_low_mask = (event_record["true_beam_traj_Z", evt] >= self.beam_pip_zlow)[1:]
             if event_record["true_beam_traj_Z", evt][-1] <= self.beam_pip_zhigh:
                 true_track_len = ak.to_numpy(np.sum(traj_dr[evt][z_infiducial_low_mask]))
             else:
+                down_stream_int[evt] = True
                 pts_in_fiducial_mask = event_record["true_beam_traj_Z", evt][z_infiducial_low_mask] < self.beam_pip_zhigh
                 idx_in_fiducial = ak.argmax(event_record["true_beam_traj_Z", evt][z_infiducial_low_mask][pts_in_fiducial_mask])
 
@@ -266,6 +269,8 @@ class BeamPionVariables(XSecVariablesBase):
 
             end_energy = self.bethe_bloch.ke_at_length(true_initial_energy[evt], true_track_len)
             true_beam_end_energy.append(end_energy)
+
+        self.xsec_vars["true_downstream_mask"] = down_stream_int
 
         return true_initial_energy, np.asarray(true_beam_end_energy)
 
@@ -293,12 +298,13 @@ class BeamPionVariables(XSecVariablesBase):
         reco_beam_energy = ak.to_numpy(event_record["shift_smear_beam_inst"] + energy_smear) - 30. #ak.to_numpy(self.xsec_vars["UpstreamEnergyLoss"])
         reco_ff_energy = np.sqrt(np.square(self.pip_mass) + np.square(reco_beam_energy)) - self.pip_mass
 
+        down_stream_int = np.zeros(len(event_record)).astype(bool)
         reco_beam_initial_energy = []
         reco_beam_end_energy = []
         for evt in range(len(event_record)):
             if len(event_record["reco_beam_calo_Z"][evt]) < 1 or len(traj_dr[evt]) < 1 or start_fid_idx[evt] is None:
                 reco_beam_end_energy.append(-1)
-                reco_beam_initial_energy.append(-1)
+                reco_beam_initial_energy.append(-999)
                 continue
             if event_record["reco_beam_calo_Z", evt][-1] <= self.beam_pip_zlow or event_record["reco_beam_calo_Z", evt][0] > self.beam_pip_zhigh:
                 reco_beam_end_energy.append(-1)
@@ -313,6 +319,7 @@ class BeamPionVariables(XSecVariablesBase):
             if event_record["reco_beam_calo_Z", evt][-1] <= self.beam_pip_zhigh:
                 reco_track_len = reco_len[-1]
             else:
+                down_stream_int[evt] = True
                 pts_in_fiducial_mask = event_record["reco_beam_calo_Z", evt] < self.beam_pip_zhigh
                 idx_in_fiducial = ak.argmax(event_record["reco_beam_calo_Z", evt][pts_in_fiducial_mask])
 
@@ -324,6 +331,8 @@ class BeamPionVariables(XSecVariablesBase):
 
             end_energy = self.bethe_bloch.ke_at_length(reco_ff_energy[evt], reco_track_len)
             reco_beam_end_energy.append(end_energy)
+
+        self.xsec_vars["reco_downstream_mask"] = down_stream_int
 
         return np.asarray(reco_beam_initial_energy), np.asarray(reco_beam_end_energy)
 

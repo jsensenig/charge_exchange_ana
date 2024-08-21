@@ -119,7 +119,7 @@ class BeamPionVariables(XSecVariablesBase):
         self.xsec_vars["true_complete_slice_mask"] = np.ones(len(event_record)).astype(bool) if self.is_training else None
         self.xsec_vars["reco_complete_slice_mask"] = np.ones(len(event_record)).astype(bool)
 
-        # Also convert to MeV/c
+        # Beam simulation error so shift and smear it let reweight do the rest, also convert to MeV/c
         if self.is_training:
             event_record["shift_smear_beam_inst"] = (
                                 event_record["beam_inst_P"] +
@@ -127,7 +127,7 @@ class BeamPionVariables(XSecVariablesBase):
         else:
             event_record["shift_smear_beam_inst"] = event_record["beam_inst_P"] * 1.e3
 
-        # Classify events
+        # Classify events and apply smearing and sytstematics
         if self.is_training:
             self.xsec_vars["beam_all_process"] = self.get_event_process(events=event_record, proc_list_name='all')
             self.xsec_vars["beam_simple_process"] = self.get_event_process(events=event_record, proc_list_name='simple')
@@ -230,9 +230,7 @@ class BeamPionVariables(XSecVariablesBase):
         Makes true: incident and end energy
         """
         # Make true beam initial energy
-        max_pt = ak.max(event_record["true_beam_traj_Z"][event_record["true_beam_traj_Z"] < self.beam_pip_zlow], axis=1)
-        ff_mask = event_record["true_beam_traj_Z"] == max_pt
-        true_initial_energy = ak.to_numpy(event_record["true_beam_traj_KE"][ff_mask][:, 0])
+        ff_idx = ak.argmax(event_record["true_beam_traj_Z"][event_record["true_beam_traj_Z"] < self.beam_pip_zlow], axis=1)
 
         # The last KE point(s) is 0 by definition, mask these out so we can get the length to the point where it's still moving
         traj_dr = np.sqrt(np.square(event_record["true_beam_traj_X"][:, 1:] - event_record["true_beam_traj_X"][:, :-1])
@@ -241,16 +239,18 @@ class BeamPionVariables(XSecVariablesBase):
 
         #true_len = ak.to_numpy(np.sum(traj_dr, axis=1))
         down_stream_int = np.zeros(len(event_record)).astype(bool)
+        true_initial_energy = np.ones(len(event_record)) * -999.
         true_beam_end_energy = []
         for evt in range(len(event_record)):
             if len(event_record["true_beam_traj_Z"][evt]) < 1:
                 true_beam_end_energy.append(-1)
-                true_initial_energy[evt] = -999
                 continue
             if event_record["true_beam_traj_Z", evt][-1] <= self.beam_pip_zlow or event_record["true_beam_traj_Z", evt][0] > self.beam_pip_zlow:
                 true_beam_end_energy.append(-1)
-                true_initial_energy[evt] = -999
                 continue
+            true_initial_energy[evt] = ak.to_numpy(event_record["true_beam_traj_KE", evt][ff_idx[evt]])
+            if true_initial_energy[evt] == 0 and ff_idx[evt] > 0:
+                true_initial_energy[evt] = ak.to_numpy(event_record["true_beam_traj_KE", evt][ff_idx[evt] - 1])
             z_infiducial_low_mask = (event_record["true_beam_traj_Z", evt] >= self.beam_pip_zlow)[1:]
             if event_record["true_beam_traj_Z", evt][-1] <= self.beam_pip_zhigh:
                 true_track_len = ak.to_numpy(np.sum(traj_dr[evt][z_infiducial_low_mask]))

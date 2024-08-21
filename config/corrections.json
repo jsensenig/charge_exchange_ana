@@ -5,16 +5,19 @@
     "mc_beam_inst_sigma": 0.1
   },
   "UpstreamEnergyLoss": {
-    "correction_var": "beam_inst_P",
+    "correction_var": "shift_smear_beam_inst",
     "eloss_slope": 0.583,
-    "eloss_intercept": -1160
+    "eloss_intercept": -1160,
+    "eloss_p0": 222.0,
+    "eloss_p1": -0.635,
+    "eloss_p2": 0.00045
   },
   "BeamMomentumReweight": {
-    "correction_var": "beam_inst_P",
-    "mc_beam_mom_mu": 0,
-    "mc_beam_mom_sigma": 4,
-    "data_beam_mom_mu": 0,
-    "data_beam_mom_sigma": 4
+    "correction_var": "shift_smear_beam_inst",
+    "mc_beam_mom_mu": 2004,
+    "mc_beam_mom_sigma": 118,
+    "data_beam_mom_mu": 2008,
+    "data_beam_mom_sigma": 139
   },
   "MuonFracReweight": {
     "correction_var": "matched_beam_muon",

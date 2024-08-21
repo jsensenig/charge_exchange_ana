@@ -53,9 +53,11 @@ class UpstreamEnergyLoss(CorrectionBase):
         self.correction_var = self.local_config["correction_var"]
         # m=0.583 b=-1160
         self.slope, self.intercept = self.local_config["eloss_slope"], self.local_config["eloss_intercept"]
+        self.p0, self.p1, self.p2 = self.local_config["eloss_p0"], self.local_config["eloss_p1"], self.local_config["eloss_p2"]
 
     def apply(self, to_correct):
-        energy_loss = self.slope * to_correct + self.intercept
+        #energy_loss = self.slope * to_correct + self.intercept
+        energy_loss = self.p2 * to_correct**2 + self.p1 * to_correct + self.p0
         return energy_loss
 
     def get_correction_variable(self):
@@ -79,7 +81,7 @@ class MCShiftSmearBeam(CorrectionBase):
 
     def apply(self, to_correct):
         energy_smear = self.beam_shift + np.random.normal(0, self.sigma, len(to_correct))
-        return energy_smear
+        return energy_smear 
 
     def get_correction_variable(self):
         return self.local_config["correction_var"]

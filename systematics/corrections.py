@@ -110,7 +110,7 @@ class BeamMomentumReweight(CorrectionBase):
 
         event_weight = gauss_num / gauss_denom
         event_weight = np.clip(event_weight, a_min=1/3., a_max=3.)
-        # smeared = events["beam_momentum"] + np.random.normal(loc=self.beam_mu, scale=self.beam_sigma, size=len(events))
+
         return event_weight
 
     def get_correction_variable(self):
@@ -128,10 +128,15 @@ class MuonFracReweight(CorrectionBase):
         self.local_config = self.config["MuonFracReweight"]
         self.correction_var = self.local_config["correction_var"]
         self.muon_frac_weight = self.local_config["muon_frac_weight"]
+        self.pdg_select = -13
 
     def apply(self, to_correct):
-        weights = np.ones(len(to_correct)).astype(bool)
-        weights[to_correct[self.correction_var]] *= self.muon_frac_weight
+        # Select the muons reweight
+        muons = to_correct[self.correction_var] == self.pdg_select
+
+        weights = np.ones(len(to_correct))
+        weights[muons] *= self.muon_frac_weight
+
         return weights
 
     def get_correction_variable(self):

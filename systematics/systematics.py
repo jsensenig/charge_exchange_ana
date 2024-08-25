@@ -67,8 +67,26 @@ class GeantCrossSection(SystematicsBase):
         super().__init__(config=config)
         self.local_config = self.config["GeantCrossSection"]
 
+        self.xsec_list = self.local_config["xsec_list"]
+        self.scale = self.local_config["xsec_scale"]
+        self.beam_pdg_select = self.local_config["beam_pdg_select"]
+
     def apply(self, events):
-        pass
+
+        pi_mask = events["true_beam_PDG"] == self.beam_pdg_select
+
+        weights = np.ones(len(events))
+        if self.scale == 1.:
+            return weights
+
+        for evt in range(len(events)):
+            if not pi_mask[evt]:
+                continue
+            for xsec in self.xsec_list:
+                coeffs = events["g4rw_full_grid_piplus_coeffs", evt][xsec]
+                weights[evt] *= np.polyval(np.flip(coeffs), self.scale)
+
+        return weights
 
     def get_systematic_variable(self):
         return self.local_config["correction_var"]

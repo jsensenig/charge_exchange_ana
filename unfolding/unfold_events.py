@@ -30,6 +30,7 @@ class Unfold:
 
         self.true_record_var = self.config["true_record_var"]
         self.reco_record_var = self.config["reco_record_var"]
+        self.reco_weight_var = self.config["reco_weight_var"]
 
         # Get the classes to interface the data to the unfolding
         var_cls = {cls.__name__: cls for cls in XSecVariablesBase.__subclasses__()}
@@ -62,16 +63,17 @@ class Unfold:
         """)
 
     def run_unfold(self, event_record, data_mask, train_mask, return_np=False, test_func=False,
-                   true_var_list=None, reco_var_list=None):
+                   true_var_list=None, reco_var_list=None, reco_weight_list=None):
 
         if not test_func:
             # self.vars.get_xsec_variable(event_record=event_record, reco_mask=data_mask)
-            true_var_list, reco_var_list = self.get_unfold_variables(event_record=event_record, reco_int_mask=data_mask)
+            true_var_list, reco_var_list, reco_weight_list = self.get_unfold_variables(event_record=event_record,
+                                                                                       reco_int_mask=data_mask)
 
         if self.is_training:
             nd_binned_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
                 self.remap_evts.remap_training_events(true_list=true_var_list, reco_list=reco_var_list,
-                                                      bin_list=self.true_bin_array, ndim=self.truth_ndim)
+                                                      bin_list=self.true_bin_array, reco_event_weights=reco_weight_list)
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(sparse_tuple[0]), len(sparse_tuple[1])
 
@@ -160,10 +162,11 @@ class Unfold:
         true_var_list = None
         if self.is_training:
             true_var_list = [var_dict[var] for var in self.true_record_var]
+            reco_weight_list = np.prod([var_dict[w] for w in self.reco_weight_var], axis=0)
 
         reco_var_list = [var_dict[var] for var in self.reco_record_var]
 
-        return true_var_list, reco_var_list
+        return true_var_list, reco_var_list, reco_weight_list
 
     def create_response_matrix(self, reco_events, true_events):
 

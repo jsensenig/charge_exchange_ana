@@ -46,13 +46,13 @@ class XSecVariablesBase:
 
         if self.apply_correction:
             for corr in self.correction_list:
-                correction_var = self.corrections[corr].get_correction_variable()
-                self.xsec_vars[corr] = self.corrections[corr].apply(to_correct=events[correction_var])
+                print("Applying Correction: [\033[34m", corr, "\033[0m]")
+                self.xsec_vars[corr] = self.corrections[corr].apply(to_correct=events)
 
         if self.apply_systematic:
             for syst in self.systematic_list:
-                syst_var = self.systematics[syst].get_systematic_variable()
-                self.systematics[syst].apply(syst_var=events[syst_var])
+                print("Applying Systematic: [\033[34m", syst, "\033[0m]")
+                self.xsec_vars[syst] = self.systematics[syst].apply(syst_var=events)
 
     def load_syst_classes(self, config, apply_corrections, apply_systematics):
 
@@ -62,7 +62,7 @@ class XSecVariablesBase:
 
         if apply_systematics:
             for syst in self.syst_classes:
-                self.corrections[syst] = self.correction_classes[syst](config=config["systematic_config"])
+                self.systematics[syst] = self.syst_classes[syst](config=config["systematic_config"])
 
     def get_event_process(self, events, proc_list_name):
 

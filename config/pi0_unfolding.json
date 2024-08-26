@@ -8,6 +8,7 @@
   "reco_record_var": ["true_pi0_energy", "true_pi0_cos_theta"],
   "true_weight_var": [],
   "reco_weight_var": [],
+  "data_weight_var": [],
   "use_bin_array":  false,
   "truth_bins": {
      "nbins": [8,5],

@@ -55,12 +55,12 @@ class Remapping:
     def remap_data_events(self, data_list, bin_list, data_weights):
 
         self.reco_total_bins = np.prod([len(d)-1 for d in bin_list])
-        data_event_ones = np.ones(len(data_list[0]))
+        #data_event_ones = np.ones(len(data_list[0]))
 
-        data_nd_binned, _, data_nd_hist, data_nd_hist_err, data_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=data_list,
+        data_nd_binned, data_weight, data_nd_hist, data_nd_hist_err, data_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=data_list,
                                                                                                bin_list=bin_list,
                                                                                                total_bins=self.reco_total_bins,
-                                                                                               evt_weights=data_event_ones,
+                                                                                               evt_weights=data_weights,
                                                                                                debug=self.debug)
 
         # Data mapping to 1D
@@ -68,7 +68,7 @@ class Remapping:
                                                                           map_nd1d=self.reco_map)
         print("Sparse Data nbins:", len(data_hist_sparse))
 
-        return data_nd_binned, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse
+        return data_nd_binned, data_weight, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse
 
     @staticmethod
     def map_meas_to_bin_space(corr_var_list, bin_list, total_bins, evt_weights, debug=False):

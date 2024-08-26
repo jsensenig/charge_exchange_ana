@@ -32,6 +32,7 @@ class Unfold:
         self.reco_record_var = self.config["reco_record_var"]
         self.reco_weight_var = self.config["reco_weight_var"]
         self.true_weight_var = self.config["true_weight_var"]
+        self.data_weight_var = self.config["data_weight_var"]
 
         # Get the classes to interface the data to the unfolding
         var_cls = {cls.__name__: cls for cls in XSecVariablesBase.__subclasses__()}
@@ -68,7 +69,7 @@ class Unfold:
 
         if not test_func:
             # self.vars.get_xsec_variable(event_record=event_record, reco_mask=data_mask)
-            true_var_list, reco_var_list, true_weight_list, reco_weight_list = (
+            true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
                 self.get_unfold_variables(event_record=event_record, reco_int_mask=data_mask))
 
         if self.is_training:
@@ -88,9 +89,9 @@ class Unfold:
 
         # Set data
         # data_nd_binned, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse =
-        _, _, _, data_hist_sparse, data_hist_err_sparse = self.remap_evts.remap_data_events(data_list=reco_var_list,
+        _, _, _, _, data_hist_sparse, data_hist_err_sparse = self.remap_evts.remap_data_events(data_list=reco_var_list,
                                                                                             bin_list=self.reco_bin_array,
-                                                                                            data_weights=reco_weight_list)
+                                                                                            data_weights=data_weight_list)
 
         self.fill_data_hist(sparse_data_hist=data_hist_sparse)
 
@@ -157,9 +158,9 @@ class Unfold:
         _ = [self.reco_hist.SetBinContent(i + 1, sparse_data_hist[i]) for i in range(self.reco_nbins_sparse)]
 
     @staticmethod
-    def get_weights(var_dict, weight_list, mask):
+    def get_weights(var_dict, weight_list, mask, nevts):
         if len(weight_list) < 1:
-            return np.ones(len(var_dict[0]))
+            return np.ones(nevts)
 
         return np.prod([var_dict[w][mask] for w in weight_list], axis=0)
 
@@ -168,21 +169,27 @@ class Unfold:
         # Get the variables of interest
         var_dict = self.vars.get_xsec_variable(event_record=event_record, reco_int_mask=reco_int_mask)
         print("Loaded variables:", list(var_dict))
+        is_beam_var = self.config["xsec_vars"] == "BeamPionVariables"
 
         reco_var_list = [var_dict[var] for var in self.reco_record_var]
+        reco_mask = var_dict["full_len_reco_mask"] if is_beam_var else np.ones(len(reco_var_list[0])).astype(bool)
 
         true_var_list = None
         if self.is_training:
             true_var_list = [var_dict[var] for var in self.true_record_var]
+            true_mask = var_dict["full_len_true_mask"] if is_beam_var else np.ones(len(true_var_list[0])).astype(bool)
             true_weight_list = self.get_weights(var_dict=var_dict, weight_list=self.true_weight_var,
-                                                mask=var_dict["full_len_true_mask"])
+                                                mask=true_mask, nevts=len(true_var_list[0]))
             reco_weight_list = self.get_weights(var_dict=var_dict, weight_list=self.reco_weight_var,
-                                                mask=var_dict["full_len_reco_mask"])
+                                                mask=reco_mask, nevts=len(reco_var_list[0]))
         else:
             true_weight_list = np.ones(len(reco_var_list[0]))
             reco_weight_list = np.ones(len(reco_var_list[0]))
+            
+        data_weight_list = self.get_weights(var_dict=var_dict, weight_list=self.data_weight_var,
+                                            mask=reco_mask, nevts=len(reco_var_list[0]))            
 
-        return true_var_list, reco_var_list, true_weight_list, reco_weight_list
+        return true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list
 
     def create_response_matrix(self, reco_events, true_events, reco_weights):
 

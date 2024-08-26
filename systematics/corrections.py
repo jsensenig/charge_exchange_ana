@@ -57,7 +57,7 @@ class UpstreamEnergyLoss(CorrectionBase):
 
     def apply(self, to_correct):
         #energy_loss = self.slope * to_correct + self.intercept
-        energy_loss = self.p2 * to_correct**2 + self.p1 * to_correct + self.p0
+        energy_loss = self.p2 * to_correct[self.correction_var]**2 + self.p1 * to_correct[self.correction_var] + self.p0
         return energy_loss
 
     def get_correction_variable(self):
@@ -95,6 +95,7 @@ class BeamMomentumReweight(CorrectionBase):
     def __init__(self, config):
         super().__init__(config=config)
         self.local_config = self.config["BeamMomentumReweight"]
+        self.correction_var = self.local_config["correction_var"]        
 
         self.mu0 = self.local_config["mc_beam_mom_mu"]
         self.sigma0 = self.local_config["mc_beam_mom_sigma"]
@@ -103,7 +104,7 @@ class BeamMomentumReweight(CorrectionBase):
 
     def apply(self, to_correct):
 
-        beam_mom = to_correct
+        beam_mom = to_correct[self.correction_var]
 
         gauss_num = np.exp(((beam_mom - self.mu0) * (beam_mom - self.mu0)) / (2. * self.sigma0 ** 2))
         gauss_denom = np.exp(((beam_mom - self.mu) * (beam_mom - self.mu)) / (2. * self.sigma ** 2))

@@ -17,7 +17,7 @@ class SystematicsBase:
         self.config = self.configure(config_file=config)
 
     @abstractmethod
-    def apply(self, events):
+    def apply(self, syst_var):
         """
         Implement the systematic here. The cuts will pass the events.
         """
@@ -51,7 +51,7 @@ class Statistical(SystematicsBase):
         super().__init__(config=config)
         self.local_config = self.config["Statistical"]
 
-    def apply(self, events):
+    def apply(self, syst_var):
         pass
 
     def get_systematic_variable(self):
@@ -68,23 +68,24 @@ class GeantCrossSection(SystematicsBase):
         self.local_config = self.config["GeantCrossSection"]
 
         self.xsec_list = self.local_config["xsec_list"]
-        self.scale = self.local_config["xsec_scale"]
+        self.xsec_scale = self.local_config["xsec_scale"]
         self.beam_pdg_select = self.local_config["beam_pdg_select"]
+        self.correction_var = self.local_config["correction_var"]
 
-    def apply(self, events):
+    def apply(self, syst_var):
 
-        pi_mask = events["true_beam_PDG"] == self.beam_pdg_select
+        pi_mask = syst_var["true_beam_PDG"] == self.beam_pdg_select
 
-        weights = np.ones(len(events))
-        if self.scale == 1.:
+        weights = np.ones(len(syst_var))
+        if self.xsec_scale == 1.:
             return weights
 
-        for evt in range(len(events)):
+        for evt in range(len(syst_var)):
             if not pi_mask[evt]:
                 continue
             for xsec in self.xsec_list:
-                coeffs = events["g4rw_full_grid_piplus_coeffs", evt][xsec]
-                weights[evt] *= np.polyval(np.flip(coeffs), self.scale)
+                coeffs = syst_var[self.correction_var, evt][xsec]
+                weights[evt] *= np.polyval(np.flip(coeffs), self.xsec_scale)
 
         return weights
 
@@ -101,6 +102,7 @@ class UpstreamEnergyLoss(SystematicsBase):
     def __init__(self, config):
         super().__init__(config=config)
         self.local_config = self.config["UpstreamEnergyLoss"]
+        self.correction_var = self.local_config["correction_var"]
         # m=0.583 b=-1160
         # self.slope, self.intercept = self.local_config["eloss_slope"], self.local_config["eloss_intercept"]
         self.mu = self.local_config["eloss_mu"]
@@ -110,7 +112,7 @@ class UpstreamEnergyLoss(SystematicsBase):
         # This will be in a corrections class
         # energy_shift = self.slope * syst_var + self.intercept
         # return syst_var + energy_shift
-        return syst_var + np.random.normal(loc=self.mu, scale=self.sigma, size=len(syst_var))
+        return syst_var[self.correction_var] + np.random.normal(loc=self.mu, scale=self.sigma, size=len(syst_var))
 
     def get_systematic_variable(self):
         return self.local_config["correction_var"]
@@ -124,6 +126,7 @@ class BeamMomentum(SystematicsBase):
     def __init__(self, config):
         super().__init__(config=config)
         self.local_config = self.config["BeamMomentum"]
+        self.correction_var = self.local_config["correction_var"]
 
         self.beam_mu = self.local_config["beam_mom_mu"]
         self.beam_sigma = self.local_config["beam_mom_sigma"]
@@ -131,7 +134,7 @@ class BeamMomentum(SystematicsBase):
     def apply(self, syst_var): # sample from a 2D gaussian for mu,sigma (mu0,sigma0 fixed)
         # should be a correction
         # smeared = events["beam_momentum"] + np.random.normal(loc=self.beam_mu, scale=self.beam_sigma, size=len(events))
-        return syst_var + np.random.normal(loc=0, scale=5, size=len(syst_var))
+        return syst_var[self.correction_var] + np.random.normal(loc=0, scale=5, size=len(syst_var))
 
     def get_systematic_variable(self):
         return self.local_config["correction_var"]
@@ -147,12 +150,13 @@ class TrackLength(SystematicsBase):
     def __init__(self, config):
         super().__init__(config=config)
         self.local_config = self.config["TrackLength"]
+        self.correction_var = self.local_config["correction_var"]
 
         self.mu = self.local_config["length_mu"]
         self.sigma = self.local_config["length_sigma"]
 
     def apply(self, syst_var):
-        return syst_var + np.random.normal(loc=self.mu, scale=self.sigma, size=len(syst_var))
+        return syst_var[self.correction_var] + np.random.normal(loc=self.mu, scale=self.sigma, size=len(syst_var))
 
     def get_systematic_variable(self):
         return self.local_config["correction_var"]
@@ -168,7 +172,7 @@ class Pi0Energy(SystematicsBase):
         super().__init__(config=config)
         self.local_config = self.config["Pi0Energy"]
 
-    def apply(self, events):
+    def apply(self, syst_var):
         pass
 
     def get_systematic_variable(self):
@@ -185,7 +189,7 @@ class Pi0Angle(SystematicsBase):
         super().__init__(config=config)
         self.local_config = self.config["Pi0Angle"]
 
-    def apply(self, events):
+    def apply(self, syst_var):
         pass
 
     def get_systematic_variable(self):

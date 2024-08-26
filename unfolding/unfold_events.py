@@ -71,14 +71,15 @@ class Unfold:
                                                                                        reco_int_mask=data_mask)
 
         if self.is_training:
-            nd_binned_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
+            nd_binned_tuple, weight_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
                 self.remap_evts.remap_training_events(true_list=true_var_list, reco_list=reco_var_list,
                                                       bin_list=self.true_bin_array, reco_event_weights=reco_weight_list)
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(sparse_tuple[0]), len(sparse_tuple[1])
 
             self.create_response_matrix(reco_events=self.remap_evts.reco_map[nd_binned_tuple[1]].astype('d'),
-                                        true_events=self.remap_evts.true_map[nd_binned_tuple[0]].astype('d'))
+                                        true_events=self.remap_evts.true_map[nd_binned_tuple[0]].astype('d'),
+                                        reco_weights=weight_tuple[1].astype('d'))
 
         if self.show_plots:
             self.plot_response_matrix(response_matrix=self.response)
@@ -122,7 +123,7 @@ class Unfold:
                                                                     unfold_nd_cov_np=unfold_nd_cov_np,
                                                                     truth_bin_list=self.true_bin_array)
 
-        # Errors, one with the unfolded variables and one with the incident histofram
+        # Errors, one with the unfolded variables and one with the incident histogram
         #bin_lens = np.ma.count(self.reco_bin_array, axis=1) - 1 
         bin_lens = [len(b) - 1 for b in self.reco_bin_array]
         unfolded_1d_err_cov, no_under_over_flow_cov = self.remap_evts.propagate_unfolded_1d_errors(unfolded_cov=unfold_nd_cov_np,
@@ -162,18 +163,23 @@ class Unfold:
         true_var_list = None
         if self.is_training:
             true_var_list = [var_dict[var] for var in self.true_record_var]
-            reco_weight_list = np.prod([var_dict[w] for w in self.reco_weight_var], axis=0)
+            if len(self.reco_weight_var) > 0:
+                reco_weight_list = np.prod([var_dict[w][var_dict["full_len_reco_mask"]] for w in self.reco_weight_var], axis=0)
+            else:
+                reco_weight_list = np.ones(len(true_var_list[0]))
+        else:
+            reco_weight_list = np.ones(len(true_var_list[0]))
 
         reco_var_list = [var_dict[var] for var in self.reco_record_var]
 
         return true_var_list, reco_var_list, reco_weight_list
 
-    def create_response_matrix(self, reco_events, true_events):
+    def create_response_matrix(self, reco_events, true_events, reco_weights):
 
         self.response = RooUnfold.RooUnfoldResponse(self.reco_nbins_sparse, 1, self.reco_nbins_sparse+1,
                                                     self.truth_nbins_sparse, 1, self.truth_nbins_sparse+1)
 
-        ROOT.fill_response_1d(len(reco_events), reco_events, true_events, np.ones_like(reco_events), self.response)
+        ROOT.fill_response_1d(len(reco_events), reco_events, true_events, reco_weights, self.response)
 
     def unfold_bayes(self):
 

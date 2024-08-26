@@ -88,7 +88,7 @@ class Unfold:
         # data_nd_binned, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse =
         _, _, _, data_hist_sparse, data_hist_err_sparse = self.remap_evts.remap_data_events(data_list=reco_var_list,
                                                                                             bin_list=self.reco_bin_array,
-                                                                                            ndim=self.reco_ndim)
+                                                                                            data_weights=reco_weight_list)
 
         self.fill_data_hist(sparse_data_hist=data_hist_sparse)
 

@@ -31,6 +31,7 @@ class Unfold:
         self.true_record_var = self.config["true_record_var"]
         self.reco_record_var = self.config["reco_record_var"]
         self.reco_weight_var = self.config["reco_weight_var"]
+        self.true_weight_var = self.config["true_weight_var"]
 
         # Get the classes to interface the data to the unfolding
         var_cls = {cls.__name__: cls for cls in XSecVariablesBase.__subclasses__()}
@@ -63,17 +64,18 @@ class Unfold:
         """)
 
     def run_unfold(self, event_record, data_mask, train_mask, return_np=False, test_func=False,
-                   true_var_list=None, reco_var_list=None, reco_weight_list=None):
+                   true_var_list=None, reco_var_list=None, true_weight_list=None, reco_weight_list=None):
 
         if not test_func:
             # self.vars.get_xsec_variable(event_record=event_record, reco_mask=data_mask)
-            true_var_list, reco_var_list, reco_weight_list = self.get_unfold_variables(event_record=event_record,
-                                                                                       reco_int_mask=data_mask)
+            true_var_list, reco_var_list, true_weight_list, reco_weight_list = (
+                self.get_unfold_variables(event_record=event_record, reco_int_mask=data_mask))
 
         if self.is_training:
             nd_binned_tuple, weight_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
                 self.remap_evts.remap_training_events(true_list=true_var_list, reco_list=reco_var_list,
-                                                      bin_list=self.true_bin_array, reco_event_weights=reco_weight_list)
+                                                      bin_list=self.true_bin_array, true_event_weights=true_weight_list,
+                                                      reco_event_weights=reco_weight_list)
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(sparse_tuple[0]), len(sparse_tuple[1])
 
@@ -154,25 +156,33 @@ class Unfold:
         self.reco_hist = ROOT.TH1D("data", "Data", self.reco_nbins_sparse, 0, self.reco_nbins_sparse)
         _ = [self.reco_hist.SetBinContent(i + 1, sparse_data_hist[i]) for i in range(self.reco_nbins_sparse)]
 
+    @staticmethod
+    def get_weights(var_dict, weight_list, mask):
+        if len(weight_list) < 1:
+            return np.ones(len(var_dict[0]))
+
+        return np.prod([var_dict[w][mask] for w in weight_list], axis=0)
+
     def get_unfold_variables(self, event_record, reco_int_mask):
 
         # Get the variables of interest
         var_dict = self.vars.get_xsec_variable(event_record=event_record, reco_int_mask=reco_int_mask)
         print("Loaded variables:", list(var_dict))
 
+        reco_var_list = [var_dict[var] for var in self.reco_record_var]
+
         true_var_list = None
         if self.is_training:
             true_var_list = [var_dict[var] for var in self.true_record_var]
-            if len(self.reco_weight_var) > 0:
-                reco_weight_list = np.prod([var_dict[w][var_dict["full_len_reco_mask"]] for w in self.reco_weight_var], axis=0)
-            else:
-                reco_weight_list = np.ones(len(true_var_list[0]))
+            true_weight_list = self.get_weights(var_dict=var_dict, weight_list=self.true_weight_var,
+                                                mask=var_dict["full_len_true_mask"])
+            reco_weight_list = self.get_weights(var_dict=var_dict, weight_list=self.reco_weight_var,
+                                                mask=var_dict["full_len_reco_mask"])
         else:
-            reco_weight_list = np.ones(len(true_var_list[0]))
+            true_weight_list = np.ones(len(reco_var_list[0]))
+            reco_weight_list = np.ones(len(reco_var_list[0]))
 
-        reco_var_list = [var_dict[var] for var in self.reco_record_var]
-
-        return true_var_list, reco_var_list, reco_weight_list
+        return true_var_list, reco_var_list, true_weight_list, reco_weight_list
 
     def create_response_matrix(self, reco_events, true_events, reco_weights):
 

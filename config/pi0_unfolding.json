@@ -6,6 +6,7 @@
   "var_names": ["pi0_energy", "pi0_cos_theta"],
   "true_record_var": ["true_pi0_energy", "true_pi0_cos_theta"],
   "reco_record_var": ["true_pi0_energy", "true_pi0_cos_theta"],
+  "true_weight_var": [],
   "reco_weight_var": [],
   "use_bin_array":  false,
   "truth_bins": {

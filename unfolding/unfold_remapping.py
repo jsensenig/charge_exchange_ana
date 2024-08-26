@@ -16,17 +16,15 @@ class Remapping:
         self.var_names = var_names
         self.debug = False
 
-    def remap_training_events(self, true_list, reco_list, bin_list, reco_event_weights):
+    def remap_training_events(self, true_list, reco_list, bin_list, true_event_weights, reco_event_weights):
 
         # 3D (l,m,n) -> (l*m*n) + (m*n) + n
         self.true_total_bins = np.prod([len(d) - 1 for d in bin_list])
 
-        true_event_ones = np.ones(len(true_list[0]))
-
         true_nd_binned, true_weights, true_nd_hist, true_nd_hist_err, true_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=true_list,
                                                                                                bin_list=bin_list,
                                                                                                total_bins=self.true_total_bins,
-                                                                                               evt_weights=true_event_ones,
+                                                                                               evt_weights=true_event_weights,
                                                                                                debug=self.debug)
 
         reco_nd_binned, reco_weights, reco_nd_hist, reco_nd_hist_err, reco_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=reco_list,
@@ -57,11 +55,12 @@ class Remapping:
     def remap_data_events(self, data_list, bin_list, data_weights):
 
         self.reco_total_bins = np.prod([len(d)-1 for d in bin_list])
+        data_event_ones = np.ones(len(data_list[0]))
 
-        data_nd_binned, data_weights, data_nd_hist, data_nd_hist_err, data_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=data_list,
+        data_nd_binned, _, data_nd_hist, data_nd_hist_err, data_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=data_list,
                                                                                                bin_list=bin_list,
                                                                                                total_bins=self.reco_total_bins,
-                                                                                               evt_weights=data_weights,
+                                                                                               evt_weights=data_event_ones,
                                                                                                debug=self.debug)
 
         # Data mapping to 1D

@@ -70,6 +70,10 @@ class Unfold:
         if not external_vars:
             true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
                 self.get_unfold_variables(event_record=event_record, reco_int_mask=data_mask))
+        else:
+            for i, (tk, rk) in enumerate(zip(self.true_record_var, self.reco_record_var)):
+                self.vars.xsec_vars[tk] = true_var_list[i]
+                self.vars.xsec_vars[rk] = reco_var_list[i]
 
         if self.is_training:
             nd_binned_tuple, weight_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \

@@ -64,11 +64,10 @@ class Unfold:
             }
         """)
 
-    def run_unfold(self, event_record, data_mask, train_mask, return_np=False, test_func=False,
-                   true_var_list=None, reco_var_list=None, true_weight_list=None, reco_weight_list=None):
+    def run_unfold(self, event_record=None, data_mask=None, true_var_list=None, reco_var_list=None, true_weight_list=None,
+                   reco_weight_list=None, data_weight_list=None, external_vars=False):
 
-        if not test_func:
-            # self.vars.get_xsec_variable(event_record=event_record, reco_mask=data_mask)
+        if not external_vars:
             true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
                 self.get_unfold_variables(event_record=event_record, reco_int_mask=data_mask))
 
@@ -144,11 +143,7 @@ class Unfold:
                                                  true_var_list=true_var_list, bin_lens=bin_lens,
                                                  var_label_list=self.config["var_names"])
 
-        if return_np:
-            return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfolded_1d_err_cov, no_under_over_flow_cov, unfolded_1d_with_inc_cov
-        else:
-            pass
-            #return unfolded_data_hist, unfolded_data_cov, unfolded_data_corr_np, self.truth_hist
+        return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfolded_1d_err_cov, no_under_over_flow_cov, unfolded_1d_with_inc_cov
 
     def fill_data_hist(self, sparse_data_hist):
         if self.reco_hist is not None:

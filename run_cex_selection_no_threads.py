@@ -116,21 +116,33 @@ def save_results(results, is_mc):
     h5_file.close()
 
 
-def save_unfold_variables(results, beam_var, pi0_var, file_name, is_mc):
+def save_unfold_variables(results, beam_var, pi0_var, file_name, signal_events, is_mc):
 
     hist_map, event_mask, beam_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
 
-    # Beam variables should be pi+
+    # Beam variables should be pi+, get all signal events to use for efficiency calculation
     print("Getting beam cross section variables!")
+    signal_beam_dict = {}
     beam_var_dict = beam_var.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=beam_mask)
+    if is_mc:
+        signal_beam_var_dict = beam_var.vars.get_xsec_variable(event_record=signal_events,
+                                                               reco_int_mask=np.ones(len(signal_events)).astype(bool))
+        signal_beam_dict = {"all_" + k: signal_beam_var_dict[k] for k in signal_beam_var_dict}
 
-    # Pi0 variables should be from CeX
+    # Pi0 variables should be from CeX, get all signal events to use for efficiency calculation
     print("Getting pi0 cross section variables!")
+    signal_pi0_dict = {}
     pi0_var_dict = pi0_var.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
+    if is_mc:
+        signal_pi0_var_dict = beam_var.vars.get_xsec_variable(event_record=signal_events,
+                                                              reco_int_mask=np.ones(len(signal_events)).astype(bool))
+        signal_pi0_dict = {"all_" + k: signal_pi0_var_dict[k] for k in signal_pi0_var_dict}
+
+    save_list = [beam_var_dict, pi0_var_dict, signal_beam_dict, signal_pi0_dict]
 
     print("Saving variables to file")
     with open(file_name, 'wb') as f:
-        pickle.dump([beam_var_dict, pi0_var_dict], f)
+        pickle.dump(save_list, f)
 
 
 def event_selection(config, data):
@@ -139,10 +151,11 @@ def event_selection(config, data):
     return event_handler_instance.run_selection(events=data)
 
 
-def start_analysis(flist, config, branches):
+def start_analysis(flist, config, branches, is_mc):
 
     data = uproot.concatenate(files=flist, expressions=branches)
-    return event_selection(config=config, data=data)
+    signal = data[config["signal"]] if is_mc else None
+    return event_selection(config=config, data=data), signal
 
 
 def configure(config_file):
@@ -169,7 +182,7 @@ def get_branches(is_mc):
 
     branches += ["beam_inst_C0", "beam_inst_valid", "beam_inst_trigger", "beam_inst_nMomenta", "beam_inst_nTracks", 
                  "beam_inst_TOF", "beam_inst_P", "reco_reconstructable_beam_event", "reco_beam_true_byE_matched",
-                 "reco_beam_true_byE_origin"]
+                 "reco_beam_true_byE_origin", "g4rw_full_grid_piplus_coeffs"]
 
     branches += ["fit_pi0_energy", "fit_pi0_cos_theta", "fit_pi0_gamma_energy1", "fit_pi0_gamma_energy2", "fit_pi0_gamma_oa"]
 
@@ -183,12 +196,12 @@ def get_branches(is_mc):
                      "true_beam_endProcess","true_beam_endZ","true_beam_endP","true_beam_endPx", "true_beam_endPy",
                      "true_beam_endPz", "true_beam_daughter_startPx", "true_beam_daughter_startPy", "true_beam_daughter_startPz"]
 
-        branches += ["true_beam_traj_Z", "true_beam_traj_KE"]
+        branches += ["true_beam_traj_X", "true_beam_traj_Y", "true_beam_traj_Z", "true_beam_traj_KE"]
 
         branches += ["true_beam_Pi0_decay_startPx", "true_beam_Pi0_decay_startPy", "true_beam_Pi0_decay_startPz",
                      "true_beam_Pi0_decay_PDG", "true_beam_Pi0_decay_ID", "true_beam_Pi0_decay_startP",
                      "true_beam_Pi0_decay_startX", "true_beam_Pi0_decay_startY", "true_beam_Pi0_decay_startZ",
-                     "true_beam_endX", "true_beam_endY", "true_beam_endZ"]
+                     "true_beam_endX", "true_beam_endY", "true_beam_endZ", "true_beam_startP"]
 
     return branches
 
@@ -230,9 +243,10 @@ if __name__ == "__main__":
     # Start the analysis threads
     print("Starting threads")
     start = timer()
-    results = start_analysis(file_list, config, branches)
+    results, signal_events = start_analysis(file_list, config, branches, is_mc=config["is_mc"])
 
-    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold, file_name="test_vars.pkl", is_mc=config["is_mc"])
+    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold, signal_events=signal_events,
+                          file_name="test_vars.pkl", is_mc=config["is_mc"])
     save_results(results=results, is_mc=config["is_mc"])
 
     end = timer()

@@ -42,6 +42,7 @@ class Unfold:
         self.beam_vars = self.config["xsec_vars"] == "BeamPionVariables"
 
         self.response = None
+        self.efficiency = None
         if not self.is_training:
             self.load_response(response_file=response_file)
 
@@ -64,8 +65,8 @@ class Unfold:
             }
         """)
 
-    def run_unfold(self, event_record=None, data_mask=None, true_var_list=None, reco_var_list=None, true_weight_list=None,
-                   reco_weight_list=None, data_weight_list=None, external_vars=False):
+    def run_unfold(self, event_record=None, data_mask=None, true_var_list=None, reco_var_list=None, signal_var_list=None,
+                   true_weight_list=None, reco_weight_list=None, data_weight_list=None, external_vars=False):
 
         if not external_vars:
             true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
@@ -76,25 +77,38 @@ class Unfold:
                 self.vars.xsec_vars[rk] = reco_var_list[i]
 
         if self.is_training:
-            nd_binned_tuple, weight_tuple, nd_hist_tuple, nd_cov_tuple, sparse_tuple = \
-                self.remap_evts.remap_training_events(true_list=true_var_list, reco_list=reco_var_list,
-                                                      bin_list=self.true_bin_array, true_event_weights=true_weight_list,
-                                                      reco_event_weights=reco_weight_list)
+            true_nd_binned, true_weights, true_nd_hist, true_nd_hist_cov, true_hist_sparse, self.remap_evts.true_map\
+                = self.remap_evts.remap_events(var_list=true_var_list,
+                                               bin_list=self.true_bin_array,
+                                               event_weights=true_weight_list)
 
-            self.truth_nbins_sparse, self.reco_nbins_sparse = len(sparse_tuple[0]), len(sparse_tuple[1])
+            reco_nd_binned, reco_weights, reco_nd_hist, reco_nd_hist_cov, reco_hist_sparse, self.remap_evts.reco_map \
+                = self.remap_evts.remap_events(var_list=reco_var_list,
+                                               bin_list=self.true_bin_array,
+                                               event_weights=reco_weight_list)
 
-            self.create_response_matrix(reco_events=self.remap_evts.reco_map[nd_binned_tuple[1]].astype('d'),
-                                        true_events=self.remap_evts.true_map[nd_binned_tuple[0]].astype('d'),
-                                        reco_weights=weight_tuple[1].astype('d'))
+            # Only used for efficiency calculation
+            signal_ones = np.ones(len(signal_var_list[0])).astype(bool)
+            _, _, signal_nd_hist, _, signal_hist_sparse, _ = self.remap_evts.remap_events(var_list=signal_var_list,
+                                                                                          bin_list=self.true_bin_array,
+                                                                                          event_weights=signal_ones)
+
+            self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
+
+            self.efficiency = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist, full_selected=true_nd_hist,
+                                                 sparse_signal=signal_hist_sparse)
+
+            self.create_response_matrix(reco_events=self.remap_evts.reco_map[reco_hist_sparse].astype('d'),
+                                        true_events=self.remap_evts.true_map[true_hist_sparse].astype('d'),
+                                        reco_weights=reco_weights.astype('d'))
 
         if self.show_plots:
             self.plot_response_matrix(response_matrix=self.response)
 
         # Set data
-        # data_nd_binned, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse =
-        _, _, _, _, data_hist_sparse, data_hist_err_sparse = self.remap_evts.remap_data_events(data_list=reco_var_list,
-                                                                                            bin_list=self.reco_bin_array,
-                                                                                            data_weights=data_weight_list)
+        _, _, _, _, data_hist_sparse, _ = self.remap_evts.remap_events(var_list=reco_var_list,
+                                                                       bin_list=self.true_bin_array,
+                                                                       event_weights=data_weight_list, not_data=False)
 
         self.fill_data_hist(sparse_data_hist=data_hist_sparse)
 
@@ -110,7 +124,7 @@ class Unfold:
         if self.show_plots and self.is_training:
             self.truth_hist = ROOT.TH1D("truth", "Truth", int(len(unfolded_data_hist_np)), 0, float(len(unfolded_data_hist_np)))
             self.plot_unfolded_results(unfolded_data_hist_np=unfolded_data_hist_np, unfolded_cov_np=unfolded_data_cov_np,
-                                       true_hist_np=sparse_tuple[0])
+                                       true_hist_np=true_hist_sparse)
 
         # Map 1D back to ND space
         total_bins = self.remap_evts.true_total_bins if self.is_training else self.remap_evts.reco_total_bins
@@ -121,7 +135,7 @@ class Unfold:
         if self.show_plots and self.is_training:
             self.truth_hist = ROOT.TH1D("truth", "Truth", int(len(unfold_nd_hist_np)), 0, float(len(unfold_nd_hist_np)))
             self.plot_unfolded_results(unfolded_data_hist_np=unfold_nd_hist_np, unfolded_cov_np=unfold_nd_cov_np,
-                                       true_hist_np=nd_hist_tuple[0])
+                                       true_hist_np=true_hist_sparse)
 
         unfolded_corr_np = self.correlation_from_covariance(unfolded_cov=unfold_nd_cov_np)
 

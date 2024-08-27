@@ -16,6 +16,34 @@ class Remapping:
         self.var_names = var_names
         self.debug = False
 
+    def remap_events(self, var_list, bin_list, event_weights, not_data=True):
+
+        # 3D (l,m,n) -> (l*m*n) + (m*n) + n
+        self.true_total_bins = np.prod([len(d) - 1 for d in bin_list])
+
+        nd_binned, weights, nd_hist, nd_hist_err, nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=var_list,
+                                                                                               bin_list=bin_list,
+                                                                                               total_bins=self.true_total_bins,
+                                                                                               evt_weights=event_weights,
+                                                                                               debug=self.debug)
+
+        print("Total Bins:", self.true_total_bins)
+        print("Number Nd:", np.unique(nd_hist).shape)
+
+        # Create map between 3D and 1D
+        if not_data:
+            nd_map, hist_sparse, hist_err_sparse = self.map_nd_to_1d(num_nd=nd_hist, num_nd_err=nd_hist_err,
+                                                                        total_bins=self.true_total_bins)
+        else:
+            nd_map = None
+            hist_sparse, hist_err_sparse = self.map_data_to_1d_bins(num_nd=nd_hist,
+                                                                              num_nd_err=nd_hist_err,
+                                                                              map_nd1d=self.reco_map)
+
+        print("Map:", np.count_nonzero(nd_map))
+
+        return nd_binned, weights, nd_hist, nd_hist_cov, hist_sparse, nd_map
+
     def remap_training_events(self, true_list, reco_list, bin_list, true_event_weights, reco_event_weights):
 
         # 3D (l,m,n) -> (l*m*n) + (m*n) + n
@@ -55,7 +83,6 @@ class Remapping:
     def remap_data_events(self, data_list, bin_list, data_weights):
 
         self.reco_total_bins = np.prod([len(d)-1 for d in bin_list])
-        #data_event_ones = np.ones(len(data_list[0]))
 
         data_nd_binned, data_weight, data_nd_hist, data_nd_hist_err, data_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=data_list,
                                                                                                bin_list=bin_list,
@@ -69,6 +96,14 @@ class Remapping:
         print("Sparse Data nbins:", len(data_hist_sparse))
 
         return data_nd_binned, data_weight, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse
+
+    @staticmethod
+    def calculate_efficiency(full_signal, full_selected, sparse_signal):
+
+        efficiency = full_selected[full_signal > 0] / sparse_signal
+        efficiency[np.isinf(efficiency)] = 0.
+
+        return efficiency
 
     @staticmethod
     def map_meas_to_bin_space(corr_var_list, bin_list, total_bins, evt_weights, debug=False):

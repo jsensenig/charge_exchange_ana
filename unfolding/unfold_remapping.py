@@ -108,6 +108,28 @@ class Remapping:
 
         return efficiency, eff_err
 
+    def correct_for_efficiency(self, unfolded_data, unfolded_data_cov, efficiency):
+
+        unfolded_data_corrected = np.zeros(self.true_total_bins)
+        unfolded_data_cov_corrected = np.zeros(shape=(self.true_total_bins, self.true_total_bins))
+
+        for i in range(self.true_total_bins):
+            idx_i = self.true_map[i] - 1
+            if (idx_i + 1) < 1: # empty bin in mapping
+                continue
+            if unfolded_data[idx_i] > 0: # empty bin in data
+                unfolded_data_corrected[i] = unfolded_data[idx_i] / efficiency[idx_i]
+                for j in range(self.true_total_bins):
+                    idx_j = self.true_map[j] - 1
+                    if (idx_j + 1) < 1 or unfolded_data[idx_j] < 1:
+                        continue
+                    unfolded_data_cov_corrected[i, j] = unfolded_data_cov[idx_i, idx_j] / (efficiency[idx_i] * efficiency[idx_j])
+            elif efficiency[idx_i] == 0: # FIXME add MC scaling
+                unfolded_data_corrected[i] = 1
+                unfolded_data_cov_corrected[i, i] = 1
+
+        return unfolded_data, unfolded_data_cov_corrected
+
     @staticmethod
     def map_meas_to_bin_space(corr_var_list, bin_list, total_bins, evt_weights, debug=False):
         """

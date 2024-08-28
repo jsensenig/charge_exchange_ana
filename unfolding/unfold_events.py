@@ -122,8 +122,13 @@ class Unfold:
 
         # Convert to numpy
         self.truth_hist = ROOT.TH1D("truth", "Truth", self.truth_nbins_sparse, 0, self.truth_nbins_sparse)
-        unfolded_data_hist_np, unfolded_data_cov_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
+        raw_unfolded_hist_np, raw_unfolded_cov_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
                                                                          cov_matrix=unfolded_data_cov)
+
+        # Efficiency correct unfolded data
+        unfolded_data_hist_np, unfolded_data_cov_np = self.remap_evts.correct_for_efficiency(unfolded_data=raw_unfolded_hist_np,
+                                                                                            unfolded_data_cov=raw_unfolded_cov_np,
+                                                                                            efficiency=self.efficiency)
 
         # Plot sparse unfolded results
         if self.show_plots and self.is_training:

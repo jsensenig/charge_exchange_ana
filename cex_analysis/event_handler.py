@@ -58,13 +58,14 @@ class EventHandler:
         :param config:
         :return:
         """
-        for cut_class in self.config["cut_list"]:
-            if cut_class in self.all_cut_classes:
+        for cut_name in self.config["cut_list"]:
+            class_name = cut_name.rsplit('_')[0]
+            if class_name in self.all_cut_classes:
                 # If the cut class is available then register and create it from the factory
-                self.build_ana.register_builder(cut_class, self.all_cut_classes[cut_class])
-                self.cut_map[cut_class] = self.build_ana.create(cut_class, self.config)
+                self.build_ana.register_builder(cut_name, self.all_cut_classes[class_name])
+                self.cut_map[cut_name] = self.build_ana.create(cut_name, self.config, cut_name)
             else:
-                print("Cut class", cut_class, "not found!")
+                print("Cut class", class_name, "not found!")
 
     def full_cut_likelihood(self, s, b):
         return ak.numpy.sqrt(2. * (s + b) * ak.numpy.log(1 + s/b) - 2. * s)

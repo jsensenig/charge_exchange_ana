@@ -5,9 +5,9 @@ class CutFactory:
     def register_builder(self, key, builder):
         self._builders[key] = builder
 
-    def create(self, key, config):
+    def create(self, key, config, cut_name):
         builder = self._builders.get(key)
         if not builder:
             raise ValueError(key)
-        return builder(config)
+        return builder(config, cut_name)
 

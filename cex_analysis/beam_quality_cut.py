@@ -4,10 +4,10 @@ import numpy as np
 
 
 class BeamQualityCut(EventSelectionBase):
-    def __init__(self, config):
+    def __init__(self, config, cut_name):
         super().__init__(config)
 
-        self.cut_name = "BeamQualityCut"
+        self.cut_name = cut_name
         self.config = config
         self.reco_beam_pdg = self.config["reco_beam_pdg"]
 

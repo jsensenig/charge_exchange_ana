@@ -249,4 +249,4 @@ def bin_centers_np(bins):
 
 
 def bin_width_np(bins):
-    return (bins[1] - bins[0])
+    return bins[1] - bins[0]

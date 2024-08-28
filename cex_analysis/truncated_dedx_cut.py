@@ -5,10 +5,10 @@ import numpy as np
 
 
 class TruncatedDedxCut(EventSelectionBase):
-    def __init__(self, config):
+    def __init__(self, config, cut_name):
         super().__init__(config)
 
-        self.cut_name = "TruncatedDedxCut"
+        self.cut_name = cut_name
         self.config = config
         self.reco_daughter_pdg = self.config["reco_daughter_pdg"]
 

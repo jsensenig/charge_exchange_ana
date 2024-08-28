@@ -12,10 +12,10 @@ import numpy as np
 
 
 class RecoShowerDirection(EventSelectionBase):
-    def __init__(self, config):
+    def __init__(self, config, cut_name):
         super().__init__(config)
 
-        self.cut_name = "RecoShowerDirection"
+        self.cut_name = cut_name
         self.config = config
         self.optimize = self.config["optimize_cut"]
         self.reco_beam_pdf = self.config["reco_beam_pdg"]

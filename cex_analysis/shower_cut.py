@@ -7,10 +7,10 @@ from itertools import product
 
 
 class ShowerCut(EventSelectionBase):
-    def __init__(self, config):
+    def __init__(self, config, cut_name):
         super().__init__(config)
 
-        self.cut_name = "ShowerCut"
+        self.cut_name = cut_name
         self.config = config
         self.reco_beam_pdg = self.config["reco_daughter_pdg"]
 
@@ -36,9 +36,9 @@ class ShowerCut(EventSelectionBase):
 
     def transform_point_to_spherical(self, events):
         # Column names
-        tmp_x = "reco_daughter_PFP_shower_spacePts_tmpX"
-        tmp_y = "reco_daughter_PFP_shower_spacePts_tmpY"
-        tmp_z = "reco_daughter_PFP_shower_spacePts_tmpZ"
+        tmp_x = "reco_all_spacePts_X"
+        tmp_y = "reco_all_spacePts_Y"
+        tmp_z = "reco_all_spacePts_Z"
 
         # Make a temp column we can operate on
         events[tmp_x] = events["reco_daughter_PFP_shower_spacePts_X"]

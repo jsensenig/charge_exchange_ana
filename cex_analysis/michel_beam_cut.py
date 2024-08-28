@@ -4,10 +4,10 @@ import numpy as np
 
 
 class MichelBeamCut(EventSelectionBase):
-    def __init__(self, config):
+    def __init__(self, config, cut_name):
         super().__init__(config)
 
-        self.cut_name = "MichelBeamCut"
+        self.cut_name = cut_name
         self.config = config
         self.reco_beam_pdg = self.config["reco_beam_pdg"]
         #self.chi2_ndof_var = "proton_chi2_ndof"

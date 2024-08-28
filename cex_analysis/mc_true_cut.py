@@ -4,14 +4,14 @@ import awkward as ak
 
 
 class MCTrueCut(EventSelectionBase):
-    def __init__(self, config):
+    def __init__(self, config, cut_name):
         super().__init__(config)
 
-        self.cut_name = "MCTrueCut"
+        self.cut_name = cut_name
         self.config = config
         self.reco_daughter_pdf = self.config["reco_beam_pdg"]
 
-        if self.config["is_mc"]:
+        if not self.config["is_mc"]:
             print("Processing data, please do not use this MC cut!")
             raise AssertionError
 
@@ -21,7 +21,7 @@ class MCTrueCut(EventSelectionBase):
         self.optimize = self.local_config["optimize_cut"]
 
         true_process = TrueProcess()
-        self.signal = self.config["true_signal"]
+        self.signal = self.local_config["true_signal"]
 
         if self.signal not in true_process.get_process_list():
             print("Unknown signal", self.signal)

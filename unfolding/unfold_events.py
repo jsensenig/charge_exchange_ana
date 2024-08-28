@@ -91,12 +91,14 @@ class Unfold:
             # Only used for efficiency calculation
             _, _, signal_nd_hist, _, signal_hist_sparse, _ = self.remap_evts.remap_events(var_list=signal_var_list,
                                                                                           bin_list=self.true_bin_array,
-                                                                                          event_weights=signal_weight_list)
+                                                                                          event_weights=signal_weight_list,
+                                                                                          is_true_reco=False, is_data=False)
             sel_signal = [var[selected_signal_mask] for var in signal_var_list]
             sel_weight = signal_weight_list[selected_signal_mask]
             _, _, selected_signal_nd_hist, _, _, _ = self.remap_evts.remap_events(var_list=sel_signal,                  
-                                                                                          bin_list=self.true_bin_array,
-                                                                                          event_weights=sel_weight)
+                                                                                  bin_list=self.true_bin_array,
+                                                                                  event_weights=sel_weight,
+                                                                                  is_true_reco=False, is_data=False)
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
 
@@ -113,7 +115,8 @@ class Unfold:
         # Set data
         _, _, _, _, data_hist_sparse, _ = self.remap_evts.remap_events(var_list=reco_var_list,
                                                                        bin_list=self.true_bin_array,
-                                                                       event_weights=data_weight_list, not_data=False)
+                                                                       event_weights=data_weight_list,
+                                                                       is_true_reco=False, is_data=True)
 
         self.fill_data_hist(sparse_data_hist=data_hist_sparse)
 

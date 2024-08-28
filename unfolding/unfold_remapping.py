@@ -16,7 +16,7 @@ class Remapping:
         self.var_names = var_names
         self.debug = False
 
-    def remap_events(self, var_list, bin_list, event_weights, not_data=True):
+    def remap_events(self, var_list, bin_list, event_weights, is_true_reco=True, is_data=True):
 
         # 3D (l,m,n) -> (l*m*n) + (m*n) + n
         self.true_total_bins = np.prod([len(d) - 1 for d in bin_list])
@@ -31,14 +31,15 @@ class Remapping:
         print("Number Nd:", np.unique(nd_hist).shape)
 
         # Create map between 3D and 1D
-        if not_data:
+        if is_true_reco:
             nd_map, hist_sparse, hist_err_sparse = self.map_nd_to_1d(num_nd=nd_hist, num_nd_err=nd_hist_err,
-                                                                        total_bins=self.true_total_bins)
+                                                                     total_bins=self.true_total_bins)
         else:
             nd_map = None
+            bin_map = self.reco_map if is_data else self.true_map
             hist_sparse, hist_err_sparse = self.map_data_to_1d_bins(num_nd=nd_hist,
-                                                                              num_nd_err=nd_hist_err,
-                                                                              map_nd1d=self.reco_map)
+                                                                    num_nd_err=nd_hist_err,
+                                                                    map_nd1d=bin_map)
 
         print("Map:", np.count_nonzero(nd_map))
 

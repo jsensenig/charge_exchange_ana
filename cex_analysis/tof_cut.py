@@ -1,12 +1,13 @@
 from cex_analysis.event_selection_base import EventSelectionBase
+import awkward as ak
 import numpy as np
 
 
 class TOFCut(EventSelectionBase):
-    def __init__(self, config):
+    def __init__(self, config, cut_name):
         super().__init__(config)
 
-        self.cut_name = "TOFCut"
+        self.cut_name = cut_name
         self.config = config
         self.reco_daughter_pdf = self.config["reco_beam_pdg"]
         self.is_mc = self.config["is_mc"]
@@ -31,10 +32,22 @@ class TOFCut(EventSelectionBase):
 
         # Perform the actual cut on TOF
         # also cut out positrons since they are vetoed in the data
-        selected_mask = (self.local_config["lower"] < events[cut_variable][:, 0]) & \
-                        (events[cut_variable][:, 0] < self.local_config["upper"])
-        #                (events["true_beam_PDG"] != -11)
+        # select only events with valid beam instrumentatin data
+        non_positron_mask = events["beam_inst_C0"] == 0
+        valid_bi = events["beam_inst_valid"]
+        
+        valid_trigger_type_mask = (events["beam_inst_trigger"] == 12) 
+        valid_num_momenta = events["beam_inst_nMomenta"] == 1
+        valid_num_tracks = events["beam_inst_nTracks"] == 1
+        valid_reco = events["reco_reconstructable_beam_event"] != 0
+        
+        valid_beam_particle = non_positron_mask & valid_bi & valid_trigger_type_mask & valid_num_momenta & valid_num_tracks & valid_reco
 
+        selected_mask = np.zeros(len(events)).astype(bool)
+        selected_mask[valid_beam_particle] = (self.local_config["lower"] < events[valid_beam_particle][cut_variable][:, 0]) & \
+                        (events[valid_beam_particle][cut_variable][:, 0] < self.local_config["upper"])
+
+        #                (events["true_beam_PDG"] != -11)
         # selected_mask = (events[cut_variable][:, 0] < 97.) & (events["true_beam_PDG"] != -11)
 
         if self.is_mc:

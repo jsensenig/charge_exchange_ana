@@ -99,13 +99,14 @@ class Remapping:
         return data_nd_binned, data_weight, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse
 
     @staticmethod
-    def calculate_efficiency(full_signal, full_selected, sparse_signal):
+    def calculate_efficiency(full_signal, full_selected):
 
-        selected_signal = full_selected[full_signal > 0]
-        efficiency = selected_signal / sparse_signal
+        efficiency = full_selected / full_signal
+
+        # If divided by zero replace the infinity by 0
         efficiency[np.isinf(efficiency)] = 0.
 
-        eff_err = efficiency * ((np.sqrt(selected_signal) / selected_signal) + (np.sqrt(sparse_signal) / sparse_signal))
+        eff_err = efficiency * ((np.sqrt(full_selected) / full_selected) + (np.sqrt(full_signal) / full_signal))
 
         return efficiency, eff_err
 
@@ -115,17 +116,13 @@ class Remapping:
         unfolded_data_cov_corrected = np.zeros(shape=(self.true_total_bins, self.true_total_bins))
 
         for i in range(self.true_total_bins):
-            idx_i = self.true_map[i] - 1
-            if (idx_i + 1) < 1: # empty bin in mapping
-                continue
-            if unfolded_data[idx_i] > 0: # empty bin in data
-                unfolded_data_corrected[i] = unfolded_data[idx_i] / efficiency[idx_i]
+            if unfolded_data[i] > 0: # empty bin in data
+                unfolded_data_corrected[i] = unfolded_data[i] / efficiency[i]
                 for j in range(self.true_total_bins):
-                    idx_j = self.true_map[j] - 1
-                    if (idx_j + 1) < 1 or unfolded_data[idx_j] < 1:
+                    if unfolded_data[j] < 1:
                         continue
-                    unfolded_data_cov_corrected[i, j] = unfolded_data_cov[idx_i, idx_j] / (efficiency[idx_i] * efficiency[idx_j])
-            elif efficiency[idx_i] == 0: # FIXME add MC scaling
+                    unfolded_data_cov_corrected[i, j] = unfolded_data_cov[i, j] / (efficiency[i] * efficiency[j])
+            elif efficiency[i] == 0: # FIXME add MC scaling
                 unfolded_data_corrected[i] = 1
                 unfolded_data_cov_corrected[i, i] = 1
 

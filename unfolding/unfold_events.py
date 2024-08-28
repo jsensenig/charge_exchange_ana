@@ -102,8 +102,8 @@ class Unfold:
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
 
-            self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist, full_selected=selected_signal_nd_hist,
-                                                 sparse_signal=signal_hist_sparse)
+            self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist,
+                                                                                 full_selected=selected_signal_nd_hist)
 
             self.create_response_matrix(reco_events=self.remap_evts.reco_map[reco_nd_binned].astype('d'),
                                         true_events=self.remap_evts.true_map[true_nd_binned].astype('d'),
@@ -125,13 +125,8 @@ class Unfold:
 
         # Convert to numpy
         self.truth_hist = ROOT.TH1D("truth", "Truth", self.truth_nbins_sparse, 0, self.truth_nbins_sparse)
-        raw_unfolded_hist_np, raw_unfolded_cov_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
+        unfolded_data_hist_np, unfolded_data_cov_np = self.root_to_numpy(unfolded_hist=unfolded_data_hist,
                                                                          cov_matrix=unfolded_data_cov)
-
-        # Efficiency correct unfolded data
-        unfolded_data_hist_np, unfolded_data_cov_np = self.remap_evts.correct_for_efficiency(unfolded_data=raw_unfolded_hist_np,
-                                                                                            unfolded_data_cov=raw_unfolded_cov_np,
-                                                                                            efficiency=self.efficiency)
 
         # Plot sparse unfolded results
         if self.show_plots and self.is_training:
@@ -141,9 +136,14 @@ class Unfold:
 
         # Map 1D back to ND space
         total_bins = self.remap_evts.true_total_bins if self.is_training else self.remap_evts.reco_total_bins
-        unfold_nd_hist_np, unfold_nd_cov_np, _ = self.remap_evts.map_1d_to_nd(unfolded_hist_np=unfolded_data_hist_np,
-                                                                              unfolded_cov_np=unfolded_data_cov_np,
-                                                                              nbins=total_bins)
+        raw_unfold_nd_hist_np, raw_unfold_nd_cov_np, _ = self.remap_evts.map_1d_to_nd(unfolded_hist_np=unfolded_data_hist_np,
+                                                                                    unfolded_cov_np=unfolded_data_cov_np,
+                                                                                    nbins=total_bins)
+
+        # Efficiency correct unfolded data after its mapped back to non-sparse form
+        unfold_nd_hist_np, unfold_nd_cov_np = self.remap_evts.correct_for_efficiency(unfolded_data=raw_unfold_nd_hist_np,
+                                                                                     unfolded_data_cov=raw_unfold_nd_cov_np,
+                                                                                     efficiency=self.efficiency)
 
         if self.show_plots and self.is_training:
             self.truth_hist = ROOT.TH1D("truth", "Truth", int(len(unfold_nd_hist_np)), 0, float(len(unfold_nd_hist_np)))

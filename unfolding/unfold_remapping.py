@@ -100,10 +100,13 @@ class Remapping:
     @staticmethod
     def calculate_efficiency(full_signal, full_selected, sparse_signal):
 
-        efficiency = full_selected[full_signal > 0] / sparse_signal
+        selected_signal = full_selected[full_signal > 0]
+        efficiency = selected_signal / sparse_signal
         efficiency[np.isinf(efficiency)] = 0.
 
-        return efficiency
+        eff_err = efficiency * ((np.sqrt(selected_signal) / selected_signal) + (np.sqrt(sparse_signal) / sparse_signal))
+
+        return efficiency, eff_err
 
     @staticmethod
     def map_meas_to_bin_space(corr_var_list, bin_list, total_bins, evt_weights, debug=False):

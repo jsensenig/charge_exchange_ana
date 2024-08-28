@@ -23,9 +23,9 @@ class MCTrueCut(EventSelectionBase):
         true_process = TrueProcess()
         self.signal = self.local_config["true_signal"]
 
-        if self.signal not in true_process.get_process_list():
-            print("Unknown signal", self.signal)
-            raise ValueError
+        #if self.signal not in true_process.get_process_list():
+        #    print("Unknown signal", self.signal)
+        #    raise ValueError
 
     def selection(self, events, hists, optimizing=False):
 

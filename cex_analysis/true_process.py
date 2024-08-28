@@ -33,12 +33,12 @@ class TrueProcess:
 
         # Momentum cut on true charged pions, i.e., pions with momentum < cut momentum are indistinguishable from say
         # protons and other charged particles. set to 0.125
-        valid_piplus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.1, pdg_select=211)
-        valid_piminus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.1, pdg_select=-211)
+        valid_piplus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.0, pdg_select=211)
+        valid_piminus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.0, pdg_select=-211)
 
         # Pion inelastic
-        pion_inelastic = ((events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic") &
-                         ~events["misid_beam"])
+        pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic") #&
+        #                 ~events["misid_beam"])
 
         # Pion elastic
         events["pion_elastic"] = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+elastic")

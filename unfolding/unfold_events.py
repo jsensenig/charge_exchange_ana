@@ -42,7 +42,7 @@ class Unfold:
         self.beam_vars = self.config["xsec_vars"] == "BeamPionVariables"
 
         self.response = None
-        self.efficiency = None
+        self.efficiency, self.eff_err = None, None
         if not self.is_training:
             self.load_response(response_file=response_file)
 
@@ -65,8 +65,8 @@ class Unfold:
             }
         """)
 
-    def run_unfold(self, event_record=None, data_mask=None, true_var_list=None, reco_var_list=None, signal_var_list=None,
-                   true_weight_list=None, reco_weight_list=None, data_weight_list=None, external_vars=False):
+    def run_unfold(self, event_record=None, data_mask=None, true_var_list=None, reco_var_list=None, signal_var_list=None, selected_signal_mask=None,
+                   true_weight_list=None, reco_weight_list=None, signal_weight_list=None,  data_weight_list=None, external_vars=False):
 
         if not external_vars:
             true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
@@ -77,6 +77,7 @@ class Unfold:
                 self.vars.xsec_vars[rk] = reco_var_list[i]
 
         if self.is_training:
+            print("Start Training")
             true_nd_binned, true_weights, true_nd_hist, true_nd_hist_cov, true_hist_sparse, self.remap_evts.true_map\
                 = self.remap_evts.remap_events(var_list=true_var_list,
                                                bin_list=self.true_bin_array,
@@ -88,18 +89,22 @@ class Unfold:
                                                event_weights=reco_weight_list)
 
             # Only used for efficiency calculation
-            signal_ones = np.ones(len(signal_var_list[0])).astype(bool)
             _, _, signal_nd_hist, _, signal_hist_sparse, _ = self.remap_evts.remap_events(var_list=signal_var_list,
                                                                                           bin_list=self.true_bin_array,
-                                                                                          event_weights=signal_ones)
+                                                                                          event_weights=signal_weight_list)
+            sel_signal = [var[selected_signal_mask] for var in signal_var_list]
+            sel_weight = signal_weight_list[selected_signal_mask]
+            _, _, selected_signal_nd_hist, _, _, _ = self.remap_evts.remap_events(var_list=sel_signal,                  
+                                                                                          bin_list=self.true_bin_array,
+                                                                                          event_weights=sel_weight)
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
 
-            self.efficiency = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist, full_selected=true_nd_hist,
+            self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist, full_selected=selected_signal_nd_hist,
                                                  sparse_signal=signal_hist_sparse)
 
-            self.create_response_matrix(reco_events=self.remap_evts.reco_map[reco_hist_sparse].astype('d'),
-                                        true_events=self.remap_evts.true_map[true_hist_sparse].astype('d'),
+            self.create_response_matrix(reco_events=self.remap_evts.reco_map[reco_nd_binned].astype('d'),
+                                        true_events=self.remap_evts.true_map[true_nd_binned].astype('d'),
                                         reco_weights=reco_weights.astype('d'))
 
         if self.show_plots:
@@ -135,7 +140,7 @@ class Unfold:
         if self.show_plots and self.is_training:
             self.truth_hist = ROOT.TH1D("truth", "Truth", int(len(unfold_nd_hist_np)), 0, float(len(unfold_nd_hist_np)))
             self.plot_unfolded_results(unfolded_data_hist_np=unfold_nd_hist_np, unfolded_cov_np=unfold_nd_cov_np,
-                                       true_hist_np=true_hist_sparse)
+                                       true_hist_np=true_nd_hist)
 
         unfolded_corr_np = self.correlation_from_covariance(unfolded_cov=unfold_nd_cov_np)
 

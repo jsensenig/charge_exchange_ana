@@ -105,6 +105,7 @@ class Remapping:
 
         # If divided by zero replace the infinity by 0
         efficiency[np.isinf(efficiency)] = 0.
+        efficiency[np.isnan(efficiency)] = 0.
 
         eff_err = efficiency * ((np.sqrt(full_selected) / full_selected) + (np.sqrt(full_signal) / full_signal))
 
@@ -123,8 +124,9 @@ class Remapping:
                         continue
                     unfolded_data_cov_corrected[i, j] = unfolded_data_cov[i, j] / (efficiency[i] * efficiency[j])
             elif efficiency[i] == 0: # FIXME add MC scaling
-                unfolded_data_corrected[i] = 1
-                unfolded_data_cov_corrected[i, i] = 1
+                #unfolded_data_corrected[i] = 1
+                #unfolded_data_cov_corrected[i, i] = 1
+                pass
 
         return unfolded_data, unfolded_data_cov_corrected
 

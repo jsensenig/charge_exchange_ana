@@ -43,6 +43,8 @@ class Unfold:
 
         self.response = None
         self.efficiency, self.eff_err = None, None
+        self.apply_eff_correction = self.config["apply_eff_correction"]
+
         if not self.is_training:
             self.load_response(response_file=response_file)
 
@@ -72,9 +74,13 @@ class Unfold:
             true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
                 self.get_unfold_variables(event_record=event_record, reco_int_mask=data_mask))
         else:
-            for i, (tk, rk) in enumerate(zip(self.true_record_var, self.reco_record_var)):
-                self.vars.xsec_vars[tk] = true_var_list[i]
-                self.vars.xsec_vars[rk] = reco_var_list[i]
+            if self.is_training:
+                for i, (tk, rk) in enumerate(zip(self.true_record_var, self.reco_record_var)):
+                    self.vars.xsec_vars[tk] = true_var_list[i]
+                    self.vars.xsec_vars[rk] = reco_var_list[i]
+            else:
+                for i, rk in enumerate(self.reco_record_var):
+                    self.vars.xsec_vars[rk] = reco_var_list[i]
 
         if self.is_training:
             print("Start Training")
@@ -135,15 +141,18 @@ class Unfold:
                                        true_hist_np=true_hist_sparse)
 
         # Map 1D back to ND space
-        total_bins = self.remap_evts.true_total_bins if self.is_training else self.remap_evts.reco_total_bins
+        total_bins = self.remap_evts.true_total_bins #if self.is_training else self.remap_evts.reco_total_bins
         raw_unfold_nd_hist_np, raw_unfold_nd_cov_np, _ = self.remap_evts.map_1d_to_nd(unfolded_hist_np=unfolded_data_hist_np,
                                                                                     unfolded_cov_np=unfolded_data_cov_np,
                                                                                     nbins=total_bins)
 
         # Efficiency correct unfolded data after its mapped back to non-sparse form
-        unfold_nd_hist_np, unfold_nd_cov_np = self.remap_evts.correct_for_efficiency(unfolded_data=raw_unfold_nd_hist_np,
-                                                                                     unfolded_data_cov=raw_unfold_nd_cov_np,
-                                                                                     efficiency=self.efficiency)
+        if self.apply_eff_correction:
+            unfold_nd_hist_np, unfold_nd_cov_np = self.remap_evts.correct_for_efficiency(unfolded_data=raw_unfold_nd_hist_np,
+                                                                                         unfolded_data_cov=raw_unfold_nd_cov_np,
+                                                                                         efficiency=self.efficiency)
+        else:
+            unfold_nd_hist_np, unfold_nd_cov_np = raw_unfold_nd_hist_np, raw_unfold_nd_cov_np
 
         if self.show_plots and self.is_training:
             self.truth_hist = ROOT.TH1D("truth", "Truth", int(len(unfold_nd_hist_np)), 0, float(len(unfold_nd_hist_np)))
@@ -418,6 +427,8 @@ class Unfold:
         self.true_bin_array = unfold_param_dict["true_bin_array"]
         self.reco_bin_array = unfold_param_dict["reco_bin_array"]
         self.reco_nbins_sparse = unfold_param_dict["reco_nbins_sparse"]
+        self.efficiency = unfold_param_dict["efficiency"]
+        self.eff_err = unfold_param_dict["efficiency_err"]
         print("Loaded unfold param file:", response_file)
 
     def save_response(self, file_name):
@@ -426,7 +437,9 @@ class Unfold:
                              "reco_bin_map": self.remap_evts.reco_map,
                              "true_bin_array": self.true_bin_array,
                              "reco_bin_array": self.reco_bin_array,
-                             "reco_nbins_sparse": self.reco_nbins_sparse}
+                             "reco_nbins_sparse": self.reco_nbins_sparse,
+                             "efficiency": self.efficiency,
+                             "efficiency_err": self.eff_err}
 
         with open(file_name, 'wb') as f:
             pickle.dump(unfold_param_dict, f)

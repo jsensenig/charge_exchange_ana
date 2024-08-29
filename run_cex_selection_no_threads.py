@@ -116,27 +116,35 @@ def save_results(results, is_mc):
     h5_file.close()
 
 
-def save_unfold_variables(results, beam_var, pi0_var, file_name, signal_events, is_mc):
+def save_unfold_variables(results, beam_cfg_file, pi0_cfg_file, file_name, signal_events, selected_signal_mask, is_mc):
 
     hist_map, event_mask, beam_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
 
+    beam_unfold = Unfold(config_file=beam_cfg_file, response_file="response_2gev_official_ntuples_sel.pkl")
+    pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file="response_2gev_official_ntuples_sel.pkl")
+
     # Beam variables should be pi+, get all signal events to use for efficiency calculation
-    print("Getting beam cross section variables!")
+    print("Getting beam cross section variables! Signal/Beam/Selected", -9, "/", len(beam_events), "/",  np.count_nonzero(beam_mask))
     signal_beam_dict = {}
-    beam_var_dict = beam_var.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=beam_mask)
+    beam_var_dict = beam_unfold.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=beam_mask)
+
     if is_mc:
-        signal_beam_var_dict = beam_var.vars.get_xsec_variable(event_record=signal_events,
+        beam_unfold = Unfold(config_file=beam_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
+        signal_beam_dict = beam_unfold.vars.get_xsec_variable(event_record=signal_events,
                                                                reco_int_mask=np.ones(len(signal_events)).astype(bool))
-        signal_beam_dict = {"all_" + k: signal_beam_var_dict[k] for k in signal_beam_var_dict}
+        signal_beam_dict["true_selected_signal"] = selected_signal_mask
+        print("Extracted Signal/Selected", len(list(signal_beam_dict.values())[0]), "/", len(list(beam_var_dict.values())[0]))
 
     # Pi0 variables should be from CeX, get all signal events to use for efficiency calculation
-    print("Getting pi0 cross section variables!")
+    print("Getting pi0 cross section variables!", len(events))
+    pi0_var_dict = {}
     signal_pi0_dict = {}
-    pi0_var_dict = pi0_var.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
-    if is_mc:
-        signal_pi0_var_dict = beam_var.vars.get_xsec_variable(event_record=signal_events,
+    #pi0_var_dict = pi0_unfold.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
+
+    if False and is_mc:
+        pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
+        signal_pi0_dict = pi0_unfold.vars.get_xsec_variable(event_record=signal_events,
                                                               reco_int_mask=np.ones(len(signal_events)).astype(bool))
-        signal_pi0_dict = {"all_" + k: signal_pi0_var_dict[k] for k in signal_pi0_var_dict}
 
     save_list = [beam_var_dict, pi0_var_dict, signal_beam_dict, signal_pi0_dict]
 
@@ -154,8 +162,14 @@ def event_selection(config, data):
 def start_analysis(flist, config, branches, is_mc):
 
     data = uproot.concatenate(files=flist, expressions=branches)
-    signal = data[config["signal"]] if is_mc else None
-    return event_selection(config=config, data=data), signal
+    event_selection_result = event_selection(config=config, data=data)
+
+    selection_mask = event_selection_result[1]
+
+    signal = data[data[config["signal"]]] if is_mc else None
+    selected_signal_mask = selection_mask[data[config["signal"]]] if is_mc else None
+
+    return event_selection_result, signal, selected_signal_mask
 
 
 def configure(config_file):
@@ -184,7 +198,7 @@ def get_branches(is_mc):
                  "beam_inst_TOF", "beam_inst_P", "reco_reconstructable_beam_event", "reco_beam_true_byE_matched",
                  "reco_beam_true_byE_origin", "g4rw_full_grid_piplus_coeffs"]
 
-    branches += ["fit_pi0_energy", "fit_pi0_cos_theta", "fit_pi0_gamma_energy1", "fit_pi0_gamma_energy2", "fit_pi0_gamma_oa"]
+    #branches += ["fit_pi0_energy", "fit_pi0_cos_theta", "fit_pi0_gamma_energy1", "fit_pi0_gamma_energy2", "fit_pi0_gamma_oa"]
 
     #branches += ["reco_all_spacePts_X", "reco_all_spacePts_Y", "reco_all_spacePts_Z", "reco_all_spacePts_Integral"]
 
@@ -222,18 +236,19 @@ if __name__ == "__main__":
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pi0_reco/pduneana_*.root:beamana;3" 
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco/pduneana_*.root:beamana;3" 
 
-    #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco*/pduneana_*.root:beamana"
+    file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco*/pduneana_*.root:beamana"
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco2/pduneana_129.root:beamana"
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pduneana_*.root:beamana;3"
-    file_list = "/nfs/disk1/users/jon/custom_ntuples/data/to_ana/run*/pduneana_*.root:beamana"
+    #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/to_ana/run*/pduneana_*.root:beamana"
 
     beam_cfg_file = "config/unfolding_2gev.json"
     pi0_cfg_file = "config/pi0_unfolding.json"
 
-    beam_unfold = Unfold(config_file=beam_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
-    pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
+    
+    
 
     # Get main configuration
+    #cfg_file = "config/main_true.json" 
     cfg_file = "config/main.json"
     config = configure(cfg_file)
 
@@ -243,10 +258,10 @@ if __name__ == "__main__":
     # Start the analysis threads
     print("Starting threads")
     start = timer()
-    results, signal_events = start_analysis(file_list, config, branches, is_mc=config["is_mc"])
+    results, signal_events, selected_signal_mask = start_analysis(file_list, config, branches, is_mc=config["is_mc"])
 
-    save_unfold_variables(results, beam_var=beam_unfold, pi0_var=pi0_unfold, signal_events=signal_events,
-                          file_name="test_vars.pkl", is_mc=config["is_mc"])
+    save_unfold_variables(results, beam_cfg_file=beam_cfg_file, pi0_cfg_file=pi0_cfg_file, signal_events=signal_events,
+                          selected_signal_mask=selected_signal_mask, file_name="test_vars.pkl", is_mc=config["is_mc"])
     save_results(results=results, is_mc=config["is_mc"])
 
     end = timer()

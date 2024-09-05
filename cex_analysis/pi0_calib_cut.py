@@ -56,19 +56,19 @@ class Pi0CalibCut(EventSelectionBase):
             hists.configure_hists(self.local_hist_config)
 
         # Get the beam particle end KE
-        events["reco_beam_end_ke"] = self.get_beam_end_ke(events=events)
-        events["reco_daughter_total_ke"] = self.get_daughter_total_ke(events=events)
+        #events["reco_beam_end_ke"] = self.get_beam_end_ke(events=events)
+        #events["reco_daughter_total_ke"] = self.get_daughter_total_ke(events=events)
 
         # Difference between beam interaction KE and all outgoing (daughter) KE
-        events["reco_delta_beam_daughter_ke"] = events["reco_beam_end_ke"] - events["reco_daughter_total_ke"]
+        #events["reco_delta_beam_daughter_ke"] = events["reco_beam_end_ke"] - events["reco_daughter_total_ke"]
 
         # Plot the variable before making cut
         if not optimizing:
             self.plot_particles_base(events=events, pdg=events[self.reco_daughter_pdf], precut=True, hists=hists)
 
         # Perform the cut on the beam particle endpoint
-        beam_end_ke_mask = events["reco_beam_end_ke"] > self.local_config["reco_beam_ke_lower"] # > 400
-        delta_ke_mask = np.abs(events["reco_delta_beam_daughter_ke"]) < self.local_config["delta_ke_limit"] # < 200
+        #beam_end_ke_mask = events["reco_beam_end_ke"] > self.local_config["reco_beam_ke_lower"] # > 400
+        #delta_ke_mask = np.abs(events["reco_delta_beam_daughter_ke"]) < self.local_config["delta_ke_limit"] # < 200
 
         ts_cut = self.local_config["track_score_cut"] # 0.5
 
@@ -89,7 +89,7 @@ class Pi0CalibCut(EventSelectionBase):
             self.efficiency(total_events=events, passed_events=events[selected_mask], cut=self.cut_name, hists=hists)
 
         # Return event selection mask
-        return selected_mask & beam_end_ke_mask & delta_ke_mask
+        return selected_mask #& beam_end_ke_mask & delta_ke_mask
 
     def plot_particles_base(self, events, pdg, precut, hists):
         # hists.plot_process(x=events, precut=precut)

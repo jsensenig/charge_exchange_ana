@@ -28,6 +28,10 @@ class Unfold:
 
         self.remap_evts = Remapping(var_names=self.config["var_names"])
 
+        self.remap_evts.subtract_bkgd = self.config["subtract_background"]
+        if self.remap_evts.subtract_bkgd:
+            self.remap_evts.background_dict = self.load_background()
+
         self.true_record_var = self.config["true_record_var"]
         self.reco_record_var = self.config["reco_record_var"]
         self.reco_weight_var = self.config["reco_weight_var"]
@@ -447,6 +451,15 @@ class Unfold:
         with open(file_name, 'wb') as f:
             pickle.dump(unfold_param_dict, f)
         print("Wrote unfold param file:", file_name)
+
+    def load_background(self):
+
+        background_file = self.config["background_file"]
+
+        with open(background_file, 'rb') as f:
+            background_dict = pickle.load(f)
+
+        return background_dict
 
     @staticmethod
     def configure(config_file):

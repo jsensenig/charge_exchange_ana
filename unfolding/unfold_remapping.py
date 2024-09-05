@@ -15,6 +15,8 @@ class Remapping:
         self.true_total_bins, self.reco_total_bins = 0, 0
         self.var_names = var_names
         self.debug = False
+        self.background_dict = {}
+        self.subtract_bkgd = False
 
     def remap_events(self, var_list, bin_list, event_weights, is_true_reco=True, is_data=True):
 
@@ -22,10 +24,10 @@ class Remapping:
         self.true_total_bins = np.prod([len(d) - 1 for d in bin_list])
 
         nd_binned, weights, nd_hist, nd_hist_err, nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=var_list,
-                                                                                               bin_list=bin_list,
-                                                                                               total_bins=self.true_total_bins,
-                                                                                               evt_weights=event_weights,
-                                                                                               debug=self.debug)
+                                                                                           bin_list=bin_list,
+                                                                                           total_bins=self.true_total_bins,
+                                                                                           evt_weights=event_weights,
+                                                                                           debug=self.debug)
 
         print("Total Bins:", self.true_total_bins)
         print("Number Nd:", np.unique(nd_hist).shape)
@@ -37,6 +39,8 @@ class Remapping:
         else:
             nd_map = None
             bin_map = self.reco_map if is_data else self.true_map
+            if self.subtract_bkgd:
+                nd_hist, nd_hist_err = self.subtract_background(nd_hist=nd_hist, nd_hist_err=nd_hist_err)
             hist_sparse, hist_err_sparse = self.map_data_to_1d_bins(num_nd=nd_hist,
                                                                     num_nd_err=nd_hist_err,
                                                                     map_nd1d=bin_map)
@@ -44,6 +48,22 @@ class Remapping:
         print("Map:", np.count_nonzero(nd_map))
 
         return nd_binned, weights, nd_hist, nd_hist_cov, hist_sparse, nd_map
+
+    def subtract_background(self, nd_hist, nd_hist_err):
+        """
+        Backgrounds saved in dictionary {"total_hist_mask": array(), "backgrounds": [array(),array(),array()]}
+        The background arrays are just fractions so to scale them to data just multiply by the total data in the region
+        """
+        total_hist_mask = self.background_dict["total_signal_hist_mask"]
+
+        for bkgd in self.background_dict["backgrounds"]:
+            nd_hist[total_hist_mask][1:] -= bkgd * nd_hist[total_hist_mask][1:]
+
+        # This should never happen but just in case
+        nd_hist[total_hist_mask][nd_hist[total_hist_mask] < 0] = 0
+
+        return nd_hist, nd_hist_err
+
 
     def remap_training_events(self, true_list, reco_list, bin_list, true_event_weights, reco_event_weights):
 

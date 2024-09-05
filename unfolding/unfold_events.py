@@ -44,6 +44,7 @@ class Unfold:
         self.response = None
         self.efficiency, self.eff_err = None, None
         self.apply_eff_correction = self.config["apply_eff_correction"]
+        self.eff_cut = self.config["efficiency_thresh"]
 
         if not self.is_training:
             self.load_response(response_file=response_file)
@@ -95,21 +96,21 @@ class Unfold:
                                                event_weights=reco_weight_list)
 
             # Only used for efficiency calculation
-            _, _, signal_nd_hist, _, signal_hist_sparse, _ = self.remap_evts.remap_events(var_list=signal_var_list,
-                                                                                          bin_list=self.true_bin_array,
-                                                                                          event_weights=signal_weight_list,
-                                                                                          is_true_reco=False, is_data=False)
-            sel_signal = [var[selected_signal_mask] for var in signal_var_list]
-            sel_weight = signal_weight_list[selected_signal_mask]
-            _, _, selected_signal_nd_hist, _, _, _ = self.remap_evts.remap_events(var_list=sel_signal,                  
-                                                                                  bin_list=self.true_bin_array,
-                                                                                  event_weights=sel_weight,
-                                                                                  is_true_reco=False, is_data=False)
+        #    _, _, signal_nd_hist, _, signal_hist_sparse, _ = self.remap_evts.remap_events(var_list=signal_var_list,
+        #                                                                                  bin_list=self.true_bin_array,
+        #                                                                                  event_weights=signal_weight_list,
+        #                                                                                  is_true_reco=False, is_data=False)
+        #    sel_signal = [var[selected_signal_mask] for var in signal_var_list]
+        #    sel_weight = signal_weight_list[selected_signal_mask]
+        #    _, _, selected_signal_nd_hist, _, _, _ = self.remap_evts.remap_events(var_list=sel_signal,                  
+        #                                                                          bin_list=self.true_bin_array,
+        #                                                                          event_weights=sel_weight,
+        #                                                                          is_true_reco=False, is_data=False)
+
+        #    self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist,
+        #                                                                         full_selected=selected_signal_nd_hist)
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
-
-            self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist,
-                                                                                 full_selected=selected_signal_nd_hist)
 
             self.create_response_matrix(reco_events=self.remap_evts.reco_map[reco_nd_binned].astype('d'),
                                         true_events=self.remap_evts.true_map[true_nd_binned].astype('d'),
@@ -150,7 +151,8 @@ class Unfold:
         if self.apply_eff_correction:
             unfold_nd_hist_np, unfold_nd_cov_np = self.remap_evts.correct_for_efficiency(unfolded_data=raw_unfold_nd_hist_np,
                                                                                          unfolded_data_cov=raw_unfold_nd_cov_np,
-                                                                                         efficiency=self.efficiency)
+                                                                                         efficiency=self.efficiency,
+                                                                                         eff_cut=self.eff_cut)
         else:
             unfold_nd_hist_np, unfold_nd_cov_np = raw_unfold_nd_hist_np, raw_unfold_nd_cov_np
 
@@ -183,7 +185,7 @@ class Unfold:
                                                  true_var_list=true_var_list, bin_lens=bin_lens,
                                                  var_label_list=self.config["var_names"])
 
-        return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfolded_1d_err_cov, no_under_over_flow_cov, unfolded_1d_with_inc_cov
+        return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfolded_1d_err_cov, no_under_over_flow_cov, unfolded_1d_with_inc_cov, 
 
     def fill_data_hist(self, sparse_data_hist):
         if self.reco_hist is not None:
@@ -238,7 +240,8 @@ class Unfold:
         unfold = RooUnfold.RooUnfoldBayes(self.response, self.reco_hist, self.bayes_niter)
 
         # Get statistical uncorrelated bin errors
-        data_error = np.diag([self.reco_hist.GetBinError(b+1) for b in range(self.reco_hist.GetNbinsX())])
+        # since setting the diagonal of the Cov matrix it should be sigma^2
+        data_error = np.diag([self.reco_hist.GetBinError(b+1)**2 for b in range(self.reco_hist.GetNbinsX())])
         data_diag_error = ROOT.TMatrix(data_error.shape[0], data_error.shape[1])
         for i in range(data_error.shape[0]):
             for j in range(data_error.shape[1]):

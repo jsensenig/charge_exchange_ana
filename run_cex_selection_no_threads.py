@@ -116,35 +116,43 @@ def save_results(results, is_mc):
     h5_file.close()
 
 
-def save_unfold_variables(results, beam_cfg_file, pi0_cfg_file, file_name, signal_events, selected_signal_mask, is_mc):
+def save_unfold_variables(results, beam_cfg_file, pi0_cfg_file, file_name, events, signal_name, is_mc):
 
-    hist_map, event_mask, beam_mask, cut_signal_selected, cut_total_selected, signal_total, events, beam_events = results
+    hist_map, event_mask, beam_mask, cut_signal_selected, cut_total_selected, signal_total, Tevents, beam_events = results
 
     beam_unfold = Unfold(config_file=beam_cfg_file, response_file="response_2gev_official_ntuples_sel.pkl")
     pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file="response_2gev_official_ntuples_sel.pkl")
 
+    signal_events = events[events[signal_name]] if is_mc else None
+    selected_signal_mask = event_mask[events[signal_name]] if is_mc else None
+
     # Beam variables should be pi+, get all signal events to use for efficiency calculation
     print("Getting beam cross section variables! Signal/Beam/Selected", -9, "/", len(beam_events), "/",  np.count_nonzero(beam_mask))
     signal_beam_dict = {}
-    beam_var_dict = beam_unfold.vars.get_xsec_variable(event_record=beam_events, reco_int_mask=beam_mask)
+    beam_var_dict = beam_unfold.vars.get_xsec_variable(event_record=events[beam_mask], reco_int_mask=event_mask[beam_mask], apply_cuts=False)
+    beam_var_dict["beam_selection"] = beam_mask[beam_mask]
+    beam_var_dict["signal_selection"] = event_mask[beam_mask]
+    #beam_var_dict = beam_unfold.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events), apply_cuts=False).astype(bool))
 
     if is_mc:
         beam_unfold = Unfold(config_file=beam_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
         signal_beam_dict = beam_unfold.vars.get_xsec_variable(event_record=signal_events,
-                                                               reco_int_mask=np.ones(len(signal_events)).astype(bool))
+                                                               reco_int_mask=np.ones(len(signal_events)).astype(bool), apply_cuts=False)
         signal_beam_dict["true_selected_signal"] = selected_signal_mask
         print("Extracted Signal/Selected", len(list(signal_beam_dict.values())[0]), "/", len(list(beam_var_dict.values())[0]))
+
+    print("Reco mask:", np.count_nonzero(beam_var_dict['full_len_reco_mask']))
 
     # Pi0 variables should be from CeX, get all signal events to use for efficiency calculation
     print("Getting pi0 cross section variables!", len(events))
     pi0_var_dict = {}
     signal_pi0_dict = {}
-    #pi0_var_dict = pi0_unfold.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events)).astype(bool))
+    pi0_var_dict = pi0_unfold.vars.get_xsec_variable(event_record=events[event_mask], reco_int_mask=event_mask[event_mask], apply_cuts=False)
 
-    if False and is_mc:
+    if is_mc:
         pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
         signal_pi0_dict = pi0_unfold.vars.get_xsec_variable(event_record=signal_events,
-                                                              reco_int_mask=np.ones(len(signal_events)).astype(bool))
+                                                              reco_int_mask=np.ones(len(signal_events)).astype(bool), apply_cuts=False)
 
     save_list = [beam_var_dict, pi0_var_dict, signal_beam_dict, signal_pi0_dict]
 
@@ -159,17 +167,12 @@ def event_selection(config, data):
     return event_handler_instance.run_selection(events=data)
 
 
-def start_analysis(flist, config, branches, is_mc):
+def start_analysis(flist, config, branches):
 
     data = uproot.concatenate(files=flist, expressions=branches)
     event_selection_result = event_selection(config=config, data=data)
 
-    selection_mask = event_selection_result[1]
-
-    signal = data[data[config["signal"]]] if is_mc else None
-    selected_signal_mask = selection_mask[data[config["signal"]]] if is_mc else None
-
-    return event_selection_result, signal, selected_signal_mask
+    return event_selection_result, data
 
 
 def configure(config_file):
@@ -192,13 +195,13 @@ def get_branches(is_mc):
                 "reco_beam_trackEndDirZ", "dEdX_truncated_mean", "reco_beam_calo_startDirX", "reco_beam_calo_startDirY",
                 "reco_beam_calo_startDirZ", "reco_beam_calo_endDirX", "reco_beam_calo_endDirY", "reco_beam_calo_endDirZ",
                 "reco_beam_calo_X", "reco_beam_calo_Y", "reco_beam_calo_Z", "reco_track_cumlen", "reco_beam_calo_wire",
-                "reco_beam_type"]
+                "reco_beam_type", "reco_daughter_allTrack_calibrated_dEdX_SCE"]
 
     branches += ["beam_inst_C0", "beam_inst_valid", "beam_inst_trigger", "beam_inst_nMomenta", "beam_inst_nTracks", 
                  "beam_inst_TOF", "beam_inst_P", "reco_reconstructable_beam_event", "reco_beam_true_byE_matched",
                  "reco_beam_true_byE_origin", "g4rw_full_grid_piplus_coeffs"]
 
-    #branches += ["fit_pi0_energy", "fit_pi0_cos_theta", "fit_pi0_gamma_energy1", "fit_pi0_gamma_energy2", "fit_pi0_gamma_oa"]
+    branches += ["fit_pi0_energy", "fit_pi0_cos_theta", "fit_pi0_gamma_energy1", "fit_pi0_gamma_energy2", "fit_pi0_gamma_oa"]
 
     #branches += ["reco_all_spacePts_X", "reco_all_spacePts_Y", "reco_all_spacePts_Z", "reco_all_spacePts_Integral"]
 
@@ -226,10 +229,14 @@ if __name__ == "__main__":
     # Provide a text file with one file per line
    # files = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/ana_alldaughter_files.txt"
 
-   # file_list = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_9.root:pduneana/beamana"
+    #file_list = "/Users/jsen/tmp/pion_qe/2gev_single_particle_sample/v0_limited_daughter/pduneana_9.root:pduneana/beamana"
     #file_list = "/home/jon/work/protodune/analysis/pi0_reco/data/2gev_ana_files/subset*/pduneana*.root:beamana"
 
-    ## Official ntupeles
+    ## 1GeV Official ntupeles
+    #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/1gev/PDSPProd4a_MC_1GeV_reco1_sce_datadriven_v1_ntuple_v09_41_00_03.root:beamana"
+    #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/1gev/data/PDSPProd4_data_1GeV_reco2_ntuple_v09_62_00d01.root:beamana"
+
+    ## 2GeV Official ntupeles
     #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/2gev/data/PDSPProd4_data_2GeV_reco2_ntuple_v09_42_03_01.root:beamana"
     #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/2gev/mc/PDSPProd4a_MC_2GeV_reco1_sce_datadriven_v1_ntuple_v09_41_00_03.root:beamana"
     
@@ -241,6 +248,7 @@ if __name__ == "__main__":
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pduneana_*.root:beamana;3"
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/to_ana/run*/pduneana_*.root:beamana"
 
+    #beam_cfg_file = "config/unfolding_1gev.json"
     beam_cfg_file = "config/unfolding_2gev.json"
     pi0_cfg_file = "config/pi0_unfolding.json"
 
@@ -250,6 +258,7 @@ if __name__ == "__main__":
     # Get main configuration
     #cfg_file = "config/main_true.json" 
     cfg_file = "config/main.json"
+    #cfg_file = "config/main_pi0calib.json"
     config = configure(cfg_file)
 
     tree_name = "pionana/beamana;17"
@@ -258,10 +267,10 @@ if __name__ == "__main__":
     # Start the analysis threads
     print("Starting threads")
     start = timer()
-    results, signal_events, selected_signal_mask = start_analysis(file_list, config, branches, is_mc=config["is_mc"])
+    results, events = start_analysis(file_list, config, branches)
 
-    save_unfold_variables(results, beam_cfg_file=beam_cfg_file, pi0_cfg_file=pi0_cfg_file, signal_events=signal_events,
-                          selected_signal_mask=selected_signal_mask, file_name="test_vars.pkl", is_mc=config["is_mc"])
+    save_unfold_variables(results, beam_cfg_file=beam_cfg_file, pi0_cfg_file=pi0_cfg_file,
+                          file_name="test_vars.pkl", events=events, signal_name=config["signal"], is_mc=config["is_mc"])
     save_results(results=results, is_mc=config["is_mc"])
 
     end = timer()

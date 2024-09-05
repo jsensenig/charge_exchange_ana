@@ -109,6 +109,9 @@ class BeamPionVariables(XSecVariablesBase):
 
         self.beam_energy = self.config["beam_energy"]
 
+        self.dedx_lower = self.config["dedx_lower"]
+        self.dedx_upper = self.config["dedx_upper"]
+
         self.bethe_bloch = BetheBloch(mass=139.57, charge=1)
 
         # This is the dict that will hold the data being unfolded and used to calculate cross-section.
@@ -121,10 +124,11 @@ class BeamPionVariables(XSecVariablesBase):
 
         # Beam simulation error so shift and smear it let reweight do the rest, also convert to MeV/c
         if self.is_training:
-            event_record["shift_smear_beam_inst"] = (
-                                event_record["beam_inst_P"] +
+            event_record["beam_inst_for_rw"] = (event_record["beam_inst_P"] +
                                 self.corrections["MCShiftSmearBeam"].apply(to_correct=event_record["beam_inst_P"])) * 1.e3
+            event_record["shift_smear_beam_inst"] = event_record["beam_inst_for_rw"] + np.random.normal(2.0, 49.7, len(event_record)) # use 49.7
         else:
+            event_record["beam_inst_for_rw"] = event_record["beam_inst_P"] * 1.e3
             event_record["shift_smear_beam_inst"] = event_record["beam_inst_P"] * 1.e3
 
         # Classify events and apply smearing and sytstematics
@@ -132,6 +136,7 @@ class BeamPionVariables(XSecVariablesBase):
             self.xsec_vars["beam_all_process"] = self.get_event_process(events=event_record, proc_list_name='all')
             self.xsec_vars["beam_simple_process"] = self.get_event_process(events=event_record, proc_list_name='simple')
             self.xsec_vars["beam_beam_process"] = self.get_event_process(events=event_record, proc_list_name='beam')
+            self.xsec_vars["beam_daughter_process"] = self.get_event_process(events=event_record, proc_list_name='daughter')
             self.apply_corrections_and_systematics(events=event_record)
        
         # Calculate and add the requisite columns to the event record
@@ -179,10 +184,13 @@ class BeamPionVariables(XSecVariablesBase):
         empty_mask = ak.count(event_record["reco_beam_calo_Z"], axis=1) > 0
         self.xsec_vars["reco_beam_endz"][empty_mask] = event_record["reco_beam_calo_Z"][empty_mask][:, -1]
 
+        # Add beam daughter total KE. To be used for pi0 calibration
+        self.xsec_vars["pi0_calib_reco_beam_daughter_ke"] = self.get_daughter_total_ke(events=event_record)
+
         # Apply mask to events
         if self.is_training:
-            true_mask = ~self.xsec_vars["true_upstream_mask"] 
-        reco_mask = ~self.xsec_vars["reco_upstream_mask"] #true_mask if self.is_training else ~self.xsec_vars["reco_upstream_mask"]
+            true_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["reco_upstream_mask"]
+        reco_mask = true_mask if self.is_training else ~self.xsec_vars["reco_upstream_mask"]
         #reco_mask = true_mask if self.is_training else ~self.xsec_vars["reco_upstream_mask"]
 
         self.xsec_vars["full_len_true_mask"] = true_mask if self.is_training else None
@@ -222,6 +230,14 @@ class BeamPionVariables(XSecVariablesBase):
             reco_beam_new_init_energy.append(new_inc[0])
             reco_beam_end_energy.append(new_inc[-1])
         return np.asarray(reco_beam_new_init_energy), np.asarray(reco_beam_end_energy)
+
+    def get_daughter_total_ke(self, events):
+        dedx = events["reco_daughter_allTrack_calibrated_dEdX_SCE"]
+        dedx_mask = (dedx > self.dedx_lower) & (dedx < self.dedx_upper)
+        # For each event: Sum over dE/dx for each particle axis=2 and then over all particles axis=1
+        daughter_sum_ke = ak.sum(ak.sum(dedx[dedx_mask], axis=2), axis=1)
+
+        return daughter_sum_ke
 
     def make_true_beam_energy(self, event_record):
         """
@@ -526,9 +542,11 @@ class Pi0Variables(XSecVariablesBase):
     def make_pi0_energy(self, event_record, reco_mask):
         true_pi0_energy = None
         if self.is_training:
-            true_mask = event_record[self.signal_proc]
-            true_pi0_energy = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][true_mask], axis=1) * 1.e3) - 135.
-            self.xsec_vars["true_gamma_energy"] = event_record["true_beam_Pi0_decay_startP"][true_mask]
+            #self.xsec_vars["true_gamma_energy"] = np.ones(len(event_record)) * -999
+            true_pi0_energy = np.ones(len(event_record)) * -999
+            one_pi0_mask = ak.count_nonzero(event_record["true_beam_daughter_PDG"] == 111, axis=1) == 1
+            true_pi0_energy[one_pi0_mask] = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][one_pi0_mask], axis=1) * 1.e3) - 135.
+            #self.xsec_vars["true_gamma_energy"][one_pi0_mask] = event_record["true_beam_Pi0_decay_startP"][one_pi0_mask]
 
         reco_pi0_energy = ak.to_numpy(event_record["fit_pi0_energy"][reco_mask]) - 135.0
 
@@ -538,7 +556,7 @@ class Pi0Variables(XSecVariablesBase):
 
         true_cos_theta = None
         if self.is_training:
-            true_mask = event_record[self.signal_proc]
+            true_cos_theta = np.ones(len(event_record)) * -999
             # Convert to numpy array and combine from (N,1) to (N,3) shape, i.e. each row is a 3D vector and normalize
             beam_dir = np.vstack((ak.to_numpy(event_record["true_beam_endPx"]),
                                   ak.to_numpy(event_record["true_beam_endPy"]),
@@ -565,7 +583,7 @@ class Pi0Variables(XSecVariablesBase):
 
             # Calculate the cos angle between beam and pi0 direction by taking the dot product of their
             # respective direction unit vectors
-            true_cos_theta = np.diag(beam_dir_unit @ full_len_daughter_dir.T)[true_mask]
+            true_cos_theta[one_pi0_mask] = np.diag(beam_dir_unit @ full_len_daughter_dir.T)[one_pi0_mask]
 
         reco_cos_theta = ak.to_numpy(event_record["fit_pi0_cos_theta"][reco_mask])
 

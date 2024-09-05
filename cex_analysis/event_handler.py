@@ -123,7 +123,7 @@ class EventHandler:
         total_event_mask = np.zeros(len(events)).astype(bool)
         selection_idx = np.arange(len(events)).astype(int)
         beam_selection_idx = np.arange(len(events)).astype(int)
-        total_beam_mask = None
+        total_beam_mask = np.zeros(len(events)).astype(bool)
         beam_events = None
 
         for i, cut in enumerate(self.cut_map):
@@ -150,11 +150,11 @@ class EventHandler:
             # Mask out events not selected
             events = events[event_mask]
             selection_idx = selection_idx[event_mask]
-            beam_selection_idx = beam_selection_idx[event_mask]
 
             if cut in self.config["beam_cut_list"]:
-                total_beam_mask = np.zeros(len(events)).astype(bool)
-                beam_selection_idx = np.arange(len(events)).astype(int)
+                #total_beam_mask = np.zeros(len(events)).astype(bool)
+                #beam_selection_idx = np.arange(len(events)).astype(int)
+                beam_selection_idx = beam_selection_idx[event_mask]
                 beam_events = events
 
 

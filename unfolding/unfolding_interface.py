@@ -189,7 +189,7 @@ class BeamPionVariables(XSecVariablesBase):
 
         # Apply mask to events
         if self.is_training:
-            true_mask = ~self.xsec_vars["true_upstream_mask"] & ~self.xsec_vars["reco_upstream_mask"]
+            true_mask = ~self.xsec_vars["true_upstream_mask"] #& ~self.xsec_vars["reco_upstream_mask"]
         reco_mask = true_mask if self.is_training else ~self.xsec_vars["reco_upstream_mask"]
         #reco_mask = true_mask if self.is_training else ~self.xsec_vars["reco_upstream_mask"]
 
@@ -548,7 +548,7 @@ class Pi0Variables(XSecVariablesBase):
             true_pi0_energy[one_pi0_mask] = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][one_pi0_mask], axis=1) * 1.e3) - 135.
             #self.xsec_vars["true_gamma_energy"][one_pi0_mask] = event_record["true_beam_Pi0_decay_startP"][one_pi0_mask]
 
-        reco_pi0_energy = ak.to_numpy(event_record["fit_pi0_energy"][reco_mask]) - 135.0
+        reco_pi0_energy = None#ak.to_numpy(event_record["fit_pi0_energy"][reco_mask]) - 135.0
 
         return true_pi0_energy, reco_pi0_energy
 
@@ -585,7 +585,7 @@ class Pi0Variables(XSecVariablesBase):
             # respective direction unit vectors
             true_cos_theta[one_pi0_mask] = np.diag(beam_dir_unit @ full_len_daughter_dir.T)[one_pi0_mask]
 
-        reco_cos_theta = ak.to_numpy(event_record["fit_pi0_cos_theta"][reco_mask])
+        reco_cos_theta = None#ak.to_numpy(event_record["fit_pi0_cos_theta"][reco_mask])
 
         return true_cos_theta, reco_cos_theta
 

@@ -14,12 +14,13 @@ from unfolding.unfolding_interface import XSecVariablesBase
 
 class Unfold:
 
-    def __init__(self, config_file, response_file=None):
+    def __init__(self, config_file, response_file=None, efficiency_file=None):
         self.config = self.configure(config_file=config_file)
         self.show_plots = self.config["show_plots"]
         self.figs_path = self.config["figure_path"]
         self.bayes_niter = self.config["bayes_niter"]
         self.is_training = self.config["is_training"]
+        self.single_var = self.config["single_var"]
         self.truth_ndim, self.reco_ndim = 0, 0
         self.truth_hist, self.reco_hist = None, None
         self.truth_nbins_sparse, self.reco_nbins_sparse = 0, 0
@@ -28,6 +29,7 @@ class Unfold:
 
         self.remap_evts = Remapping(var_names=self.config["var_names"])
 
+        self.remap_evts.remove_overflow = self.config["remove_overflow"]
         self.remap_evts.subtract_bkgd = self.config["subtract_background"]
         if self.remap_evts.subtract_bkgd:
             self.remap_evts.background_dict = self.load_background()
@@ -52,6 +54,8 @@ class Unfold:
 
         if not self.is_training:
             self.load_response(response_file=response_file)
+        if self.apply_eff_correction:
+            self.load_efficiency(efficiency_file=efficiency_file)
 
     @staticmethod
     def compile_cpp_helpers():
@@ -100,19 +104,19 @@ class Unfold:
                                                event_weights=reco_weight_list)
 
             # Only used for efficiency calculation
-        #    _, _, signal_nd_hist, _, signal_hist_sparse, _ = self.remap_evts.remap_events(var_list=signal_var_list,
-        #                                                                                  bin_list=self.true_bin_array,
-        #                                                                                  event_weights=signal_weight_list,
-        #                                                                                  is_true_reco=False, is_data=False)
-        #    sel_signal = [var[selected_signal_mask] for var in signal_var_list]
-        #    sel_weight = signal_weight_list[selected_signal_mask]
-        #    _, _, selected_signal_nd_hist, _, _, _ = self.remap_evts.remap_events(var_list=sel_signal,                  
-        #                                                                          bin_list=self.true_bin_array,
-        #                                                                          event_weights=sel_weight,
-        #                                                                          is_true_reco=False, is_data=False)
+            _, _, signal_nd_hist, _, signal_hist_sparse, _ = self.remap_evts.remap_events(var_list=signal_var_list,
+                                                                                          bin_list=self.true_bin_array,
+                                                                                          event_weights=signal_weight_list,
+                                                                                          is_true_reco=False, is_data=False)
+            sel_signal = [var[selected_signal_mask] for var in signal_var_list]
+            sel_weight = signal_weight_list[selected_signal_mask]
+            _, _, selected_signal_nd_hist, _, _, _ = self.remap_evts.remap_events(var_list=sel_signal,                  
+                                                                                  bin_list=self.true_bin_array,
+                                                                                  event_weights=sel_weight,
+                                                                                  is_true_reco=False, is_data=False)
 
-        #    self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist,
-        #                                                                         full_selected=selected_signal_nd_hist)
+            self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist,
+                                                                                 full_selected=selected_signal_nd_hist)
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
 
@@ -177,7 +181,7 @@ class Unfold:
         unfolded_1d_err_cov, no_under_over_flow_cov = self.remap_evts.propagate_unfolded_1d_errors(unfolded_cov=unfold_nd_cov_np,
                                                                                                    bin_list=bin_lens)
         unfolded_1d_with_inc_cov = None
-        if self.beam_vars:
+        if self.beam_vars and not self.single_var:
             unfolded_1d_with_inc_cov = self.remap_evts.propagate_unfolded_errors_with_incident(unfolded_1d_cov=no_under_over_flow_cov,
                                                                                                bin_list=bin_lens)
 
@@ -434,8 +438,8 @@ class Unfold:
         self.true_bin_array = unfold_param_dict["true_bin_array"]
         self.reco_bin_array = unfold_param_dict["reco_bin_array"]
         self.reco_nbins_sparse = unfold_param_dict["reco_nbins_sparse"]
-        self.efficiency = unfold_param_dict["efficiency"]
-        self.eff_err = unfold_param_dict["efficiency_err"]
+        
+        
         print("Loaded unfold param file:", response_file)
 
     def save_response(self, file_name):
@@ -451,6 +455,27 @@ class Unfold:
         with open(file_name, 'wb') as f:
             pickle.dump(unfold_param_dict, f)
         print("Wrote unfold param file:", file_name)
+
+    def load_efficiency(self, efficiency_file):
+
+        if efficiency_file is None:                               
+            efficiency_file = self.config["efficiency_file"]
+                                                         
+        with open(efficiency_file, 'rb') as f:
+            unfold_eff_dict = pickle.load(f)
+
+        self.efficiency = unfold_eff_dict["efficiency"]
+        self.eff_err = unfold_eff_dict["efficiency_err"]
+
+        print("Loaded efficiency file:", efficiency_file)
+
+    def save_efficiency(self, file_name):
+        unfold_eff_dict = {"efficiency": self.efficiency,
+                             "efficiency_err": self.eff_err}
+                                                                          
+        with open(file_name, 'wb') as f:
+            pickle.dump(unfold_eff_dict, f)
+        print("Wrote efficiency file:", file_name)
 
     def load_background(self):
 

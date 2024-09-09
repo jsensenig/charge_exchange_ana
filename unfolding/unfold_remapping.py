@@ -17,6 +17,7 @@ class Remapping:
         self.debug = False
         self.background_dict = {}
         self.subtract_bkgd = False
+        self.remove_overflow = False
 
     def remap_events(self, var_list, bin_list, event_weights, is_true_reco=True, is_data=True):
 
@@ -34,13 +35,17 @@ class Remapping:
 
         # Create map between 3D and 1D
         if is_true_reco:
+            if self.remove_overflow:
+                nd_hist, nd_hist_err = self.empty_overflow_bins(nd_hist=nd_hist, nd_hist_err=nd_hist_err)
             nd_map, hist_sparse, hist_err_sparse = self.map_nd_to_1d(num_nd=nd_hist, num_nd_err=nd_hist_err,
                                                                      total_bins=self.true_total_bins)
         else:
             nd_map = None
             bin_map = self.reco_map if is_data else self.true_map
+            if self.remove_overflow:
+                nd_hist, nd_hist_err = self.empty_overflow_bins(nd_hist=nd_hist, nd_hist_err=nd_hist_err)
             if self.subtract_bkgd:
-                nd_hist, nd_hist_err = self.subtract_background(nd_hist=nd_hist, nd_hist_err=nd_hist_err)
+                nd_hist, nd_hist_err = self.subtract_background_v2(nd_hist=nd_hist, nd_hist_err=nd_hist_err)
             hist_sparse, hist_err_sparse = self.map_data_to_1d_bins(num_nd=nd_hist,
                                                                     num_nd_err=nd_hist_err,
                                                                     map_nd1d=bin_map)
@@ -54,16 +59,46 @@ class Remapping:
         Backgrounds saved in dictionary {"total_hist_mask": array(), "backgrounds": [array(),array(),array()]}
         The background arrays are just fractions so to scale them to data just multiply by the total data in the region
         """
-        total_hist_mask = self.background_dict["total_signal_hist_mask"]
+        #total_hist_mask = self.background_dict["total_signal_hist_mask"].astype(bool)
+        print("nd_hist.shape", nd_hist.shape, "/", nd_hist.sum())
+        print("Pre-Sub", nd_hist.reshape(16,16,16).sum(axis=(1,0)))
+        print("Pre-Sub", nd_hist.reshape(16,16,16).sum(axis=(2,1)), "/", nd_hist.reshape(16,16,16).sum(axis=(2,0)))
 
-        for bkgd in self.background_dict["backgrounds"]:
-            nd_hist[total_hist_mask][1:] -= bkgd * nd_hist[total_hist_mask][1:]
+        for i, bkgd in enumerate(self.background_dict["backgrounds"]):
+            print("Subtracting bkgd", i, "/", (bkgd[np.newaxis, np.newaxis, :] * nd_hist.reshape(16,16,16)[:,:,1:-1]).sum())
+            nd_hist.reshape(16,16,16)[:,:,1:-1] -= (bkgd[np.newaxis, np.newaxis, :] * nd_hist.reshape(16,16,16)[:,:,1:-1]) #/ (16*16)
+            nd_hist.reshape(16,16,16)[:,:,0] += (bkgd[np.newaxis, np.newaxis, :] * nd_hist.reshape(16,16,16)[:,:,1:-1]).sum(axis=2) #/ (16*16)
 
         # This should never happen but just in case
-        nd_hist[total_hist_mask][nd_hist[total_hist_mask] < 0] = 0
+        nd_hist.reshape(16,16,16)[:,:,1:-1][nd_hist.reshape(16,16,16)[:,:,1:-1] < 0] = 0.
+        print("Post-Sub", nd_hist.reshape(16,16,16).sum(axis=(1,0)))
+        print("Post-Sub", nd_hist.reshape(16,16,16).sum(axis=(2,1)), "/", nd_hist.reshape(16,16,16).sum(axis=(2,0)))
 
         return nd_hist, nd_hist_err
 
+    def empty_overflow_bins(self, nd_hist, nd_hist_err):
+        nd_hist[0] = 0.
+        nd_hist[-1] = 0.
+        return nd_hist, nd_hist_err
+
+    def subtract_background_v2(self, nd_hist, nd_hist_err):                                                                                              
+        """
+        Backgrounds saved in dictionary {"total_hist_mask": array(), "backgrounds": [array(),array(),array()]}
+        The background arrays are just fractions so to scale them to data just multiply by the total data in the region
+        """
+        print("nd_hist.shape", nd_hist.shape, "/", nd_hist.sum())
+        print("Pre-Sub", nd_hist.sum())
+        total_event_count = nd_hist[1:-1].copy()
+                                                                                                                                               
+        for i, bkgd in enumerate(self.background_dict["backgrounds"]):
+            print("Subtracting bkgd", i, "/", (bkgd * total_event_count).sum(), "/", total_event_count)
+            nd_hist[1:-1] -= (bkgd * total_event_count) 
+                                                                                                                                               
+        # This should never happen but just in case
+        nd_hist[1:-1][nd_hist[1:-1] < 0] = 0.
+        print("Post-Sub", nd_hist.sum())
+                                                                                                                                               
+        return nd_hist, nd_hist_err
 
     def remap_training_events(self, true_list, reco_list, bin_list, true_event_weights, reco_event_weights):
 

@@ -149,7 +149,8 @@ class XSecTotal(XSecBase):
         jacobian[idx, idx + nbins + nbins] = deriv_int_hist  # ∂σ/∂Nint_ex
 
         unfolded_xsec_cov = (jacobian @ cov_with_inc) @ jacobian.T
-        xsec_yerr = np.sqrt(np.diagonal(unfolded_xsec_cov))
+        #xsec_yerr = np.sqrt(np.diagonal(unfolded_xsec_cov))
+        xsec_yerr = np.diagonal(unfolded_xsec_cov)
 
         return unfolded_xsec_cov, xsec_yerr
 
@@ -277,11 +278,11 @@ class XSecDiff(XSecBase):
 
     def get_geant_diff_xsec(self, pi0_var):
         if pi0_var == 'pi0_ke':
-            y = self.geant_diff_xsec['inel_cex_1dKEpi0775_MeV;1']
-            x = np.linspace(0, 1200, len(self.geant_diff_xsec['inel_cex_1dKEpi0775_MeV;1']))
+            y = self.geant_diff_xsec['inel_cex_1dKEpi0650to800_MeV;1']
+            x = np.linspace(0, 1200, len(self.geant_diff_xsec['inel_cex_1dKEpi0650to800_MeV;1']))
         elif pi0_var == 'pi0_cos':
-            y = self.geant_diff_xsec['inel_cex_1dcosThetapi0775_MeV;1']
-            x = np.linspace(-1, 1, len(self.geant_diff_xsec['inel_cex_1dcosThetapi0775_MeV;1']))
+            y = self.geant_diff_xsec['inel_cex_1dcosThetapi0650to800_MeV;1']
+            x = np.linspace(-1, 1, len(self.geant_diff_xsec['inel_cex_1dcosThetapi0650to800_MeV;1']))
         else:
             print("Unknown cross-section", pi0_var, "choose ['pi0_ke', 'pi0_cos']")
             raise ValueError
@@ -302,7 +303,7 @@ class XSecDiff(XSecBase):
             diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices, diff_edges=bin_array)
             ax.errorbar(abs(bin_centers_np(bin_array)), diff_xsec, yerr, abs(bin_width_np(bin_array)) / 2,
                          capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
-            ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dT_{\\pi^0}$')
+            #ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dT_{\\pi^0}$')
             ax.set_xlabel("$T_{\\pi^0}$ [MeV]", fontsize=14)
             ax.set_ylabel("$\\frac{d\\sigma}{dT_{\\pi^0}}$ [mb]")
             ax.set_ylim(0, 0.3)
@@ -312,7 +313,7 @@ class XSecDiff(XSecBase):
             diff_xsec = self.calc_xsec(hist_dict=xsec_hist2d, beam_eslice_edges=beam_eslices, diff_edges=bin_array)
             ax.errorbar(bin_centers_np(bin_array), diff_xsec, yerr, bin_width_np(bin_array) / 2, capsize=2,
                          marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
-            ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dcos\\theta_{\\pi^0}$')
+            #ax.plot(xsec_x, xsec_y, linestyle='--', color='indianred', label='Geant $d\\sigma / dcos\\theta_{\\pi^0}$')
             ax.set_xlabel("$cos\\theta_{\\pi^0}$", fontsize=14)
             ax.set_ylabel("$\\frac{d\\sigma}{dcos\\theta_{\\pi^0}}$ [mb]")
             ax.set_ylim(0, 150)

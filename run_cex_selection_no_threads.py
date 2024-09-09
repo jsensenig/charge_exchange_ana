@@ -118,28 +118,40 @@ def save_results(results, is_mc):
 
 def save_unfold_variables(results, beam_cfg_file, pi0_cfg_file, file_name, events, signal_name, is_mc):
 
+    resp_matrix = "beam_response_2gev_official_ntuples_truesel_v0.pkl"
     hist_map, event_mask, beam_mask, cut_signal_selected, cut_total_selected, signal_total, Tevents, beam_events = results
 
-    beam_unfold = Unfold(config_file=beam_cfg_file, response_file="response_2gev_official_ntuples_sel.pkl")
-    pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file="response_2gev_official_ntuples_sel.pkl")
+    beam_unfold = Unfold(config_file=beam_cfg_file, response_file=resp_matrix)
+    pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file=resp_matrix)
 
     signal_events = events[events[signal_name]] if is_mc else None
     selected_signal_mask = event_mask[events[signal_name]] if is_mc else None
 
+    pip_events = events[events["pion_inelastic"]] if is_mc else None
+    selected_pip_mask = beam_mask[events["pion_inelastic"]] if is_mc else None
+
     # Beam variables should be pi+, get all signal events to use for efficiency calculation
     print("Getting beam cross section variables! Signal/Beam/Selected", -9, "/", len(beam_events), "/",  np.count_nonzero(beam_mask))
     signal_beam_dict = {}
+    signal_pip_dict = {}
     beam_var_dict = beam_unfold.vars.get_xsec_variable(event_record=events[beam_mask], reco_int_mask=event_mask[beam_mask], apply_cuts=False)
     beam_var_dict["beam_selection"] = beam_mask[beam_mask]
     beam_var_dict["signal_selection"] = event_mask[beam_mask]
     #beam_var_dict = beam_unfold.vars.get_xsec_variable(event_record=events, reco_int_mask=np.ones(len(events), apply_cuts=False).astype(bool))
 
     if is_mc:
-        beam_unfold = Unfold(config_file=beam_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
+        beam_unfold = Unfold(config_file=beam_cfg_file, response_file=resp_matrix)
         signal_beam_dict = beam_unfold.vars.get_xsec_variable(event_record=signal_events,
                                                                reco_int_mask=np.ones(len(signal_events)).astype(bool), apply_cuts=False)
         signal_beam_dict["true_selected_signal"] = selected_signal_mask
         print("Extracted Signal/Selected", len(list(signal_beam_dict.values())[0]), "/", len(list(beam_var_dict.values())[0]))
+
+        beam_unfold = Unfold(config_file=beam_cfg_file, response_file=resp_matrix)
+        signal_pip_dict = beam_unfold.vars.get_xsec_variable(event_record=pip_events,
+                                                               reco_int_mask=np.ones(len(pip_events)).astype(bool), apply_cuts=False)
+        signal_pip_dict["true_selected_signal"] = selected_pip_mask
+
+
 
     print("Reco mask:", np.count_nonzero(beam_var_dict['full_len_reco_mask']))
 
@@ -150,11 +162,11 @@ def save_unfold_variables(results, beam_cfg_file, pi0_cfg_file, file_name, event
     pi0_var_dict = pi0_unfold.vars.get_xsec_variable(event_record=events[event_mask], reco_int_mask=event_mask[event_mask], apply_cuts=False)
 
     if is_mc:
-        pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file="notebooks/official_ntuples_1_22gev_12bin_respones.pkl")
+        pi0_unfold = Unfold(config_file=pi0_cfg_file, response_file=resp_matrix)
         signal_pi0_dict = pi0_unfold.vars.get_xsec_variable(event_record=signal_events,
                                                               reco_int_mask=np.ones(len(signal_events)).astype(bool), apply_cuts=False)
 
-    save_list = [beam_var_dict, pi0_var_dict, signal_beam_dict, signal_pi0_dict]
+    save_list = [beam_var_dict, pi0_var_dict, signal_beam_dict, signal_pi0_dict, signal_pip_dict]
 
     print("Saving variables to file")
     with open(file_name, 'wb') as f:
@@ -201,7 +213,7 @@ def get_branches(is_mc):
                  "beam_inst_TOF", "beam_inst_P", "reco_reconstructable_beam_event", "reco_beam_true_byE_matched",
                  "reco_beam_true_byE_origin", "g4rw_full_grid_piplus_coeffs"]
 
-    branches += ["fit_pi0_energy", "fit_pi0_cos_theta", "fit_pi0_gamma_energy1", "fit_pi0_gamma_energy2", "fit_pi0_gamma_oa"]
+    #branches += ["fit_pi0_energy", "fit_pi0_cos_theta", "fit_pi0_gamma_energy1", "fit_pi0_gamma_energy2", "fit_pi0_gamma_oa"]
 
     #branches += ["reco_all_spacePts_X", "reco_all_spacePts_Y", "reco_all_spacePts_Z", "reco_all_spacePts_Integral"]
 
@@ -236,14 +248,14 @@ if __name__ == "__main__":
     #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/1gev/PDSPProd4a_MC_1GeV_reco1_sce_datadriven_v1_ntuple_v09_41_00_03.root:beamana"
     #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/1gev/data/PDSPProd4_data_1GeV_reco2_ntuple_v09_62_00d01.root:beamana"
 
-    ## 2GeV Official ntupeles
+    # 2GeV Official ntupeles
     #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/2gev/data/PDSPProd4_data_2GeV_reco2_ntuple_v09_42_03_01.root:beamana"
-    #file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/2gev/mc/PDSPProd4a_MC_2GeV_reco1_sce_datadriven_v1_ntuple_v09_41_00_03.root:beamana"
+    file_list = "/nfs/disk1/users/jon/pdsp_prod4a_official_ntuples/2gev/mc/PDSPProd4a_MC_2GeV_reco1_sce_datadriven_v1_ntuple_v09_41_00_03.root:beamana"
     
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pi0_reco/pduneana_*.root:beamana;3" 
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco/pduneana_*.root:beamana;3" 
 
-    file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco*/pduneana_*.root:beamana"
+    #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco*/pduneana_*.root:beamana"
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/mc/pi0_reco2/pduneana_129.root:beamana"
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/run5429/pduneana_*.root:beamana;3"
     #file_list = "/nfs/disk1/users/jon/custom_ntuples/data/to_ana/run*/pduneana_*.root:beamana"
@@ -256,8 +268,8 @@ if __name__ == "__main__":
     
 
     # Get main configuration
-    #cfg_file = "config/main_true.json" 
-    cfg_file = "config/main.json"
+    cfg_file = "config/main_true.json" 
+   # cfg_file = "config/main.json"
     #cfg_file = "config/main_pi0calib.json"
     config = configure(cfg_file)
 

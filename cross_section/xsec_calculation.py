@@ -118,7 +118,7 @@ class XSecTotal(XSecBase):
 
         return xsec
 
-    def propagate_error(self, hist_dict, cov_with_inc, beam_eslice_edges, bin_list):
+    def propagate_error(self, hist_dict, cov_with_inc, beam_eslice_edges, nbins):
         """
         Propagate the errors through the cross-section calculation
         3 derivatives wrt Ninc, Nend and Nint
@@ -139,8 +139,6 @@ class XSecTotal(XSecBase):
         deriv_inc_hist = prefactor * ((1. / inc_hist) - (1. / (inc_hist - int_hist)))
         deriv_int_hist = prefactor * (1. / (inc_hist - int_hist))
 
-        bin_lens = np.ma.count(bin_list, axis=1) - 3
-        nbins = bin_lens[0]
         jacobian = np.zeros([nbins, 3 * nbins])
 
         idx = np.arange(nbins)
@@ -162,7 +160,7 @@ class XSecTotal(XSecBase):
         for graph in loaded_xsec:
             self.geant_total_xsec[graph] = loaded_xsec[graph].values()
 
-    def plot_beam_xsec(self, unfold_hist, yerr, process, bin_array, xlim, ylim, xsec_file, show_plot):
+    def plot_beam_xsec(self, xsec_hists, yerr, process, bin_array, xlim, ylim, xsec_file, show_plot):
 
         proc_name = {"cex": "cex_KE;1", "abs": "abs_KE;1", "inel": "total_inel_KE;1"}
 
@@ -171,9 +169,9 @@ class XSecTotal(XSecBase):
             self.load_geant_total_xsec(xsec_file=xsec_file)
 
         # Calculate the cross-section
-        xsec_hists = {"init_hist": unfold_hist.sum(axis=2).sum(axis=1)[1:-1],
-                      "end_hist": unfold_hist.sum(axis=2).sum(axis=0)[1:-1],
-                      "int_hist": unfold_hist.sum(axis=1).sum(axis=0)[1:-1]}
+        #xsec_hists = {"init_hist": unfold_hist.sum(axis=2).sum(axis=1)[1:-1],
+        #              "end_hist": unfold_hist.sum(axis=2).sum(axis=0)[1:-1],
+        #              "int_hist": unfold_hist.sum(axis=1).sum(axis=0)[1:-1]}
 
         total_xsec = self.calc_xsec(hist_dict=xsec_hists, beam_eslice_edges=bin_array)
 

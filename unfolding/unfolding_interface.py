@@ -515,6 +515,42 @@ class BeamPionVariables(XSecVariablesBase):
         else:
             return ax1, ax2, ax3
 
+    def plot_single_beam_vars(self, unfld_hist, err_ax0, bin_array, h1_limits, true_xsec_var, reco_xsec_var,
+                              plot_true_reco='both', show_plot=True, reco_label=None):
+
+        if plot_true_reco == 'both':
+            plot_true, plot_reco = True, True
+        elif plot_true_reco == 'true':
+            plot_true, plot_reco = True, False
+        elif plot_true_reco == 'reco':
+            plot_true, plot_reco = False, True
+        else:
+            print("Unknown value", plot_true_reco)
+
+        rlabel = 'Reco' if reco_label is None else reco_label
+
+        plt.figure(figsize=(8, 6))
+        if plot_true: h1, bx1, _ = plt.hist(self.xsec_vars[true_xsec_var], bins=bin_array[0],
+                                            edgecolor='black', label='True')
+        if plot_reco: h1, bx1, _ = plt.hist(self.xsec_vars[reco_xsec_var], bins=bin_array[0], alpha=0.8,
+                                            color='indianred', edgecolor='black', label=rlabel)
+
+        plt.errorbar(bin_centers_np(bx1), unfld_hist, err_ax0, bin_width_np(bx1[2:4]) / 2,
+                     capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
+
+        plt.title('$KE$', fontsize=14)
+        plt.xlim(h1_limits)
+        plt.ylim(bottom=0)
+
+        print("True | Reco Hist", np.sum(h1))
+        print("Unfolded Hist", unfld_hist.sum())
+
+        if show_plot:
+            plt.legend()
+            plt.show()
+        else:
+            return
+
 
 class Pi0Variables(XSecVariablesBase):
     def __init__(self, config_file, is_training, energy_slices=None):

@@ -530,19 +530,22 @@ class BeamPionVariables(XSecVariablesBase):
         rlabel = 'Reco' if reco_label is None else reco_label
 
         plt.figure(figsize=(8, 6))
-        if plot_true: h1, bx1, _ = plt.hist(self.xsec_vars[true_xsec_var], bins=bin_array[0],
+        if plot_true: hmc, bx1, _ = plt.hist(self.xsec_vars[true_xsec_var], bins=bin_array[0],
                                             edgecolor='black', label='True')
-        if plot_reco: h1, bx1, _ = plt.hist(self.xsec_vars[reco_xsec_var], bins=bin_array[0], alpha=0.8,
+        if plot_reco: hreco, bx1, _ = plt.hist(self.xsec_vars[reco_xsec_var], bins=bin_array[0], alpha=0.8,
                                             color='indianred', edgecolor='black', label=rlabel)
 
-        plt.errorbar(bin_centers_np(bx1), unfld_hist, err_ax0, bin_width_np(bx1[2:4]) / 2,
+        mc_scale = hmc[1:-1].sum() / unfld_hist[1:-1].sum() if plot_true else hreco[1:-1].sum() / unfld_hist[1:-1].sum()
+
+        plt.errorbar(bin_centers_np(bx1), unfld_hist*mc_scale, err_ax0, bin_width_np(bx1[2:4]) / 2,
                      capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
 
         plt.title('$KE$', fontsize=14)
         plt.xlim(h1_limits)
         plt.ylim(bottom=0)
 
-        print("True | Reco Hist", np.sum(h1))
+        if plot_true: print("True Hist", np.sum(hmc))
+        if plot_reco: print("True Hist", np.sum(hreco))
         print("Unfolded Hist", unfld_hist.sum())
 
         if show_plot:
@@ -640,16 +643,20 @@ class Pi0Variables(XSecVariablesBase):
             print("Unknown value", plot_true_reco)
 
         _, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 5))
-        if plot_true: h1, bx1, h1obj = ax1.hist(self.xsec_vars["true_pi0_energy"], bins=bin_array[0], edgecolor='black', label='True')
+        if plot_true: hmc1, bx1, h1obj = ax1.hist(self.xsec_vars["true_pi0_energy"], bins=bin_array[0], edgecolor='black', label='True')
         if plot_reco: rh1, bx1, _ = ax1.hist(self.xsec_vars["reco_pi0_energy"], bins=bin_array[0], alpha=0.8, color='indianred',
                              edgecolor='black', label='Reco')
-        if plot_true: h2, bx2, _ = ax2.hist(self.xsec_vars["true_pi0_cos_theta"], bins=bin_array[1], edgecolor='black', label='True')
+        if plot_true: hmc2, bx2, _ = ax2.hist(self.xsec_vars["true_pi0_cos_theta"], bins=bin_array[1], edgecolor='black', label='True')
         if plot_reco: rh2, bx2, _ = ax2.hist(self.xsec_vars["reco_pi0_cos_theta"], bins=bin_array[1], alpha=0.8, color='indianred',
                              edgecolor='black', label='Reco')
 
-        ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=1), err_ax0, bin_width_np(bx1[1:-1]) / 2,
+        unfold_ke, unfold_cos = unfold_hist.sum(axis=1), unfold_hist.sum(axis=0)
+        mc_scale1 = hmc1[1:-1].sum() / unfold_ke[1:-1].sum() if plot_true else rh1[1:-1].sum() / unfold_ke[1:-1].sum()
+        mc_scale2 = hmc2[1:-1].sum() / unfold_cos[1:-1].sum() if plot_true else rh2[1:-1].sum() / unfold_cos[1:-1].sum()
+
+        ax1.errorbar(bin_centers_np(bx1), unfold_ke*mc_scale1, err_ax0, bin_width_np(bx1[1:-1]) / 2,
                      capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
-        ax2.errorbar(bin_centers_np(bx2), unfold_hist.sum(axis=0), err_ax1, bin_width_np(bx2[1:-1]) / 2,
+        ax2.errorbar(bin_centers_np(bx2), unfold_cos*mc_scale2, err_ax1, bin_width_np(bx2[1:-1]) / 2,
                      capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
         ax1.set_title('$T_{\\pi^0}$', fontsize=16)
         ax2.set_title('$cos\\theta_{\\pi^0}$', fontsize=16)

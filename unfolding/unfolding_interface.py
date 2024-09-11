@@ -592,14 +592,23 @@ class Pi0Variables(XSecVariablesBase):
 
         return true_cos_theta, reco_cos_theta
 
-    def plot_pi0_vars(self, unfold_hist, err_ax0, err_ax1, bin_array, h1_limits, h2_limits, plot_reco=True):
+    def plot_pi0_vars(self, unfold_hist, err_ax0, err_ax1, bin_array, h1_limits, h2_limits, plot_true_reco='both', show_plot=True):
+
+        if plot_true_reco == 'both':
+            plot_true, plot_reco = True, True
+        elif plot_true_reco == 'true':
+            plot_true, plot_reco = True, False
+        elif plot_true_reco == 'reco':
+            plot_true, plot_reco = False, True
+        else:
+            print("Unknown value", plot_true_reco)
 
         _, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 5))
-        h1, bx1, h1obj = ax1.hist(self.xsec_vars["true_pi0_energy"], bins=bin_array[0], edgecolor='black', label='True')
-        rh1, _, _ = ax1.hist(self.xsec_vars["reco_pi0_energy"], bins=bin_array[0], alpha=0.8, color='indianred',
+        if plot_true: h1, bx1, h1obj = ax1.hist(self.xsec_vars["true_pi0_energy"], bins=bin_array[0], edgecolor='black', label='True')
+        if plot_reco: rh1, bx1, _ = ax1.hist(self.xsec_vars["reco_pi0_energy"], bins=bin_array[0], alpha=0.8, color='indianred',
                              edgecolor='black', label='Reco')
-        h2, bx2, _ = ax2.hist(self.xsec_vars["true_pi0_cos_theta"], bins=bin_array[1], edgecolor='black', label='True')
-        rh2, _, _ = ax2.hist(self.xsec_vars["reco_pi0_cos_theta"], bins=bin_array[1], alpha=0.8, color='indianred',
+        if plot_true: h2, bx2, _ = ax2.hist(self.xsec_vars["true_pi0_cos_theta"], bins=bin_array[1], edgecolor='black', label='True')
+        if plot_reco: rh2, bx2, _ = ax2.hist(self.xsec_vars["reco_pi0_cos_theta"], bins=bin_array[1], alpha=0.8, color='indianred',
                              edgecolor='black', label='Reco')
 
         ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=1), err_ax0, bin_width_np(bx1[1:-1]) / 2,
@@ -612,9 +621,13 @@ class Pi0Variables(XSecVariablesBase):
         ax2.set_xlim(h2_limits)
         ax1.set_ylim(bottom=0)
         ax2.set_ylim(bottom=0)
-        ax1.legend()
-        ax2.legend()
-        plt.show()
 
-        print("True T_pi0/cos_pi0", np.sum(h1), "/", np.sum(h2))
-        print("Reco T_pi0/cos_pi0", np.sum(rh1), "/", np.sum(rh2))
+        if plot_true: print("True T_pi0/cos_pi0", np.sum(h1), "/", np.sum(h2))
+        if plot_reco: print("Reco T_pi0/cos_pi0", np.sum(rh1), "/", np.sum(rh2))
+
+        if show_plot:
+            ax1.legend()
+            ax2.legend()
+            plt.show()
+        else:
+            return ax1, ax2

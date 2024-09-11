@@ -458,7 +458,7 @@ class BeamPionVariables(XSecVariablesBase):
 
         return true_int, reco_int
 
-    def plot_beam_vars(self, unfold_hist, err_ax0, err_ax1, err_ax2, bin_array, h1_limits, h2_limits, h3_limits, plot_true_reco='both', show_plot=True, reco_label=None):
+    def plot_beam_vars(self, xsec_hist, err_ax0, err_ax1, err_ax2, bin_array, h1_limits, h2_limits, h3_limits, plot_true_reco='both', show_plot=True, reco_label=None):
 
         if plot_true_reco == 'both':
             plot_true, plot_reco = True, True
@@ -469,11 +469,15 @@ class BeamPionVariables(XSecVariablesBase):
         else:
             print("Unknown value", plot_true_reco)
 
+        init_hist = xsec_hist["init_hist"]
+        end_hist = xsec_hist["end_hist"]
+        int_hist = xsec_hist["int_hist"]
+
         rlabel = 'Reco' if reco_label is None else reco_label
 
         _, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 5))
         if plot_true: h1, bx1 , _ = ax1.hist(self.xsec_vars["true_beam_initial_energy"], bins=bin_array[0],
-                               edgecolor='black', label='True')
+                                             edgecolor='black', label='True')
         if plot_reco: h1, bx1 , _ = ax1.hist(self.xsec_vars["reco_beam_initial_energy"], bins=bin_array[0], alpha=0.8,
                                color='indianred',edgecolor='black', label=rlabel)
         if plot_true: h2, bx2, _ = ax2.hist(self.xsec_vars["true_beam_end_energy"], bins=bin_array[1], edgecolor='black', label='True')
@@ -484,11 +488,11 @@ class BeamPionVariables(XSecVariablesBase):
         if plot_reco: h3, bx3 , _ = ax3.hist(self.xsec_vars["reco_beam_sig_int_energy"], bins=bin_array[2], alpha=0.8,
                                color='indianred', edgecolor='black', label=rlabel)
 
-        ax1.errorbar(bin_centers_np(bx1), unfold_hist.sum(axis=2).sum(axis=1), err_ax0, bin_width_np(bx1[2:4]) / 2,
+        ax1.errorbar(bin_centers_np(bx1), init_hist, err_ax0, bin_width_np(bx1[2:4]) / 2,
                      capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
-        ax2.errorbar(bin_centers_np(bx2), unfold_hist.sum(axis=2).sum(axis=0), err_ax1, bin_width_np(bx2[2:4]) / 2,
+        ax2.errorbar(bin_centers_np(bx2), end_hist, err_ax1, bin_width_np(bx2[2:4]) / 2,
                      capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
-        ax3.errorbar(bin_centers_np(bx3), unfold_hist.sum(axis=1).sum(axis=0), err_ax2, bin_width_np(bx3[2:4]) / 2,
+        ax3.errorbar(bin_centers_np(bx3), int_hist, err_ax2, bin_width_np(bx3[2:4]) / 2,
                      capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='Unfolded')
         ax1.set_title('$KE_{init}$', fontsize=14)
         ax2.set_title('$KE_{end}$', fontsize=14)
@@ -501,8 +505,7 @@ class BeamPionVariables(XSecVariablesBase):
         ax3.set_ylim(bottom=0, top=(np.max(h3[1:-1]) * 1.2))
         
         print("True | Reco Init/End/Int", np.sum(h1), "/", np.sum(h2), "/", np.sum(h3))
-        print("Unfolded Init/End/Int", unfold_hist.sum(axis=2).sum(axis=1).sum(), "/",
-              unfold_hist.sum(axis=2).sum(axis=0).sum(), "/", unfold_hist.sum(axis=1).sum(axis=0).sum())
+        print("Unfolded Init/End/Int", init_hist.sum(), "/", end_hist.sum(), "/", int_hist.sum())
 
         if show_plot:
             ax1.legend()    

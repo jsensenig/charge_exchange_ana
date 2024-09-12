@@ -23,6 +23,7 @@ class Remapping:
 
         # 3D (l,m,n) -> (l*m*n) + (m*n) + n
         self.true_total_bins = np.prod([len(d) - 1 for d in bin_list])
+        num_bin_list = [len(d) - 1 for d in bin_list]
 
         nd_binned, weights, nd_hist, nd_hist_err, nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=var_list,
                                                                                            bin_list=bin_list,
@@ -37,7 +38,7 @@ class Remapping:
         if is_true_reco:
             if self.remove_overflow:
                 nd_hist, nd_hist_err = self.empty_overflow_bins(nd_hist=nd_hist, nd_hist_err=nd_hist_err,
-                                                                unfld_ndim=len(bin_list))
+                                                                unfld_nbin=num_bin_list)
             nd_map, hist_sparse, hist_err_sparse = self.map_nd_to_1d(num_nd=nd_hist, num_nd_err=nd_hist_err,
                                                                      total_bins=self.true_total_bins)
         else:
@@ -45,10 +46,10 @@ class Remapping:
             bin_map = self.reco_map if is_data else self.true_map
             if self.remove_overflow:
                 nd_hist, nd_hist_err = self.empty_overflow_bins(nd_hist=nd_hist, nd_hist_err=nd_hist_err,
-                                                                unfld_ndim=len(bin_list))
+                                                                unfld_nbin=num_bin_list)
             if self.subtract_bkgd:
                 nd_hist, nd_hist_err = self.subtract_background_v2(nd_hist=nd_hist, nd_hist_err=nd_hist_err,
-                                                                   unfld_ndim=len(bin_list))
+                                                                   unfld_nbin=num_bin_list)
             hist_sparse, hist_err_sparse = self.map_data_to_1d_bins(num_nd=nd_hist,
                                                                     num_nd_err=nd_hist_err,
                                                                     map_nd1d=bin_map)
@@ -79,51 +80,56 @@ class Remapping:
 
         return nd_hist, nd_hist_err
 
-    def empty_overflow_bins(self, nd_hist, nd_hist_err, unfld_ndim):
+    def empty_overflow_bins(self, nd_hist, nd_hist_err, unfld_nbin):
         
-        if unfld_ndim == 2:
-            len_2d = len(nd_hist) // 2
-            print("2D Len:", len_2d)
-            nd_hist.reshape(len_2d, len_2d)[0] = 0.
-            nd_hist.reshape(len_2d, len_2d)[-1] = 0.
-
-            nd_hist_err.reshape(len_2d, len_2d)[0] = 0.
-            nd_hist_err.reshape(len_2d, len_2d)[-1] = 0.
-        elif unfld_ndim == 1:
+        if len(unfld_nbin) == 2:
+            print("2D Bins:", unfld_nbin, "/", nd_hist.sum())
+            nd_hist.reshape(tuple(unfld_nbin))[0, :] = 0.
+            nd_hist.reshape(tuple(unfld_nbin))[:, 0] = 0.
+            nd_hist.reshape(tuple(unfld_nbin))[-1, :] = 0.
+            nd_hist.reshape(tuple(unfld_nbin))[:, -1] = 0.
+            print("Post:", nd_hist.sum())
+            nd_hist_err.reshape(tuple(unfld_nbin))[0, :] = 0.
+            nd_hist_err.reshape(tuple(unfld_nbin))[:, 0] = 0.
+            nd_hist_err.reshape(tuple(unfld_nbin))[-1, :] = 0.
+            nd_hist_err.reshape(tuple(unfld_nbin))[:, -1] = 0.
+        elif len(unfld_nbin) == 1:
             nd_hist[0] = 0.
             nd_hist[-1] = 0.
     
             nd_hist_err[0] = 0.
             nd_hist_err[-1] = 0.
         else:
-            print("ndim not supported. ndim=", unfld_ndim)
+            print("ndim not supported. ndim=", unfld_nbin)
             raise NotImplementedError
 
         return nd_hist, nd_hist_err
 
-    def subtract_background_v2(self, nd_hist, nd_hist_err, unfld_ndim):
+    def subtract_background_v2(self, nd_hist, nd_hist_err, unfld_nbin):
         """
         Backgrounds saved in dictionary {"total_hist_mask": array(), "backgrounds": [array(),array(),array()]}
         The background arrays are just fractions so to scale them to data just multiply by the total data in the region
         """
         print("nd_hist Shape:", nd_hist.shape, " Pre-Sub:", nd_hist.sum())
 
-        if unfld_ndim == 2:
-            len_2d = len(nd_hist) // 2
-            shape = (len_2d, len_2d)
+        if len(unfld_nbin) == 2:
+            shape = tuple(unfld_nbin)
             axis_slice = (slice(1, -1), slice(1, -1))
-        elif unfld_ndim == 1:
+        elif len(unfld_nbin) == 1:
             shape = len(nd_hist)
             axis_slice = slice(1, -1)
         else:
-            print("ndim not supported. ndim=", unfld_ndim)
+            print("ndim not supported. ndim=", unfld_nbin)
             raise NotImplementedError
 
         total_event_count = nd_hist.reshape(shape)[axis_slice].copy()
+        total_mc = self.background_dict["total_signal_hist"].sum()
                                                                                                                                                
         for i, bkgd in enumerate(self.background_dict["backgrounds"]):
-            print("Subtracting bkgd", i, "/", (bkgd * total_event_count).sum(), "/", total_event_count)
-            nd_hist.reshape(shape)[axis_slice] -= (bkgd * total_event_count)
+            #print("Subtracting bkgd", i, "/", (bkgd * total_event_count).sum())
+            #nd_hist.reshape(shape)[axis_slice] -= (bkgd * total_event_count)
+            print("Subtracting bkgd", i, "/", (bkgd * (total_event_count.sum()/total_mc)).sum())
+            nd_hist.reshape(shape)[axis_slice] -= (bkgd * (total_event_count.sum()/total_mc))
                                                                                                                                                
         # This should never happen but just in case
         nd_hist.reshape(shape)[axis_slice][nd_hist.reshape(shape)[axis_slice] < 0] = 0.

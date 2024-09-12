@@ -25,10 +25,11 @@ class Remapping:
         self.true_total_bins = np.prod([len(d) - 1 for d in bin_list])
         num_bin_list = [len(d) - 1 for d in bin_list]
 
-        nd_binned, weights, nd_hist, nd_hist_err, nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=var_list,
+        nd_binned, weights, nd_hist, nd_hist_err, nd_hist_cov, evt_mask = self.map_meas_to_bin_space(corr_var_list=var_list,
                                                                                            bin_list=bin_list,
                                                                                            total_bins=self.true_total_bins,
                                                                                            evt_weights=event_weights,
+                                                                                           is_data=is_data,
                                                                                            debug=self.debug)
 
         print("Total Bins:", self.true_total_bins)
@@ -56,7 +57,7 @@ class Remapping:
 
         print("Map:", np.count_nonzero(nd_map))
 
-        return nd_binned, weights, nd_hist, nd_hist_cov, hist_sparse, nd_map
+        return nd_binned, weights, nd_hist, nd_hist_cov, hist_sparse, nd_map, evt_mask
 
     def subtract_background(self, nd_hist, nd_hist_err):
         """
@@ -142,16 +143,18 @@ class Remapping:
         # 3D (l,m,n) -> (l*m*n) + (m*n) + n
         self.true_total_bins = np.prod([len(d) - 1 for d in bin_list])
 
-        true_nd_binned, true_weights, true_nd_hist, true_nd_hist_err, true_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=true_list,
+        true_nd_binned, true_weights, true_nd_hist, true_nd_hist_err, true_nd_hist_cov, true_evt_mask = self.map_meas_to_bin_space(corr_var_list=true_list,
                                                                                                bin_list=bin_list,
                                                                                                total_bins=self.true_total_bins,
                                                                                                evt_weights=true_event_weights,
+                                                                                               is_data=False,
                                                                                                debug=self.debug)
 
-        reco_nd_binned, reco_weights, reco_nd_hist, reco_nd_hist_err, reco_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=reco_list,
+        reco_nd_binned, reco_weights, reco_nd_hist, reco_nd_hist_err, reco_nd_hist_cov, reco_evt_mask = self.map_meas_to_bin_space(corr_var_list=reco_list,
                                                                                                bin_list=bin_list,
                                                                                                total_bins=self.true_total_bins,
                                                                                                evt_weights=reco_event_weights,
+                                                                                               is_data=False,
                                                                                                debug=self.debug)
 
         print("Total Bins:", self.true_total_bins)
@@ -171,16 +174,17 @@ class Remapping:
         print("Meas Map:", np.count_nonzero(self.reco_map))
 
         return (true_nd_binned, reco_nd_binned), (true_weights, reco_weights), (true_nd_hist, reco_nd_hist), (true_nd_hist_cov, reco_nd_hist_cov), \
-               (true_hist_sparse, reco_hist_err_sparse)
+               (true_hist_sparse, reco_hist_err_sparse), (true_evt_mask, reco_evt_mask)
 
     def remap_data_events(self, data_list, bin_list, data_weights):
 
         self.reco_total_bins = np.prod([len(d)-1 for d in bin_list])
 
-        data_nd_binned, data_weight, data_nd_hist, data_nd_hist_err, data_nd_hist_cov = self.map_meas_to_bin_space(corr_var_list=data_list,
+        data_nd_binned, data_weight, data_nd_hist, data_nd_hist_err, data_nd_hist_cov, evt_mask = self.map_meas_to_bin_space(corr_var_list=data_list,
                                                                                                bin_list=bin_list,
                                                                                                total_bins=self.reco_total_bins,
                                                                                                evt_weights=data_weights,
+                                                                                               is_data=True,
                                                                                                debug=self.debug)
 
         # Data mapping to 1D
@@ -188,7 +192,7 @@ class Remapping:
                                                                           map_nd1d=self.reco_map)
         print("Sparse Data nbins:", len(data_hist_sparse))
 
-        return data_nd_binned, data_weight, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse
+        return data_nd_binned, data_weight, data_nd_hist, data_nd_hist_cov, data_hist_sparse, data_hist_err_sparse, evt_mask
 
     @staticmethod
     def calculate_efficiency(full_signal, full_selected):
@@ -224,7 +228,7 @@ class Remapping:
         return unfolded_data_corrected, unfolded_data_cov_corrected
 
     @staticmethod
-    def map_meas_to_bin_space(corr_var_list, bin_list, total_bins, evt_weights, debug=False):
+    def map_meas_to_bin_space(corr_var_list, bin_list, total_bins, evt_weights, is_data, debug=False):
         """
         Convert list of correlated variables to single ndim variable
         """
@@ -232,7 +236,7 @@ class Remapping:
         mask_events = np.ones(shape=corr_var_list[0].shape, dtype=bool)
         print("Pre", np.count_nonzero(mask_events))
         for cvar, bins in zip(corr_var_list, bin_list): # NOTE remove masking
-            mask_events &= (cvar >= bins[0]) & (cvar < bins[-1])
+            mask_events &= (cvar >= bins[1]) & (cvar < bins[-2])
         print("Post", np.count_nonzero(mask_events))
 
         bin_lens = [len(d)-1 for d in bin_list] # NOTE changed from len() -1
@@ -243,7 +247,7 @@ class Remapping:
             arr, bins, shift = arr_bin
             nbins = len(bins) - 1
             # Mapping from measured space (usually energy) to bin space
-            n_binned = np.digitize(x=arr[mask_events], bins=bins, right=False) - 1
+            n_binned = np.digitize(x=arr, bins=bins, right=False) - 1
             if debug: print("Unique bins:", np.unique(n_binned))
             if debug: print("(n_binned >= 0) & (n_binned <= (", nbins-1, ")") # was >= 1 and <= 0 # NOTE remove cut
             n_binned = n_binned[(n_binned >= 0) & (n_binned <= nbins-1)]  # ignore under/over flow bins, 0/n+1 respectively
@@ -259,12 +263,17 @@ class Remapping:
         if debug: print("Unique Bins:", np.unique(ravelled_idx))
 
         # Create the histogram with event weighting and calculate errors
-        num_nd, _ = np.histogram(ravelled_idx, bins=total_bins, range=(0, total_bins-1), weights=evt_weights[mask_events])
+        if is_data:
+            num_nd, _ = np.histogram(ravelled_idx[mask_events], bins=total_bins, range=(0, total_bins - 1),
+                                     weights=evt_weights[mask_events])
+        else:
+            num_nd, _ = np.histogram(ravelled_idx, bins=total_bins, range=(0, total_bins - 1), weights=evt_weights)
+
         num_nd_err, _ = np.histogram(ravelled_idx, bins=total_bins, range=(0, total_bins-1),
-                                     weights=evt_weights[mask_events] * evt_weights[mask_events])
+                                     weights=evt_weights * evt_weights)
         num_nd_vcov = np.diag(num_nd_err)
 
-        return ravelled_idx, evt_weights[mask_events], num_nd, np.sqrt(num_nd_err), num_nd_vcov
+        return ravelled_idx, evt_weights, num_nd, np.sqrt(num_nd_err), num_nd_vcov, mask_events
 
     @staticmethod
     def map_nd_to_1d(num_nd, num_nd_err, total_bins):

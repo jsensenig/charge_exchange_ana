@@ -93,24 +93,24 @@ class Unfold:
 
         if self.is_training:
             print("Start Training")
-            true_nd_binned, true_weights, true_nd_hist, true_nd_hist_cov, true_hist_sparse, self.remap_evts.true_map\
+            true_nd_binned, true_weights, true_nd_hist, true_nd_hist_cov, true_hist_sparse, self.remap_evts.true_map, true_evt_mask \
                 = self.remap_evts.remap_events(var_list=true_var_list,
                                                bin_list=self.true_bin_array,
                                                event_weights=true_weight_list)
 
-            reco_nd_binned, reco_weights, reco_nd_hist, reco_nd_hist_cov, reco_hist_sparse, self.remap_evts.reco_map \
+            reco_nd_binned, reco_weights, reco_nd_hist, reco_nd_hist_cov, reco_hist_sparse, self.remap_evts.reco_map, reco_evt_mask \
                 = self.remap_evts.remap_events(var_list=reco_var_list,
                                                bin_list=self.true_bin_array,
                                                event_weights=reco_weight_list)
 
             # Only used for efficiency calculation
-            _, _, signal_nd_hist, _, signal_hist_sparse, _ = self.remap_evts.remap_events(var_list=signal_var_list,
+            _, _, signal_nd_hist, _, signal_hist_sparse, _, _ = self.remap_evts.remap_events(var_list=signal_var_list,
                                                                                           bin_list=self.true_bin_array,
                                                                                           event_weights=signal_weight_list,
                                                                                           is_true_reco=False, is_data=False)
             sel_signal = [var[selected_signal_mask] for var in signal_var_list]
             sel_weight = signal_weight_list[selected_signal_mask]
-            _, _, selected_signal_nd_hist, _, _, _ = self.remap_evts.remap_events(var_list=sel_signal,                  
+            _, _, selected_signal_nd_hist, _, _, _, _ = self.remap_evts.remap_events(var_list=sel_signal,
                                                                                   bin_list=self.true_bin_array,
                                                                                   event_weights=sel_weight,
                                                                                   is_true_reco=False, is_data=False)
@@ -120,15 +120,16 @@ class Unfold:
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
 
-            self.create_response_matrix(reco_events=self.remap_evts.reco_map[reco_nd_binned].astype('d'),
-                                        true_events=self.remap_evts.true_map[true_nd_binned].astype('d'),
-                                        reco_weights=reco_weights.astype('d'))
+            response_mask = true_evt_mask & reco_evt_mask
+            self.create_response_matrix(reco_events=self.remap_evts.reco_map[reco_nd_binned[response_mask]].astype('d'),
+                                        true_events=self.remap_evts.true_map[true_nd_binned[response_mask]].astype('d'),
+                                        reco_weights=reco_weights[response_mask].astype('d'))
 
         if self.show_plots:
             self.plot_response_matrix(response_matrix=self.response)
 
         # Set data
-        _, _, _, _, data_hist_sparse, _ = self.remap_evts.remap_events(var_list=reco_var_list,
+        _, _, _, _, data_hist_sparse, _, _ = self.remap_evts.remap_events(var_list=reco_var_list,
                                                                        bin_list=self.true_bin_array,
                                                                        event_weights=data_weight_list,
                                                                        is_true_reco=False, is_data=True)
@@ -416,11 +417,11 @@ class Unfold:
             nbins, bin_range = self.config["truth_bins"]["nbins"], self.config["truth_bins"]["limits"]
             self.truth_ndim = len(nbins)
             true_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
-            true_array = [np.concatenate(([-1000], tarr, [limits[1] + 1000])) for tarr, limits in zip(true_array, bin_range)]
+            true_array = [np.concatenate(([-1.e6], tarr, [limits[1] + 1.e6])) for tarr, limits in zip(true_array, bin_range)]
             nbins, bin_range = self.config["reco_bins"]["nbins"], self.config["reco_bins"]["limits"]
             self.reco_ndim = len(nbins)
             reco_array = [np.linspace(limits[0], limits[1], bin + 1) for bin, limits in zip(nbins, bin_range)]
-            reco_array = [np.concatenate(([-1000], tarr, [limits[1] + 1000])) for tarr, limits in zip(reco_array, bin_range)]
+            reco_array = [np.concatenate(([-1.e6], tarr, [limits[1] + 1.e6])) for tarr, limits in zip(reco_array, bin_range)]
 
         return true_array, reco_array
 

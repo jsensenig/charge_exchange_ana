@@ -90,15 +90,24 @@ class BeamQualityCut(EventSelectionBase):
             beam_starty_sigma = self.local_config["beam_startY_rms_Data"]
             beam_startz_sigma = self.local_config["beam_startZ_rms_Data"]
 
+        fid_start = 0
+        beam_inst_cosx = events["beam_inst_dirX"] / events["beam_inst_dirZ"]
+        beam_inst_cosy = events["beam_inst_dirY"] / events["beam_inst_dirZ"]
+        beam_inst_new_x = (fid_start - events["beam_inst_Z"]) * beam_inst_cosx + events["beam_inst_X"]
+        beam_inst_new_y = (fid_start - events["beam_inst_Z"]) * beam_inst_cosy + events["beam_inst_Y"]
+
+        delta_start_x = ak.to_numpy(events["reco_beam_calo_startX"] - beam_inst_new_x)
+        delta_start_y = ak.to_numpy(events["reco_beam_calo_startY"] - beam_inst_new_y)
+
         # Shift the start to the mean and normalize by the RMS for each dimension
-        events["beam_dx"] = (events[self.local_config["beam_startX"]] - beam_startx_mean) / beam_startx_sigma
-        events["beam_dy"] = (events[self.local_config["beam_startY"]] - beam_starty_mean) / beam_starty_sigma
+        events["beam_dx"] = (delta_start_x - beam_startx_mean) / beam_startx_sigma
+        events["beam_dy"] = (delta_start_y - beam_starty_mean) / beam_starty_sigma
         events["beam_dz"] = ak.to_numpy((events[self.local_config["beam_startZ"]] - beam_startz_mean) / beam_startz_sigma)
 
         # Convert to numpy array with shape (2,N) where N is number of events
-        beam_xy = np.vstack((ak.to_numpy(events["beam_dx"]), ak.to_numpy(events["beam_dy"]))).T
+        # beam_xy = np.vstack((ak.to_numpy(events["beam_dx"]), ak.to_numpy(events["beam_dy"]))).T
         # Get the length of the pairs in the xy plane
-        events["beam_dxy"] = np.sqrt(np.sum(beam_xy*beam_xy, axis=1))
+        # events["beam_dxy"] = np.sqrt(np.sum(beam_xy*beam_xy, axis=1))
 
         return events
 
@@ -129,8 +138,10 @@ class BeamQualityCut(EventSelectionBase):
 
         selected_mask &= (ak.to_numpy(events["beam_dz"]) > self.local_config["beam_start_min_dz"]) & \
                         (ak.to_numpy(events["beam_dz"]) < self.local_config["beam_start_max_dz"])
-        selected_mask &= (ak.to_numpy(events["beam_dxy"]) > self.local_config["beam_start_min_dxy"]) & \
-                         (ak.to_numpy(events["beam_dxy"]) < self.local_config["beam_start_max_dxy"])
+        selected_mask &= (ak.to_numpy(events["beam_dx"]) > self.local_config["beam_start_min_dx"]) & \
+                         (ak.to_numpy(events["beam_dx"]) < self.local_config["beam_start_max_dx"])
+        selected_mask &= (ak.to_numpy(events["beam_dy"]) > self.local_config["beam_start_min_dy"]) & \
+                         (ak.to_numpy(events["beam_dy"]) < self.local_config["beam_start_max_dy"])
 
         selected_mask &= (ak.to_numpy(events["beam_direction"]) > self.local_config["min_angle"]) & \
                          (ak.to_numpy(events["beam_direction"]) < self.local_config["max_angle"])

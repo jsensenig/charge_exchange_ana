@@ -214,12 +214,13 @@ class Remapping:
 
         for i in range(self.true_total_bins):
             if unfolded_data[i] > 0: # empty bin in data
-                unfolded_data_corrected[i] = unfolded_data[i] / efficiency[i] if efficiency[i] > eff_cut else 0.
+                unfolded_data_corrected[i] = unfolded_data[i] / efficiency[i] if efficiency[i] > eff_cut else unfolded_data[i] 
+                print("Bin:", i, "E:", np.round(efficiency[i], 3), "E Corr:", int(unfolded_data[i]), " -> ", int(unfolded_data_corrected[i]))
                 for j in range(self.true_total_bins):
                     if unfolded_data[j] < 1:
                         continue
                     valid_eff = (efficiency[i] > eff_cut) and (efficiency[j] > eff_cut)
-                    unfolded_data_cov_corrected[i, j] = unfolded_data_cov[i, j] / (efficiency[i] * efficiency[j]) if valid_eff else 0.
+                    unfolded_data_cov_corrected[i, j] = unfolded_data_cov[i, j] / (efficiency[i] * efficiency[j]) if valid_eff else unfolded_data_cov[i, j]
             elif efficiency[i] == 0: # FIXME add MC scaling
                 #unfolded_data_corrected[i] = 1
                 #unfolded_data_cov_corrected[i, i] = 1
@@ -267,6 +268,7 @@ class Remapping:
             num_nd, _ = np.histogram(ravelled_idx[mask_events], bins=total_bins, range=(0, total_bins - 1),
                                      weights=evt_weights[mask_events])
         else:
+            print("Evt/Wt Shape:", ravelled_idx.shape, "/", evt_weights.shape)
             num_nd, _ = np.histogram(ravelled_idx, bins=total_bins, range=(0, total_bins - 1), weights=evt_weights)
 
         num_nd_err, _ = np.histogram(ravelled_idx, bins=total_bins, range=(0, total_bins-1),

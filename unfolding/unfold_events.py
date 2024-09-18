@@ -436,8 +436,8 @@ class Unfold:
         self.response = unfold_param_dict["response"]
         self.remap_evts.true_map = unfold_param_dict["true_bin_map"]
         self.remap_evts.reco_map = unfold_param_dict["reco_bin_map"]
-        self.true_bin_array = unfold_param_dict["true_bin_array"]
-        self.reco_bin_array = unfold_param_dict["reco_bin_array"]
+        #self.true_bin_array = unfold_param_dict["true_bin_array"]
+        #self.reco_bin_array = unfold_param_dict["reco_bin_array"]
         self.reco_nbins_sparse = unfold_param_dict["reco_nbins_sparse"]
         
         

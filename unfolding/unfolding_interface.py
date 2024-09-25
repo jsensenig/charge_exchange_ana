@@ -187,6 +187,10 @@ class BeamPionVariables(XSecVariablesBase):
         # Add beam daughter total KE. To be used for pi0 calibration
         self.xsec_vars["pi0_calib_reco_beam_daughter_ke"] = self.get_daughter_total_ke(events=event_record)
 
+        # Get shower and charged pion counts for sidebands
+        self.xsec_vars["reco_shower_count"] = self.make_shower_count(event_record=event_record)
+        self.xsec_vars["reco_pion_count"] = self.make_pion_count(event_record=event_record)
+
         # Apply mask to events
         if self.is_training:
             true_mask = ~self.xsec_vars["true_upstream_mask"] #& ~self.xsec_vars["reco_upstream_mask"]
@@ -238,6 +242,25 @@ class BeamPionVariables(XSecVariablesBase):
         daughter_sum_ke = ak.sum(ak.sum(dedx[dedx_mask], axis=2), axis=1)
 
         return daughter_sum_ke
+
+    def make_shower_count(self, event_record):
+        cnn_shower_mask = event_record["reco_daughter_PFP_trackScore_collection"] < 0.5
+        nhit_mask = event_record["reco_daughter_PFP_nHits"] > 50.
+
+        shower_mask = cnn_shower_mask & nhit_mask
+        shower_count = np.count_nonzero(event_record["reco_daughter_allShower_energy", shower_mask], axis=1)
+
+        return ak.to_numpy(shower_count)
+
+    def make_pion_count(self, event_record):
+        track_score_mask = event_record["reco_daughter_PFP_trackScore_collection"] > 0.5
+        delta_chi2_mask = (event_record["reco_daughter_allTrack_Chi2_proton"] -
+                              event_record["reco_daughter_allTrack_Chi2_pion"]) > 750
+
+        daughter_pion_mask = delta_chi2_mask & track_score_mask
+        pion_count = np.count_nonzero(event_record["reco_daughter_PFP_trackScore_collection", daughter_pion_mask], axis=1)
+
+        return ak.to_numpy(pion_count)
 
     def make_true_beam_energy(self, event_record):
         """

@@ -33,8 +33,8 @@ class TrueProcess:
 
         # Momentum cut on true charged pions, i.e., pions with momentum < cut momentum are indistinguishable from say
         # protons and other charged particles. set to 0.125
-        valid_piplus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.0, pdg_select=211)
-        valid_piminus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=0.0, pdg_select=-211)
+        valid_piplus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=-1000., pdg_select=211)
+        valid_piminus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=-1000., pdg_select=-211)
 
         # Pion inelastic
         pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic") #&
@@ -81,7 +81,8 @@ class TrueProcess:
         events["daughter_zero_pi0_bkgd"] = pion_inelastic & self.daughter_charged_pion_prod(events, valid_piplus, valid_piminus)
         events["daughter_one_pi0_bkgd"] = pion_inelastic & self.daughter_one_pi0_bkgd(events, valid_piplus, valid_piminus)
         events["daughter_n_pi0_bkgd"] = pion_inelastic & self.daughter_n_pi0_bkgd(events, valid_piplus, valid_piminus)
-        events["daughter_other_bkgd"] =  (~events["daughter_zero_pi0_bkgd"] & ~events["daughter_one_pi0_bkgd"] &
+        events["beam_bkgd"] = ~pion_inelastic 
+        events["daughter_other_bkgd"] =  pion_inelastic & (~events["daughter_zero_pi0_bkgd"] & ~events["daughter_one_pi0_bkgd"] &
                                           ~events["daughter_n_pi0_bkgd"] & ~events["single_charge_exchange"])
 
         # other (fill "other" column with all zeroes)
@@ -123,7 +124,7 @@ class TrueProcess:
 
     @staticmethod
     def get_daughter_bkgd_list():
-        return ["single_charge_exchange", "daughter_zero_pi0_bkgd", "daughter_one_pi0_bkgd", "daughter_n_pi0_bkgd", "daughter_other_bkgd"]
+        return ["single_charge_exchange", "daughter_zero_pi0_bkgd", "daughter_one_pi0_bkgd", "daughter_n_pi0_bkgd", "daughter_other_bkgd", "beam_bkgd"]
 
     @staticmethod
     def get_beam_particle_list():
@@ -227,6 +228,6 @@ class TrueProcess:
 
     @staticmethod
     def daughter_charged_pion_prod(events, piplus, piminus):
-        return ((piminus > 0) & (piplus > 0)) & (events["true_daughter_nPi0"] == 0)
+        return ((piminus > 0) | (piplus > 0)) & (events["true_daughter_nPi0"] == 0)
 
 

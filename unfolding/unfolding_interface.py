@@ -578,8 +578,23 @@ class Pi0Variables(XSecVariablesBase):
         true_cos_theta, reco_cos_theta = self.make_pi0_cos_theta(event_record=event_record, reco_mask=reco_int_mask)
         self.xsec_vars["true_pi0_cos_theta"] = true_cos_theta
         self.xsec_vars["reco_pi0_cos_theta"] = reco_cos_theta
+   
+        # Get shower quality cut variables -lnL_alpha and M_gg
+        nll_alpha, inv_mass = self.make_shower_quality(event_record=event_record, reco_mask=reco_int_mask)
+        self.xsec_vars["reco_nll_alpha"] = nll_alpha
+        self.xsec_vars["reco_inv_mass"] = inv_mass
 
         return self.xsec_vars
+
+    def make_shower_quality(self, event_record, reco_mask):
+ 
+        inv_mass = np.sqrt(2. * event_record["fit_pi0_gamma_energy1"] * event_record["fit_pi0_gamma_energy2"] * ( 
+                    1. - np.cos(np.radians(event_record["fit_pi0_gamma_oa"]))))
+
+        nll_alpha = np.asarray([-np.log(self.dn_dalpha_distribution_mod(alpha=np.radians(oa), epi0=energy) + 1.e-200)
+                                    for energy, oa in zip(event_record["fit_pi0_energy"], event_record["fit_pi0_gamma_oa"])])
+
+        return nll_alpha[reco_mask], ak.to_numpy(inv_mass[reco_mask])
 
     def make_pi0_energy(self, event_record, reco_mask):
         true_pi0_energy = None
@@ -590,7 +605,7 @@ class Pi0Variables(XSecVariablesBase):
             true_pi0_energy[one_pi0_mask] = ak.to_numpy(np.sum(event_record["true_beam_Pi0_decay_startP"][one_pi0_mask], axis=1) * 1.e3) - 135.
             #self.xsec_vars["true_gamma_energy"][one_pi0_mask] = event_record["true_beam_Pi0_decay_startP"][one_pi0_mask]
 
-        reco_pi0_energy = None#ak.to_numpy(event_record["fit_pi0_energy"][reco_mask]) - 135.0
+        reco_pi0_energy = ak.to_numpy(event_record["fit_pi0_energy"][reco_mask]) - 135.0
 
         return true_pi0_energy, reco_pi0_energy
 
@@ -627,9 +642,27 @@ class Pi0Variables(XSecVariablesBase):
             # respective direction unit vectors
             true_cos_theta[one_pi0_mask] = np.diag(beam_dir_unit @ full_len_daughter_dir.T)[one_pi0_mask]
 
-        reco_cos_theta = None#ak.to_numpy(event_record["fit_pi0_cos_theta"][reco_mask])
+        reco_cos_theta = ak.to_numpy(event_record["fit_pi0_cos_theta"][reco_mask])
 
         return true_cos_theta, reco_cos_theta
+
+    def dn_dalpha_distribution_mod(self, alpha, epi0):
+        offset = 0.1 
+        min_angle = 2. * np.arcsin(135. / epi0)
+        momentum = np.sqrt(epi0 ** 2 - 135. * 135.)
+        beta = (momentum / 135.) * np.sqrt(1 / (1 + (momentum / 135.) ** 2)) 
+        gamma = 1 / np.sqrt(1 - beta ** 2)
+
+        diff_angle = 2 * (1 / (4. * gamma * beta)) * (np.cos(alpha / 2.) / np.sin(alpha / 2.) ** 2) * ( 
+                1 / np.sqrt(gamma ** 2 * np.sin(alpha / 2.) ** 2 - 1)) 
+
+        if alpha < (min_angle + np.radians(offset)):
+            min_alpha = min_angle + np.radians(offset)
+            trans_point = 2 * (1 / (4. * gamma * beta)) * (np.cos(min_alpha / 2.) / np.sin(min_alpha / 2.) ** 2) * ( 
+                    1 / np.sqrt(gamma ** 2 * np.sin(min_alpha / 2.) ** 2 - 1)) 
+            diff_angle = trans_point * np.exp(50. * (alpha - min_alpha))
+
+        return diff_angle
 
     def plot_pi0_vars(self, unfold_hist, err_ax0, err_ax1, bin_array, h1_limits, h2_limits, plot_true_reco='both', show_plot=True):
 
@@ -665,7 +698,7 @@ class Pi0Variables(XSecVariablesBase):
         ax1.set_ylim(bottom=0)
         ax2.set_ylim(bottom=0)
 
-        if plot_true: print("True T_pi0/cos_pi0", np.sum(h1), "/", np.sum(h2))
+        if plot_true: print("True T_pi0/cos_pi0", np.sum(hmc1), "/", np.sum(hmc2))
         if plot_reco: print("Reco T_pi0/cos_pi0", np.sum(rh1), "/", np.sum(rh2))
 
         if show_plot:

@@ -118,7 +118,7 @@ class Unfold:
             # self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist,
             #                                                                      full_selected=selected_signal_nd_hist)
             #
-            # self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
+            self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
 
             response_mask = true_evt_mask & reco_evt_mask
             self.create_response_matrix(reco_events=self.remap_evts.reco_map[reco_nd_binned[response_mask]].astype('d'),

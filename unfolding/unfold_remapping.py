@@ -43,8 +43,7 @@ class Remapping:
             nd_map, hist_sparse, hist_err_sparse = self.map_nd_to_1d(num_nd=nd_hist, num_nd_err=nd_hist_err,
                                                                      total_bins=self.true_total_bins)
         else:
-            nd_map = None
-            bin_map = self.reco_map if is_data else self.true_map
+            nd_map = self.reco_map if is_data else self.true_map
             if self.remove_overflow:
                 nd_hist, nd_hist_err = self.empty_overflow_bins(nd_hist=nd_hist, nd_hist_err=nd_hist_err,
                                                                 unfld_nbin=num_bin_list)
@@ -53,7 +52,7 @@ class Remapping:
                                                                    unfld_nbin=num_bin_list)
             hist_sparse, hist_err_sparse = self.map_data_to_1d_bins(num_nd=nd_hist,
                                                                     num_nd_err=nd_hist_err,
-                                                                    map_nd1d=bin_map)
+                                                                    map_nd1d=nd_map)
 
         print("Map:", np.count_nonzero(nd_map))
 
@@ -215,13 +214,14 @@ class Remapping:
         for i in range(self.true_total_bins):
             if unfolded_data[i] > 0: # empty bin in data
                 unfolded_data_corrected[i] = unfolded_data[i] / efficiency[i] if efficiency[i] > eff_cut else unfolded_data[i] 
-                print("Bin:", i, "E:", np.round(efficiency[i], 3), "E Corr:", int(unfolded_data[i]), " -> ", int(unfolded_data_corrected[i]))
+                print("Bin:", i, "E:", np.round(efficiency[i], 3), "E Corr:", np.round(unfolded_data[i], 3), " -> ", int(unfolded_data_corrected[i]))
                 for j in range(self.true_total_bins):
                     if unfolded_data[j] < 1:
                         continue
                     valid_eff = (efficiency[i] > eff_cut) and (efficiency[j] > eff_cut)
                     unfolded_data_cov_corrected[i, j] = unfolded_data_cov[i, j] / (efficiency[i] * efficiency[j]) if valid_eff else unfolded_data_cov[i, j]
             elif efficiency[i] == 0: # FIXME add MC scaling
+                print("Bin:", i, "Effiency is 0 passing. Bin contents:", unfolded_data[i])
                 #unfolded_data_corrected[i] = 1
                 #unfolded_data_cov_corrected[i, i] = 1
                 pass

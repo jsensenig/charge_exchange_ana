@@ -26,6 +26,7 @@ class ShowerPreCut(EventSelectionBase):
                                                                       cut_name=self.cut_name)
         self.optimize = self.local_config["optimize_cut"]
         self.is_mc = self.config["is_mc"]
+        self.reverse_cut = self.local_config["reverse_cut"]
 
     def cnn_shower_cut(self, events):
         # Create a mask for all daughters with CNN EM-like score <0.5
@@ -44,7 +45,7 @@ class ShowerPreCut(EventSelectionBase):
         # Perform a 2 step cut on showers, get a daughter mask from each
         cnn_shower_mask = self.cnn_shower_cut(events)
         min_shower_energy = self.min_shower_energy_cut(events)
-        nhit_mask = events["reco_daughter_PFP_nHits"] > 80.
+        nhit_mask = events["reco_daughter_PFP_nHits"] > 50.
 
         # Shower selection mask
         shower_mask = cnn_shower_mask & nhit_mask #&  min_shower_energy
@@ -70,9 +71,12 @@ class ShowerPreCut(EventSelectionBase):
                   ak.sum(shower_print_pi0_prod == 3), "/",
                   ak.sum(shower_print_pi0_prod == 4), "/",
                   ak.sum(shower_print_pi0_prod == 5))
+         
+        if self.reverse_cut: print("Reversed shower cut!")
 
         # Create the event mask, true if there are 2 candidate showers
-        return (shower_count > 0) #& (shower_count < 3)
+        shower_count_mask = (shower_count < 1) if self.reverse_cut else (shower_count > 0) # >1 for npi0 sideband
+        return shower_count_mask
 
     def selection(self, events, hists, optimizing=False):
 

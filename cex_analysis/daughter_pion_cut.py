@@ -27,6 +27,7 @@ class DaughterPionCut(EventSelectionBase):
                                                                       cut_name=self.cut_name)
         self.optimize = self.local_config["optimize_cut"]
         self.is_mc = self.config["is_mc"]
+        self.reverse_cut = self.local_config["reverse_cut"]
 
     def cnn_track_cut(self, events):
         # Create a mask for all daughters with CNN track-like score >0.6
@@ -45,13 +46,19 @@ class DaughterPionCut(EventSelectionBase):
         cut_variable = self.chi2_ndof_var
 
         events[self.chi2_ndof_var] = events[self.local_config["proton_chi2"]] / events[self.local_config["proton_ndof"]]
+        events["delta_chi2"] = events[self.local_config["proton_chi2"]] - events["reco_daughter_allTrack_Chi2_pion"]
 
         # Plot the variable before making cut
         if not optimizing:
             self.plot_particles_base(events=events, pdg=events[self.reco_beam_pdg], precut=True, hists=hists)
 
         track_score_mask = self.cnn_track_cut(events)
-        daughter_pion_mask = self.chi2_ndof(events)
+        # daughter_pion_mask = self.chi2_ndof(events)
+
+        if self.reverse_cut:
+            daughter_pion_mask = events["delta_chi2"] < self.local_config["chi2_ndof_cut_param"]
+        else:
+            daughter_pion_mask = events["delta_chi2"] > self.local_config["chi2_ndof_cut_param"]
 
         # Combine all event level masks
         # We want to *reject* events if there are daughter charged pions so negate the selection mask

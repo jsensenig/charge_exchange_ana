@@ -17,6 +17,7 @@ class Pi0NLLCut(EventSelectionBase):
                                                                       cut_name=self.cut_name)
         self.optimize = self.local_config["optimize_cut"]
         self.is_mc = self.config["is_mc"]
+        self.reverse_cut = self.local_config["reverse_cut"]
 
         # Optimization rules
         self.opt_dict = {"nll_cut_param": [-1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1],
@@ -65,9 +66,12 @@ class Pi0NLLCut(EventSelectionBase):
             self.plot_particles_base(events=events, pdg=events[self.reco_daughter_pdf], precut=True, hists=hists)
 
         # Perform the cut on the beam particle endpoint
-        selected_mask = (ak.to_numpy(events["fit_pi0_oa_nll"]) < self.local_config["nll_cut_param"]) & \
-                        (ak.to_numpy(events["pi0_invariant_mass"]) > self.local_config["inv_mass_cut_param"])
-
+        if self.reverse_cut:
+            selected_mask = ((ak.to_numpy(events["fit_pi0_oa_nll"]) > self.local_config["nll_cut_param"]) & 
+                            (ak.to_numpy(events["pi0_invariant_mass"]) < self.local_config["inv_mass_cut_param"]))
+        else:
+            selected_mask = ((ak.to_numpy(events["fit_pi0_oa_nll"]) < self.local_config["nll_cut_param"]) &               
+                            (ak.to_numpy(events["pi0_invariant_mass"]) > self.local_config["inv_mass_cut_param"]))
 
         # Plot the variable before after cut
         if not optimizing:

@@ -180,14 +180,14 @@ class XSecTotal(XSecBase):
 
         ax.errorbar(bin_centers_np(bin_array), total_xsec, yerr, bin_width_np(bin_centers_np(bin_array)) / 2,
                     capsize=2, marker='s', markersize=3, linestyle='None', color='black', label='MC Unfolded')
-        ax.plot(self.geant_total_xsec[proc_name[process]][0], self.geant_total_xsec[proc_name[process]][1],
-                linestyle='--', color='indianred', label='Geant $\\sigma$')
-        ax.set_xlabel("$T_{\\pi^+}$ [MeV]", fontsize=14)
-        ax.set_ylabel("$\sigma$ [mb]", fontsize=14)
-        ax.set_xlim(xlim)
-        ax.set_ylim(ylim)
-        ax.set_xticks(np.arange(xlim[0], xlim[1]+1, 100))
-        ax.legend()
+        #ax.plot(self.geant_total_xsec[proc_name[process]][0], self.geant_total_xsec[proc_name[process]][1],
+        #        linestyle='--', color='indianred', label='Geant $\\sigma$')
+        #ax.set_xlabel("$T_{\\pi^+}$ [MeV]", fontsize=14)
+        #ax.set_ylabel("$\sigma$ [mb]", fontsize=14)
+        #ax.set_xlim(xlim)
+        #ax.set_ylim(ylim)
+        #ax.set_xticks(np.arange(xlim[0], xlim[1]+1, 100))
+        #ax.legend()
 
         if show_plot:
             plt.show()
@@ -326,7 +326,7 @@ class XSecDiff(XSecBase):
         if show_plot:
             plt.show()
         else:
-            return ax
+            return ax, diff_xsec
 
 
 class XSecDoubleDiff(XSecBase):

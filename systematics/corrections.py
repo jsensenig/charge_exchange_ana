@@ -144,6 +144,70 @@ class MuonFracReweight(CorrectionBase):
         return self.local_config["correction_var"]
 
 
+class BeamBkgdScale(CorrectionBase):
+    """
+    Subtract the background
+    """
+
+    def __init__(self, config):
+        super().__init__(config=config)
+        self.local_config = self.config["BeamBkgdScale"]
+        self.correction_var = self.local_config["correction_var"]
+
+        # self.scale_dict = {k: self.local_config["muon_frac_weight"] for k in self.local_config["muon_bkgd_list"]}
+        self.scale_dict = {}
+
+    def apply(self, to_correct):
+
+        return to_correct
+
+    def get_correction_variable(self):
+        return self.local_config["correction_var"]
+
+
+class BeamSignalBkgdScale(CorrectionBase):
+    """
+    Subtract the background
+    """
+
+    def __init__(self, config):
+        super().__init__(config=config)
+        self.local_config = self.config["BeamSignalBkgdScale"]
+        self.correction_var = self.local_config["correction_var"]
+
+        tmp_zpi0 = {k: self.local_config["zpi0_scale"] for k in self.local_config["zpi0_bkgd_list"]}
+        tmp_npi0 = {k: self.local_config["npi0_scale"] for k in self.local_config["npi0_bkgd_list"]}
+
+        self.scale_dict = {**tmp_zpi0, **tmp_npi0 }
+
+    def apply(self, to_correct):
+
+        return to_correct
+
+    def get_correction_variable(self):
+        return self.local_config["correction_var"]
+
+
+class Pi0BkgdScale:
+    """
+    Subtract the pi0 background
+    """
+
+    def __init__(self, config):
+        super().__init__(config=config)
+        self.local_config = self.config["Pi0BkgdScale"]
+        self.correction_var = self.local_config["correction_var"]
+
+        self.pi0_scale =self.local_config["pi0_scale"]
+
+    def apply(self, to_correct):
+
+        return to_correct
+
+    def get_correction_variable(self):
+        return self.local_config["correction_var"]
+
+
 class Pi0Energy(CorrectionBase):
     """
     Uncertainty from beam energy loss upstream of the active volume.

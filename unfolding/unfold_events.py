@@ -8,6 +8,7 @@ import RooUnfold
 import awkward as ak
 
 from cex_analysis.plot_utils import histogram_constructor, bin_centers_np, bin_width_np
+from cex_analysis.true_process import TrueProcess
 from unfolding.unfold_remapping import Remapping
 from unfolding.unfolding_interface import XSecVariablesBase
 
@@ -28,9 +29,13 @@ class Unfold:
         self.compile_cpp_helpers()
 
         self.remap_evts = Remapping(var_names=self.config["var_names"])
+        self.true_process = TrueProcess()
 
         self.remap_evts.remove_overflow = self.config["remove_overflow"]
         self.remap_evts.subtract_bkgd = self.config["subtract_background"]
+        self.calc_bkgds = self.config["calculate_background"]
+        self.bkgd_scale_cls = self.config["bkgd_scale_cls"]
+        self.bkgd_file_name = self.config["bkgd_file_name"]
         if self.remap_evts.subtract_bkgd:
             self.remap_evts.background_dict = self.load_background()
 
@@ -77,7 +82,7 @@ class Unfold:
         """)
 
     def run_unfold(self, event_record=None, data_mask=None, true_var_list=None, reco_var_list=None, true_weight_list=None,
-                   reco_weight_list=None,  data_weight_list=None, external_vars=False, calculate_eff=False):
+                   reco_weight_list=None,  data_weight_list=None, evt_categories=None, external_vars=False, calculate_eff=False):
 
         if not external_vars:
             true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
@@ -118,6 +123,11 @@ class Unfold:
             # self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist,
             #                                                                      full_selected=selected_signal_nd_hist)
             #
+            if self.calc_bkgds:
+                bkgd_dict = self.vars.get_backgrounds(pts=true_var_list, process=evt_categories, bin_array=self.true_bin_array,
+                                                      weights=true_weights, scale_cls=self.bkgd_scale_cls)
+                self.save_backgrounds(bkgd_dict=bkgd_dict)
+
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
 
             response_mask = true_evt_mask & reco_evt_mask
@@ -484,6 +494,14 @@ class Unfold:
         with open(file_name, 'wb') as f:
             pickle.dump(unfold_eff_dict, f)
         print("Wrote efficiency file:", file_name)
+
+    def save_backgrounds(self, bkgd_dict=None):
+        """
+        Save the background and its (errors)
+        """
+        with open(self.bkgd_file_name, 'wb') as f:
+            pickle.dump(bkgd_dict, f)
+        print("Wrote background file:", self.bkgd_file_name)
 
     def load_background(self):
 

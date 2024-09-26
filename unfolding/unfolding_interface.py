@@ -41,6 +41,13 @@ class XSecVariablesBase:
         Get the specified cross-section's variable(s).
         """
         pass
+
+    @abstractmethod
+    def get_backgrounds(self, pts, process, bin_array, weights, scale_cls):
+        """
+        Implement to get the backgrounds from the variable
+        """
+        pass
     
     def apply_corrections_and_systematics(self, events):
 
@@ -481,7 +488,24 @@ class BeamPionVariables(XSecVariablesBase):
 
         return true_int, reco_int
 
-    def plot_beam_vars(self, xsec_hist, err_ax0, err_ax1, err_ax2, bin_array, h1_limits, h2_limits, h3_limits, plot_true_reco='both', show_plot=True, reco_label=None):
+    def get_backgrounds(self, pts, process, bin_array, weights, scale_cls):
+
+        bkgd_scale_dict = self.corrections[scale_cls].scale_dict
+        total_event_count = np.histogram(pts[0], bins=bin_array[0][1:-1], weights=weights)[0].sum()
+
+        bkgd_list = []
+        for proc in self.true_process.get_daughter_bkgd_list():
+            if proc == self.signal_proc:
+                continue
+            scale = bkgd_scale_dict.get(proc, 1)
+            proc_mask = process == string2code[proc]
+            hist, _ = np.histogram(pts[0][proc_mask], bins=bin_array[0][1:-1], weights=weights[proc_mask]*scale)
+            bkgd_list.append(hist)
+
+        return {"total_signal_hist": total_event_count, "backgrounds": bkgd_list}
+
+    def plot_beam_vars(self, xsec_hist, err_ax0, err_ax1, err_ax2, bin_array, h1_limits, h2_limits, h3_limits,
+                       plot_true_reco='both', show_plot=True, reco_label=None):
 
         if plot_true_reco == 'both':
             plot_true, plot_reco = True, True
@@ -686,6 +710,22 @@ class Pi0Variables(XSecVariablesBase):
             diff_angle = trans_point * np.exp(50. * (alpha - min_alpha))
 
         return diff_angle
+
+    def get_backgrounds(self, pts, process, bin_array, weights, scale_cls):
+
+        bkgd_scale = self.corrections[scale_cls].pi0_scale
+        total_event_count = np.histogram2d(pts[0], pts[1], bins=[bin_array[0][1:-1], bin_array[1][1:-1]])[0].sum()
+
+        bkgd_list = []
+        for proc in self.true_process.get_daughter_bkgd_list():
+            if proc == self.signal_proc:
+                continue
+            proc_mask = process == string2code[proc]
+            hist, _, _ = np.histogram2d(pts[0][proc_mask], pts[1][proc_mask],
+                                        bins=[bin_array[0][1:-1], bin_array[1][1:-1]], weights=bkgd_scale)
+            bkgd_list.append(hist)
+
+        return {"total_signal_hist": total_event_count, "backgrounds": bkgd_list}
 
     def plot_pi0_vars(self, unfold_hist, err_ax0, err_ax1, bin_array, h1_limits, h2_limits, plot_true_reco='both', show_plot=True):
 

@@ -19,6 +19,7 @@ class Unfold:
     def __init__(self, config_file, response_file=None, efficiency_file=None):
         self.config = self.configure(config_file=config_file)
         self.show_plots = self.config["show_plots"]
+        self.quiet_unfold = self.config["quiet_unfold"]
         self.figs_path = self.config["figure_path"]
         self.bayes_niter = self.config["bayes_niter"]
         self.is_training = self.config["is_training"]
@@ -139,7 +140,7 @@ class Unfold:
                                         true_events=self.remap_evts.true_map[true_nd_binned[response_mask]].astype('d'),
                                         reco_weights=reco_weights[response_mask].astype('d'))
 
-        if self.show_plots:
+        if self.show_plots and not self.quiet_unfold:
             self.plot_response_matrix(response_matrix=self.response)
 
         # Set data
@@ -159,7 +160,7 @@ class Unfold:
                                                                          cov_matrix=unfolded_data_cov)
 
         # Plot sparse unfolded results
-        if self.show_plots and self.is_training:
+        if self.show_plots and self.is_training and not self.quiet_unfold:
             self.truth_hist = ROOT.TH1D("truth", "Truth", int(len(unfolded_data_hist_np)), 0, float(len(unfolded_data_hist_np)))
             self.plot_unfolded_results(unfolded_data_hist_np=unfolded_data_hist_np, unfolded_cov_np=unfolded_data_cov_np,
                                        true_hist_np=true_hist_sparse)
@@ -183,7 +184,7 @@ class Unfold:
         else:
             unfold_nd_hist_np, unfold_nd_cov_np = raw_unfold_nd_hist_np, raw_unfold_nd_cov_np
 
-        if self.show_plots and self.is_training:
+        if self.show_plots and self.is_training and not self.quiet_unfold:
             self.truth_hist = ROOT.TH1D("truth", "Truth", int(len(unfold_nd_hist_np)), 0, float(len(unfold_nd_hist_np)))
             self.plot_unfolded_results(unfolded_data_hist_np=unfold_nd_hist_np, unfolded_cov_np=unfold_nd_cov_np,
                                        true_hist_np=true_nd_hist)
@@ -265,6 +266,9 @@ class Unfold:
     def unfold_bayes(self):
 
         unfold = RooUnfold.RooUnfoldBayes(self.response, self.reco_hist, self.bayes_niter)
+
+        if self.quiet_unfold:
+            unfold.SetVerbose(0)
 
         # Get statistical uncorrelated bin errors
         # since setting the diagonal of the Cov matrix it should be sigma^2
@@ -493,7 +497,7 @@ class Unfold:
         if os.path.isfile(self.efficiency_file):
             with open(self.efficiency_file, 'rb') as f:
                 unfold_eff_dict = pickle.load(f)
-            print("Reading existing efficiency file:", self.eff_file_name)
+            print("Reading existing efficiency file:", self.efficiency_file)
 
         if is_denom:
             print("Calculating efficiency")

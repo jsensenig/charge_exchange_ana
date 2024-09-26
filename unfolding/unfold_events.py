@@ -1,4 +1,5 @@
 import json
+import os.path
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -59,8 +60,10 @@ class Unfold:
 
         if not self.is_training:
             self.load_response(response_file=response_file)
+
+        self.efficiency_file = self.config["efficiency_file"] if efficiency_file is None else efficiency_file
         if self.apply_eff_correction:
-            self.load_efficiency(efficiency_file=efficiency_file)
+            self.load_efficiency()
 
     @staticmethod
     def compile_cpp_helpers():
@@ -82,7 +85,8 @@ class Unfold:
         """)
 
     def run_unfold(self, event_record=None, data_mask=None, true_var_list=None, reco_var_list=None, true_weight_list=None,
-                   reco_weight_list=None,  data_weight_list=None, evt_categories=None, external_vars=False, calculate_eff=False):
+                   reco_weight_list=None,  data_weight_list=None, evt_categories=None, external_vars=False,
+                   calculate_eff=False, is_eff_denom=False):
 
         if not external_vars:
             true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
@@ -168,7 +172,8 @@ class Unfold:
 
         # Efficiency correct unfolded data after its mapped back to non-sparse form
         if calculate_eff:
-            return raw_unfold_nd_hist_np, raw_unfold_nd_cov_np
+            self.save_efficiency(hist=raw_unfold_nd_hist_np, is_denom=is_eff_denom)
+            # return raw_unfold_nd_hist_np, raw_unfold_nd_cov_np
 
         if self.apply_eff_correction:
             unfold_nd_hist_np, unfold_nd_cov_np = self.remap_evts.correct_for_efficiency(unfolded_data=raw_unfold_nd_hist_np,
@@ -470,30 +475,40 @@ class Unfold:
             pickle.dump(unfold_param_dict, f)
         print("Wrote unfold param file:", file_name)
 
-    def load_efficiency(self, efficiency_file):
-
-        if efficiency_file is None:                               
-            efficiency_file = self.config["efficiency_file"]
+    def load_efficiency(self):
                                                          
-        with open(efficiency_file, 'rb') as f:
+        with open(self.efficiency_file, 'rb') as f:
             unfold_eff_dict = pickle.load(f)
 
         self.efficiency = unfold_eff_dict["efficiency"]
         self.eff_err = unfold_eff_dict["efficiency_err"]
 
-        print("Loaded efficiency file:", efficiency_file)
+        print("Loaded efficiency file:", self.efficiency_file)
 
-    def save_efficiency(self, file_name, unfold_eff_dict=None):
+    def save_efficiency(self, hist, is_denom=False):
         """
         Save the efficiency and its errors
         """
-        if unfold_eff_dict is None:
-            unfold_eff_dict = {"efficiency": self.efficiency,
-                               "efficiency_err": self.eff_err}
-                                                                          
-        with open(file_name, 'wb') as f:
+        unfold_eff_dict = {}
+        if os.path.isfile(self.efficiency_file):
+            with open(self.efficiency_file, 'rb') as f:
+                unfold_eff_dict = pickle.load(f)
+            print("Reading existing efficiency file:", self.eff_file_name)
+
+        if is_denom:
+            print("Calculating efficiency")
+            unfold_eff_dict["eff_denom_hist"] = hist
+            efficiency, eff_err = self.remap_evts.calculate_efficiency(full_signal=unfold_eff_dict["eff_num_hist"],
+                                                                       full_selected=unfold_eff_dict["eff_denom_hist"])
+            unfold_eff_dict["efficiency"] = efficiency
+            unfold_eff_dict["efficiency_err"] = eff_err
+        else:
+            print("Just added efficiency numerator")
+            unfold_eff_dict["eff_num_hist"] = hist
+
+        with open(self.efficiency_file, 'wb') as f:
             pickle.dump(unfold_eff_dict, f)
-        print("Wrote efficiency file:", file_name)
+        print("Wrote efficiency file:", self.efficiency_file)
 
     def save_backgrounds(self, bkgd_dict=None):
         """

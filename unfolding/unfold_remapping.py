@@ -199,10 +199,10 @@ class Remapping:
         efficiency = full_selected / full_signal
 
         # If divided by zero replace the infinity by 0
-        efficiency[np.isinf(efficiency)] = 0.
-        efficiency[np.isnan(efficiency)] = 0.
+        efficiency[np.isinf(efficiency) | np.isnan(efficiency)] = 0.
 
         eff_err = efficiency * ((np.sqrt(full_selected) / full_selected) + (np.sqrt(full_signal) / full_signal))
+        eff_err[np.isinf(efficiency) | np.isnan(efficiency)] = 0.
 
         return efficiency, eff_err
 

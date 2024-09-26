@@ -501,6 +501,7 @@ class BeamPionVariables(XSecVariablesBase):
             proc_mask = process == string2code[proc]
             hist, _ = np.histogram(pts[0][proc_mask], bins=bin_array[0][1:-1], weights=weights[proc_mask]*scale)
             bkgd_list.append(hist)
+            print("Background", proc, "Count:", hist.sum())
 
         return {"total_signal_hist": total_event_count, "backgrounds": bkgd_list}
 
@@ -721,9 +722,10 @@ class Pi0Variables(XSecVariablesBase):
             if proc == self.signal_proc:
                 continue
             proc_mask = process == string2code[proc]
-            hist, _, _ = np.histogram2d(pts[0][proc_mask], pts[1][proc_mask],
-                                        bins=[bin_array[0][1:-1], bin_array[1][1:-1]], weights=bkgd_scale)
+            hist, _, _ = np.histogram2d(pts[0][proc_mask], pts[1][proc_mask], bins=[bin_array[0][1:-1], bin_array[1][1:-1]], 
+                                        weights=np.ones(np.count_nonzero(proc_mask)) * bkgd_scale)
             bkgd_list.append(hist)
+            print("Background", proc, "Count:", hist.sum())
 
         return {"total_signal_hist": total_event_count, "backgrounds": bkgd_list}
 

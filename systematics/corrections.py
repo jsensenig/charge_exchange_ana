@@ -188,7 +188,7 @@ class BeamSignalBkgdScale(CorrectionBase):
         return self.local_config["correction_var"]
 
 
-class Pi0BkgdScale:
+class Pi0BkgdScale(CorrectionBase):
     """
     Subtract the pi0 background
     """

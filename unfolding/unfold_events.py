@@ -124,8 +124,8 @@ class Unfold:
             #                                                                      full_selected=selected_signal_nd_hist)
             #
             if self.calc_bkgds:
-                bkgd_dict = self.vars.get_backgrounds(pts=true_var_list, process=evt_categories, bin_array=self.true_bin_array,
-                                                      weights=true_weights, scale_cls=self.bkgd_scale_cls)
+                bkgd_dict = self.vars.get_backgrounds(pts=reco_var_list, process=evt_categories, bin_array=self.true_bin_array,
+                                                      weights=reco_weight_list, scale_cls=self.bkgd_scale_cls)
                 self.save_backgrounds(bkgd_dict=bkgd_dict)
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)

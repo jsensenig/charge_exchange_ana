@@ -87,7 +87,7 @@ class Unfold:
 
     def run_unfold(self, event_record=None, data_mask=None, true_var_list=None, reco_var_list=None, true_weight_list=None,
                    reco_weight_list=None,  data_weight_list=None, evt_categories=None, external_vars=False,
-                   calculate_eff=False, is_eff_denom=False):
+                   calculate_eff=False, is_eff_num=False):
 
         if not external_vars:
             true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
@@ -103,6 +103,13 @@ class Unfold:
 
         if self.is_training:
             print("Start Training")
+
+            # Get backgrounds first so we can use them right away
+            if self.calc_bkgds:
+                bkgd_dict = self.vars.get_backgrounds(pts=reco_var_list, process=evt_categories, bin_array=self.true_bin_array,
+                                                      weights=reco_weight_list, scale_cls=self.bkgd_scale_cls)
+                self.save_backgrounds(bkgd_dict=bkgd_dict)
+
             true_nd_binned, true_weights, true_nd_hist, true_nd_hist_cov, true_hist_sparse, self.remap_evts.true_map, true_evt_mask \
                 = self.remap_evts.remap_events(var_list=true_var_list,
                                                bin_list=self.true_bin_array,
@@ -128,10 +135,6 @@ class Unfold:
             # self.efficiency, self.eff_err = self.remap_evts.calculate_efficiency(full_signal=signal_nd_hist,
             #                                                                      full_selected=selected_signal_nd_hist)
             #
-            if self.calc_bkgds:
-                bkgd_dict = self.vars.get_backgrounds(pts=reco_var_list, process=evt_categories, bin_array=self.true_bin_array,
-                                                      weights=reco_weight_list, scale_cls=self.bkgd_scale_cls)
-                self.save_backgrounds(bkgd_dict=bkgd_dict)
 
             self.truth_nbins_sparse, self.reco_nbins_sparse = len(true_hist_sparse), len(reco_hist_sparse)
 
@@ -173,7 +176,7 @@ class Unfold:
 
         # Efficiency correct unfolded data after its mapped back to non-sparse form
         if calculate_eff:
-            self.save_efficiency(hist=raw_unfold_nd_hist_np, is_denom=is_eff_denom)
+            self.save_efficiency(hist=raw_unfold_nd_hist_np, is_num=is_eff_num)
             # return raw_unfold_nd_hist_np, raw_unfold_nd_cov_np
 
         if self.apply_eff_correction:
@@ -471,9 +474,9 @@ class Unfold:
                              "reco_bin_map": self.remap_evts.reco_map,
                              "true_bin_array": self.true_bin_array,
                              "reco_bin_array": self.reco_bin_array,
-                             "reco_nbins_sparse": self.reco_nbins_sparse,
-                             "efficiency": self.efficiency,
-                             "efficiency_err": self.eff_err}
+                             "reco_nbins_sparse": self.reco_nbins_sparse}
+                             # "efficiency": self.efficiency,
+                             # "efficiency_err": self.eff_err}
 
         with open(file_name, 'wb') as f:
             pickle.dump(unfold_param_dict, f)
@@ -489,7 +492,7 @@ class Unfold:
 
         print("Loaded efficiency file:", self.efficiency_file)
 
-    def save_efficiency(self, hist, is_denom=False):
+    def save_efficiency(self, hist, is_num=False):
         """
         Save the efficiency and its errors
         """
@@ -499,16 +502,16 @@ class Unfold:
                 unfold_eff_dict = pickle.load(f)
             print("Reading existing efficiency file:", self.efficiency_file)
 
-        if is_denom:
+        if is_num:
             print("Calculating efficiency")
-            unfold_eff_dict["eff_denom_hist"] = hist
-            efficiency, eff_err = self.remap_evts.calculate_efficiency(full_signal=unfold_eff_dict["eff_num_hist"],
-                                                                       full_selected=unfold_eff_dict["eff_denom_hist"])
+            unfold_eff_dict["eff_num_hist"] = hist
+            efficiency, eff_err = self.remap_evts.calculate_efficiency(full_signal=unfold_eff_dict["eff_denom_hist"],
+                                                                       full_selected=unfold_eff_dict["eff_num_hist"])
             unfold_eff_dict["efficiency"] = efficiency
             unfold_eff_dict["efficiency_err"] = eff_err
         else:
-            print("Just added efficiency numerator")
-            unfold_eff_dict["eff_num_hist"] = hist
+            print("Just added efficiency denominator")
+            unfold_eff_dict["eff_denom_hist"] = hist
 
         with open(self.efficiency_file, 'wb') as f:
             pickle.dump(unfold_eff_dict, f)
@@ -518,6 +521,9 @@ class Unfold:
         """
         Save the background and its (errors)
         """
+        # Make it usable right away
+        self.remap_evts.background_dict = bkgd_dict
+
         with open(self.bkgd_file_name, 'wb') as f:
             pickle.dump(bkgd_dict, f)
         print("Wrote background file:", self.bkgd_file_name)

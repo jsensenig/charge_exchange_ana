@@ -43,7 +43,7 @@ class XSecVariablesBase:
         pass
 
     @abstractmethod
-    def get_backgrounds(self, pts, process, bin_array, weights, scale_cls):
+    def get_backgrounds(self, pts, process, bin_array, weights, scale_cls, scale_syst):
         """
         Implement to get the backgrounds from the variable
         """
@@ -488,9 +488,10 @@ class BeamPionVariables(XSecVariablesBase):
 
         return true_int, reco_int
 
-    def get_backgrounds(self, pts, process, bin_array, weights, scale_cls):
+    def get_backgrounds(self, pts, process, bin_array, weights, scale_cls, scale_syst):
 
-        bkgd_scale_dict = self.corrections[scale_cls].scale_dict
+        # bkgd_scale_dict = self.corrections[scale_cls].scale_dict
+        bkgd_scale_dict = self.corrections[scale_cls].get_bkgd_scale(apply_syst=scale_syst)
         total_event_count = np.histogram(pts[0], bins=bin_array[0][1:-1], weights=weights)[0].sum()
 
         bkgd_list = []
@@ -501,7 +502,7 @@ class BeamPionVariables(XSecVariablesBase):
             proc_mask = process == string2code[proc]
             hist, _ = np.histogram(pts[0][proc_mask], bins=bin_array[0][1:-1], weights=weights[proc_mask]*scale)
             bkgd_list.append(hist)
-            print("Background", proc, "Count:", hist.sum())
+            print("Background", proc, "Scale:", scale, "Count:", hist.sum())
 
         return {"total_signal_hist": total_event_count, "backgrounds": bkgd_list}
 
@@ -712,9 +713,10 @@ class Pi0Variables(XSecVariablesBase):
 
         return diff_angle
 
-    def get_backgrounds(self, pts, process, bin_array, weights, scale_cls):
+    def get_backgrounds(self, pts, process, bin_array, weights, scale_cls, scale_syst):
 
-        bkgd_scale = self.corrections[scale_cls].pi0_scale
+        # bkgd_scale = self.corrections[scale_cls].pi0_scale
+        bkgd_scale = self.corrections[scale_cls].get_bkgd_scale(apply_syst=scale_syst)
         total_event_count = np.histogram2d(pts[0], pts[1], bins=[bin_array[0][1:-1], bin_array[1][1:-1]])[0].sum()
 
         bkgd_list = []
@@ -725,7 +727,7 @@ class Pi0Variables(XSecVariablesBase):
             hist, _, _ = np.histogram2d(pts[0][proc_mask], pts[1][proc_mask], bins=[bin_array[0][1:-1], bin_array[1][1:-1]], 
                                         weights=np.ones(np.count_nonzero(proc_mask)) * bkgd_scale)
             bkgd_list.append(hist)
-            print("Background", proc, "Count:", hist.sum())
+            print("Background", proc, "Scale:", bkgd_scale, "Count:", hist.sum())
 
         return {"total_signal_hist": total_event_count, "backgrounds": bkgd_list}
 

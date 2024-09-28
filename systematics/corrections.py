@@ -161,6 +161,13 @@ class BeamBkgdScale(CorrectionBase):
 
         return to_correct
 
+    def get_bkgd_scale(self, apply_syst):
+
+        if apply_syst:
+            return self.scale_dict
+
+        return self.scale_dict
+
     def get_correction_variable(self):
         return self.local_config["correction_var"]
 
@@ -177,12 +184,27 @@ class BeamSignalBkgdScale(CorrectionBase):
 
         tmp_zpi0 = {k: self.local_config["zpi0_scale"] for k in self.local_config["zpi0_bkgd_list"]}
         tmp_npi0 = {k: self.local_config["npi0_scale"] for k in self.local_config["npi0_bkgd_list"]}
-
         self.scale_dict = {**tmp_zpi0, **tmp_npi0 }
+
+        self.zpi0_err = self.local_config["zpi0_bkgd_list"]
+        self.npi0_err = self.local_config["npi0_bkgd_list"]
 
     def apply(self, to_correct):
 
         return to_correct
+
+    def get_bkgd_scale(self, apply_syst):
+
+        if apply_syst:
+            zpi0_err = np.random.normal(0, self.zpi0_err)
+            npi0_err = np.random.normal(0, self.npi0_err)
+
+            tmp_zpi0 = {k: self.local_config["zpi0_scale"] + zpi0_err for k in self.local_config["zpi0_bkgd_list"]}
+            tmp_npi0 = {k: self.local_config["npi0_scale"] + npi0_err for k in self.local_config["npi0_bkgd_list"]}
+
+            return {**tmp_zpi0, **tmp_npi0 }
+
+        return self.scale_dict
 
     def get_correction_variable(self):
         return self.local_config["correction_var"]
@@ -199,10 +221,18 @@ class Pi0BkgdScale(CorrectionBase):
         self.correction_var = self.local_config["correction_var"]
 
         self.pi0_scale =self.local_config["pi0_scale"]
+        self.pi0_err = self.local_config["pi0_scale_error"]
 
     def apply(self, to_correct):
 
         return to_correct
+
+    def get_bkgd_scale(self, apply_syst):
+
+        if apply_syst:
+            return self.pi0_scale + np.random.normal(0, self.pi0_err)
+
+        return self.pi0_scale
 
     def get_correction_variable(self):
         return self.local_config["correction_var"]

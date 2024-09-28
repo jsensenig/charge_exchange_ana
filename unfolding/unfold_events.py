@@ -37,6 +37,7 @@ class Unfold:
         self.remap_evts.subtract_bkgd = self.config["subtract_background"]
         self.calc_bkgds = self.config["calculate_background"]
         self.bkgd_scale_cls = self.config["bkgd_scale_cls"]
+        self.scale_syst = self.config["apply_scale_syst"]
         self.bkgd_file_name = self.config["bkgd_file_name"]
         if self.remap_evts.subtract_bkgd:
             self.remap_evts.background_dict = self.load_background()
@@ -101,14 +102,14 @@ class Unfold:
                 for i, rk in enumerate(self.reco_record_var):
                     self.vars.xsec_vars[rk] = reco_var_list[i]
 
+        # Get backgrounds first so we can use them right away
+        if self.calc_bkgds:
+            bkgd_dict = self.vars.get_backgrounds(pts=reco_var_list, process=evt_categories, bin_array=self.true_bin_array,
+                                                  weights=reco_weight_list, scale_cls=self.bkgd_scale_cls, scale_syst=self.scale_syst)
+            self.save_backgrounds(bkgd_dict=bkgd_dict)
+
         if self.is_training:
             print("Start Training")
-
-            # Get backgrounds first so we can use them right away
-            if self.calc_bkgds:
-                bkgd_dict = self.vars.get_backgrounds(pts=reco_var_list, process=evt_categories, bin_array=self.true_bin_array,
-                                                      weights=reco_weight_list, scale_cls=self.bkgd_scale_cls)
-                self.save_backgrounds(bkgd_dict=bkgd_dict)
 
             true_nd_binned, true_weights, true_nd_hist, true_nd_hist_cov, true_hist_sparse, self.remap_evts.true_map, true_evt_mask \
                 = self.remap_evts.remap_events(var_list=true_var_list,

@@ -34,13 +34,14 @@ class Unfold:
         self.true_process = TrueProcess()
 
         self.remap_evts.remove_overflow = self.config["remove_overflow"]
+        self.bkgd_file_name = self.config["background_file"]
         self.remap_evts.subtract_bkgd = self.config["subtract_background"]
         self.calc_bkgds = self.config["calculate_background"]
         self.bkgd_scale_cls = self.config["bkgd_scale_cls"]
         self.scale_syst = self.config["apply_scale_syst"]
         self.bkgd_file_name = self.config["bkgd_file_name"]
         if self.remap_evts.subtract_bkgd:
-            self.remap_evts.background_dict = self.load_background()
+            self.load_background()
 
         self.true_record_var = self.config["true_record_var"]
         self.reco_record_var = self.config["reco_record_var"]
@@ -508,12 +509,15 @@ class Unfold:
             unfold_eff_dict["eff_num_hist"] = hist
             efficiency, eff_err = self.remap_evts.calculate_efficiency(full_signal=unfold_eff_dict["eff_denom_hist"],
                                                                        full_selected=unfold_eff_dict["eff_num_hist"])
+            efficiency *= (unfold_eff_dict["eff_num_hist"].sum() / unfold_eff_dict["eff_denom_hist"].sum())
             unfold_eff_dict["efficiency"] = efficiency
             unfold_eff_dict["efficiency_err"] = eff_err
+            self.efficiency = efficiency
         else:
             print("Just added efficiency denominator")
             unfold_eff_dict["eff_denom_hist"] = hist
 
+        print("EFF:", unfold_eff_dict["efficiency"])
         with open(self.efficiency_file, 'wb') as f:
             pickle.dump(unfold_eff_dict, f)
         print("Wrote efficiency file:", self.efficiency_file)
@@ -531,12 +535,11 @@ class Unfold:
 
     def load_background(self):
 
-        background_file = self.config["background_file"]
-
-        with open(background_file, 'rb') as f:
+        with open(self.bkgd_file_name, 'rb') as f:
             background_dict = pickle.load(f)
 
-        return background_dict
+        self.remap_evts.background_dict = background_dict
+        print("Loaded background file:", self.bkgd_file_name)
 
     @staticmethod
     def configure(config_file):

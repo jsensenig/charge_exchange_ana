@@ -128,7 +128,7 @@ class MuonFracReweight(CorrectionBase):
         super().__init__(config=config)
         self.local_config = self.config["MuonFracReweight"]
         self.correction_var = self.local_config["correction_var"]
-        self.muon_frac_weight = self.local_config["muon_frac_weight"]
+        self.muon_frac_weight = self.local_config["muon_scale"]
         self.pdg_select = -13
 
     def apply(self, to_correct):
@@ -186,8 +186,8 @@ class BeamSignalBkgdScale(CorrectionBase):
         tmp_npi0 = {k: self.local_config["npi0_scale"] for k in self.local_config["npi0_bkgd_list"]}
         self.scale_dict = {**tmp_zpi0, **tmp_npi0 }
 
-        self.zpi0_err = self.local_config["zpi0_bkgd_list"]
-        self.npi0_err = self.local_config["npi0_bkgd_list"]
+        self.zpi0_err = self.local_config["zpi0_scale_error"]
+        self.npi0_err = self.local_config["npi0_scale_error"]
 
     def apply(self, to_correct):
 

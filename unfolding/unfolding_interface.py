@@ -493,10 +493,13 @@ class BeamPionVariables(XSecVariablesBase):
         # bkgd_scale_dict = self.corrections[scale_cls].scale_dict
         bkgd_scale_dict = self.corrections[scale_cls].get_bkgd_scale(apply_syst=scale_syst)
         total_event_count = np.histogram(pts[0], bins=bin_array[0][1:-1], weights=weights)[0].sum()
+        process_list = self.true_process.get_daughter_bkgd_list() if scale_cls == "BeamSignalBkgdScale" else (
+                                                                        self.true_process.get_beam_particle_list())
+        signal_proc = "single_charge_exchange" if scale_cls == "BeamSignalBkgdScale" else "matched_pion"
 
         bkgd_list = []
-        for proc in self.true_process.get_daughter_bkgd_list():
-            if proc == self.signal_proc:
+        for proc in process_list:
+            if proc == signal_proc:
                 continue
             scale = bkgd_scale_dict.get(proc, 1)
             proc_mask = process == string2code[proc]

@@ -144,18 +144,18 @@ class MuonFracReweight(CorrectionBase):
         return self.local_config["correction_var"]
 
 
-class BeamBkgdScale(CorrectionBase):
+class BeamIncBkgdScale(CorrectionBase):
     """
     Subtract the background
     """
 
     def __init__(self, config):
         super().__init__(config=config)
-        self.local_config = self.config["BeamBkgdScale"]
+        self.local_config = self.config["BeamIncBkgdScale"]
         self.correction_var = self.local_config["correction_var"]
 
-        # self.scale_dict = {k: self.local_config["muon_frac_weight"] for k in self.local_config["muon_bkgd_list"]}
-        self.scale_dict = {}
+        self.scale_dict = {k: self.local_config["muon_scale"] for k in self.local_config["muon_bkgd_list"]}
+        self.muon_err = self.local_config["muon_scale_error"]
 
     def apply(self, to_correct):
 
@@ -164,7 +164,9 @@ class BeamBkgdScale(CorrectionBase):
     def get_bkgd_scale(self, apply_syst):
 
         if apply_syst:
-            return self.scale_dict
+            muon_err = np.random.normal(0, self.muon_err)
+            tmp_muon = {k: self.local_config["muon_scale"] + muon_err for k in self.local_config["muon_bkgd_list"]}
+            return tmp_muon
 
         return self.scale_dict
 

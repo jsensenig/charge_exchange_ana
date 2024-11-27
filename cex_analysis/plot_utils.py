@@ -45,7 +45,15 @@ code2prettystring = {-11:  '$e^+$',
                10024: '$\\pi^{\\pm}$',
                10025: '$\\mu^{+}$',
                10026: 'Other',
-               10027: 'Beam Background'}
+               10027: 'Beam Background',
+               10028: 'Proton Inelastic',
+               10029: 'Proton CeX',
+               10030: 'Proton 0$\\pi^{0}$ Bkgd',
+               10031: 'Proton 1$\\pi^{0}$ Bkgd',
+               10032: 'Proton n$\\pi^{0}$ Bkgd',
+               10033: 'Proton 0$\\pi$ Bkgd',
+               10034: 'Proton Beam Bkgd',
+               10035: 'Proton Other Bkgd'}
 
 code2string = {-11:  '$e^+$',
                 11:   'e^-$',
@@ -85,7 +93,16 @@ code2string = {-11:  '$e^+$',
                10024: 'matched_pion',
                10025: 'matched_muon',
                10026: 'beam_other',
-               10027: 'beam_bkgd'}
+               10027: 'beam_bkgd',
+               10028: 'proton_inelastic',
+               10029: 'proton_charge_exchange',
+               10030: 'proton_zero_pi0_bkgd',
+               10031: 'proton_one_pi0_bkgd',
+               10032: 'proton_n_pi0_bkgd',
+               10033: 'proton_zero_pion_bkgd',
+               10034: 'proton_beam_bkgd',
+               10035: 'proton_other_bkgd'}
+
 
 string2code = {code2string[-11]: -11,
                code2string[11]: 11,
@@ -125,7 +142,15 @@ string2code = {code2string[-11]: -11,
                code2string[10024]: 10024,
                code2string[10025]: 10025,
                code2string[10026]: 10026,
-               code2string[10027]: 10027}
+               code2string[10027]: 10027,
+               code2string[10028]: 10028,
+               code2string[10029]: 10029,
+               code2string[10030]: 10030,
+               code2string[10031]: 10031,
+               code2string[10032]: 10032,
+               code2string[10033]: 10033,
+               code2string[10034]: 10034,
+               code2string[10035]: 10035}
 
 # matplotlib colors
 colors = {-11:  'indianred',  # red
@@ -164,7 +189,17 @@ colors = {-11:  'indianred',  # red
         10024: 'royalblue',
         10025: 'peru',
         10026: 'olivedrab',
-        10027: 'peru'}
+        10027: 'peru',
+        10028: 'paleturquoise',
+        10029: 'goldenrod',
+        10030: 'olivedrab',
+        10031: 'royalblue',
+        10032: 'peru',
+        10033: 'olivedrab',
+        10034: 'peru',
+        10035: 'indianred'}
+
+
 
 # ROOT color palette: https://root-forum.cern.ch/t/what-is-your-best-way-to-increment-colors/13809/2
 # colors = {-11:  46,  # red

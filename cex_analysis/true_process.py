@@ -23,13 +23,23 @@ class TrueProcess:
 
         beam_matched = events["reco_beam_true_byE_matched"]
         # cosmic_origin = events["reco_beam_true_byE_origin"]
-        events["misid_pion"] = ~beam_matched & (np.abs(events["true_beam_PDG"]) == 211)
-        events["misid_proton"] = ~beam_matched & (events["true_beam_PDG"] == 2212)
-        events["misid_muon"] = ~beam_matched & (np.abs(events["true_beam_PDG"]) == 13)
-        events["misid_electron_gamma"] = ~beam_matched & ((np.abs(events["true_beam_PDG"]) == 11) | (events["true_beam_PDG"]) == 22)
-        events["matched_pion"] = beam_matched & (np.abs(events["true_beam_PDG"]) == 211)
-        events["matched_muon"] = beam_matched & (np.abs(events["true_beam_PDG"]) == 13)
-        events["misid_beam"] = events["misid_pion"] | events["misid_proton"] | events["misid_muon"] | events["misid_electron_gamma"]
+        #events["misid_pion"] = ~beam_matched & (events["true_beam_PDG"] == 211)
+        #events["misid_proton"] = ~beam_matched & (events["true_beam_PDG"] == 2212)
+        #events["misid_muon"] = ~beam_matched & (np.abs(events["true_beam_PDG"]) == 13)
+        #events["misid_electron_gamma"] = ~beam_matched & ((np.abs(events["true_beam_PDG"]) == 11) | (events["true_beam_PDG"]) == 22)
+        #events["matched_pion"] = beam_matched & (events["true_beam_PDG"] == 211)
+        #events["matched_muon"] = beam_matched & (np.abs(events["true_beam_PDG"]) == 13)
+        #events["misid_beam"] = events["misid_pion"] | events["misid_proton"] | events["misid_muon"] | events["misid_electron_gamma"]
+
+        events["misid_pion"] = (np.abs(events["true_beam_PDG"]) == 211) & ~(events["true_beam_endProcess"] == "pi+Inelastic")
+        events["misid_proton"] = (events["true_beam_PDG"] == 2212)
+        events["matched_proton"] = (events["true_beam_PDG"] == 2212) & (events["true_beam_endProcess"] == "protonInelastic")
+        #events["misid_muon"] = (np.abs(events["true_beam_PDG"]) == 13)
+        events["misid_electron_gamma"] = ((np.abs(events["true_beam_PDG"]) == 11) | (events["true_beam_PDG"]) == 22)
+        events["matched_pion"] = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic")
+        events["matched_muon"] = (np.abs(events["true_beam_PDG"]) == 13)
+        events["misid_beam"] = events["misid_pion"] | events["misid_proton"] | events["misid_electron_gamma"]
+
 
         # Momentum cut on true charged pions, i.e., pions with momentum < cut momentum are indistinguishable from say
         # protons and other charged particles. set to 0.125
@@ -37,17 +47,19 @@ class TrueProcess:
         valid_piminus = TrueProcess.mask_daughter_momentum(events=events, momentum_threshold=-1000., pdg_select=-211)
 
         # Pion inelastic
-        pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic") #&
-        #                 ~events["misid_beam"])
+        pion_inelastic = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+Inelastic") #& ~events["misid_beam"]
+        proton_inelastic = (events["true_beam_PDG"] == 2212) & (events["true_beam_endProcess"] == "protonInelastic") 
 
         # Pion elastic
         events["pion_elastic"] = (events["true_beam_PDG"] == 211) & (events["true_beam_endProcess"] == "pi+elastic")
 
         # Pion In-elastic
         events["pion_inelastic"] = pion_inelastic
+        events["proton_inelastic"] = proton_inelastic
 
         # Single charge exchange, the singal
         events["single_charge_exchange"] = pion_inelastic & self.single_charge_exchange(events, valid_piplus, valid_piminus)
+        events["proton_charge_exchange"] = proton_inelastic & self.single_charge_exchange(events, valid_piplus, valid_piminus)
 
         # Double charge exchange
         events["double_charge_exchange"] = pion_inelastic & self.double_charge_exchange(events, valid_piplus, valid_piminus)
@@ -84,6 +96,14 @@ class TrueProcess:
         events["beam_bkgd"] = ~pion_inelastic 
         events["daughter_other_bkgd"] =  pion_inelastic & (~events["daughter_zero_pi0_bkgd"] & ~events["daughter_one_pi0_bkgd"] &
                                           ~events["daughter_n_pi0_bkgd"] & ~events["single_charge_exchange"])
+
+        events["proton_zero_pi0_bkgd"] = proton_inelastic & self.daughter_charged_pion_prod(events, valid_piplus, valid_piminus)
+        events["proton_one_pi0_bkgd"] = proton_inelastic & self.daughter_one_pi0_bkgd(events, valid_piplus, valid_piminus)
+        events["proton_n_pi0_bkgd"] = proton_inelastic & self.daughter_n_pi0_bkgd(events, valid_piplus, valid_piminus)
+        events["proton_zero_pion_bkgd"] = proton_inelastic & self.absorption(events, valid_piplus, valid_piminus)
+        events["proton_beam_bkgd"] = ~proton_inelastic 
+        events["proton_other_bkgd"] =  proton_inelastic & (~events["proton_zero_pi0_bkgd"] & ~events["proton_one_pi0_bkgd"] &
+                                          ~events["proton_n_pi0_bkgd"] & events["proton_zero_pion_bkgd"] & ~events["proton_charge_exchange"])
 
         # other (fill "other" column with all zeroes)
         # events["other"] = np.zeros_like(events["pion_inelastic"])
@@ -128,8 +148,12 @@ class TrueProcess:
 
     @staticmethod
     def get_beam_particle_list():
-        return ["misid_pion", "misid_proton", "misid_muon", "misid_electron_gamma", "matched_pion",
+        return ["misid_pion", "misid_proton", "misid_electron_gamma", "matched_pion",
                 "matched_muon", "beam_other"]
+
+    @staticmethod
+    def get_proton_bkgd_list():
+        return ["proton_charge_exchange", "proton_zero_pi0_bkgd", "proton_one_pi0_bkgd", "proton_n_pi0_bkgd", "proton_zero_pion_bkgd", "proton_beam_bkgd", "proton_other_bkgd"]
 
     def get_reco_particle_counts(self, events):
             for pdg in self.pdg_dict:

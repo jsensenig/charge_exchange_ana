@@ -81,6 +81,7 @@ class XSecVariablesBase:
             proc_list = self.true_process.get_process_list_simple()
         elif proc_list_name == "daughter":
             proc_list = self.true_process.get_daughter_bkgd_list()
+            #proc_list = self.true_process.get_proton_bkgd_list()
         elif proc_list_name == "beam":
             proc_list = self.true_process.get_beam_particle_list()
         else:
@@ -197,6 +198,11 @@ class BeamPionVariables(XSecVariablesBase):
         # Get shower and charged pion counts for sidebands
         self.xsec_vars["reco_shower_count"] = self.make_shower_count(event_record=event_record)
         self.xsec_vars["reco_pion_count"] = self.make_pion_count(event_record=event_record)
+
+        self.xsec_vars["true_g4_rw_piplus_coeffs"], self.xsec_vars["true_g4_rw_piplus_weights"] = None, None 
+        if self.is_training:
+            self.xsec_vars["true_g4_rw_piplus_coeffs"] = event_record["g4rw_full_grid_piplus_coeffs"][:, (4,5,6)]
+            self.xsec_vars["true_g4_rw_piplus_weights"] = event_record["g4rw_full_grid_piplus_weights"][:, (4,5,6)]
 
         # Apply mask to events
         if self.is_training:
@@ -499,7 +505,7 @@ class BeamPionVariables(XSecVariablesBase):
 
         bkgd_list = []
         for proc in process_list:
-            if proc == signal_proc:
+            if proc == signal_proc:# or proc == "misid_pion":
                 continue
             scale = bkgd_scale_dict.get(proc, 1)
             proc_mask = process == string2code[proc]
@@ -720,7 +726,10 @@ class Pi0Variables(XSecVariablesBase):
 
         # bkgd_scale = self.corrections[scale_cls].pi0_scale
         bkgd_scale = self.corrections[scale_cls].get_bkgd_scale(apply_syst=scale_syst)
-        total_event_count = np.histogram2d(pts[0], pts[1], bins=[bin_array[0][1:-1], bin_array[1][1:-1]])[0].sum()
+        bkgd_mask = ~(process == string2code[self.signal_proc])
+        tmp_bkgd_scale = np.ones(len(pts[0]))
+        tmp_bkgd_scale[bkgd_mask] *= bkgd_scale
+        total_event_count = np.histogram2d(pts[0], pts[1], bins=[bin_array[0][1:-1], bin_array[1][1:-1]], weights=tmp_bkgd_scale)[0].sum()
 
         bkgd_list = []
         for proc in self.true_process.get_daughter_bkgd_list():

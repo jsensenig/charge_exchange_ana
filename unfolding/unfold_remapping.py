@@ -214,14 +214,15 @@ class Remapping:
         for i in range(self.true_total_bins):
             if unfolded_data[i] > 0: # empty bin in data
                 unfolded_data_corrected[i] = unfolded_data[i] / efficiency[i] if efficiency[i] > eff_cut else unfolded_data[i] 
-                print("Bin:", i, "E:", np.round(efficiency[i], 3), "E Corr:", np.round(unfolded_data[i], 3), " -> ", int(unfolded_data_corrected[i]))
+                if self.debug: print("Bin:", i, "E:", np.round(efficiency[i], 3), "E Corr:", np.round(unfolded_data[i], 3), " -> ", int(unfolded_data_corrected[i]))
                 for j in range(self.true_total_bins):
-                    if unfolded_data[j] < 1:
+                    if unfolded_data[j] == 0:
                         continue
-                    valid_eff = (efficiency[i] > eff_cut) and (efficiency[j] > eff_cut)
-                    unfolded_data_cov_corrected[i, j] = unfolded_data_cov[i, j] / (efficiency[i] * efficiency[j]) if valid_eff else unfolded_data_cov[i, j]
+                    i_err = efficiency[i] if efficiency[i] > eff_cut else 1
+                    j_err = efficiency[j] if efficiency[j] > eff_cut else 1
+                    unfolded_data_cov_corrected[i, j] = unfolded_data_cov[i, j] / (i_err * j_err)
             elif efficiency[i] == 0: # FIXME add MC scaling
-                print("Bin:", i, "Effiency is 0 passing. Bin contents:", unfolded_data[i])
+                if self.debug: print("Bin:", i, "Effiency is 0 passing. Bin contents:", unfolded_data[i])
                 #unfolded_data_corrected[i] = 1
                 #unfolded_data_cov_corrected[i, i] = 1
                 pass

@@ -89,7 +89,7 @@ class Unfold:
 
     def run_unfold(self, event_record=None, data_mask=None, true_var_list=None, reco_var_list=None, true_weight_list=None,
                    reco_weight_list=None,  data_weight_list=None, evt_categories=None, external_vars=False,
-                   calculate_eff=False, is_eff_num=False):
+                   calculate_eff=False, is_eff_num=False, total_evts=0):
 
         if not external_vars:
             true_var_list, reco_var_list, true_weight_list, reco_weight_list, data_weight_list = (
@@ -144,6 +144,10 @@ class Unfold:
             self.create_response_matrix(reco_events=self.remap_evts.reco_map[reco_nd_binned[response_mask]].astype('d'),
                                         true_events=self.remap_evts.true_map[true_nd_binned[response_mask]].astype('d'),
                                         reco_weights=reco_weights[response_mask].astype('d'))
+        
+        #if calculate_eff and not is_eff_num:
+        #    self.save_efficiency(hist=true_nd_hist, total_evts=total_evts, is_num=is_eff_num)
+
 
         if self.show_plots and not self.quiet_unfold:
             self.plot_response_matrix(response_matrix=self.response)
@@ -178,7 +182,7 @@ class Unfold:
 
         # Efficiency correct unfolded data after its mapped back to non-sparse form
         if calculate_eff:
-            self.save_efficiency(hist=raw_unfold_nd_hist_np, is_num=is_eff_num)
+            self.save_efficiency(hist=raw_unfold_nd_hist_np, total_evts=total_evts, is_num=is_eff_num)
             # return raw_unfold_nd_hist_np, raw_unfold_nd_cov_np
 
         if self.apply_eff_correction:
@@ -218,7 +222,7 @@ class Unfold:
                                                  true_var_list=true_var_list, bin_lens=bin_lens,
                                                  var_label_list=self.config["var_names"])
 
-        return unfold_nd_hist_np, unfold_nd_cov_np, unfolded_corr_np, unfold_var_hist, unfolded_1d_err_cov, no_under_over_flow_cov, unfolded_1d_with_inc_cov, 
+        return unfold_nd_hist_np, (unfold_nd_cov_np, raw_unfold_nd_cov_np), unfolded_corr_np, unfold_var_hist, unfolded_1d_err_cov, no_under_over_flow_cov, unfolded_1d_with_inc_cov, 
 
     def fill_data_hist(self, sparse_data_hist):
         if self.reco_hist is not None:
@@ -494,7 +498,7 @@ class Unfold:
 
         print("Loaded efficiency file:", self.efficiency_file)
 
-    def save_efficiency(self, hist, is_num=False):
+    def save_efficiency(self, hist, total_evts, is_num=False):
         """
         Save the efficiency and its errors
         """
@@ -507,17 +511,22 @@ class Unfold:
         if is_num:
             print("Calculating efficiency")
             unfold_eff_dict["eff_num_hist"] = hist
+            #scale = unfold_eff_dict["eff_denom_hist"].sum() / unfold_eff_dict["eff_num_hist"].sum()
+            scale = (unfold_eff_dict["eff_denom_total_evts"] / total_evts) # scale to total pi+ inel evts
+            print("scale:", scale)
             efficiency, eff_err = self.remap_evts.calculate_efficiency(full_signal=unfold_eff_dict["eff_denom_hist"],
-                                                                       full_selected=unfold_eff_dict["eff_num_hist"])
-            efficiency *= (unfold_eff_dict["eff_num_hist"].sum() / unfold_eff_dict["eff_denom_hist"].sum())
+                                                                       full_selected=unfold_eff_dict["eff_num_hist"]*scale)
+            #efficiency *= (unfold_eff_dict["eff_denom_total_evts"] / total_evts) # scale to total pi+ inel evts
             unfold_eff_dict["efficiency"] = efficiency
             unfold_eff_dict["efficiency_err"] = eff_err
+            unfold_eff_dict["eff_num_total_evts"] = total_evts
             self.efficiency = efficiency
+            print(unfold_eff_dict["eff_denom_total_evts"], "/", total_evts)
         else:
             print("Just added efficiency denominator")
             unfold_eff_dict["eff_denom_hist"] = hist
+            unfold_eff_dict["eff_denom_total_evts"] = total_evts
 
-        print("EFF:", unfold_eff_dict["efficiency"])
         with open(self.efficiency_file, 'wb') as f:
             pickle.dump(unfold_eff_dict, f)
         print("Wrote efficiency file:", self.efficiency_file)

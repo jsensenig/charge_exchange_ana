@@ -233,8 +233,8 @@ class XSecDiff(XSecBase):
         Since the incident and diff variables are unfolded seperately they are treated as uncorrelated errors.
         So add them in quadrature.
         """
-        ke_nbins, cos_nbins = [len(b) - 3 for b in bin_list] #np.ma.count(bin_list, axis=1) - 3
-        ke_bins, cos_bins = bin_list[0][1:-1], bin_list[1][1:-1]
+        ke_nbins, cos_nbins = [len(b) - 1 for b in bin_list] #np.ma.count(bin_list, axis=1) - 3
+        ke_bins, cos_bins = bin_list[0], bin_list[1]
         prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
 
         # KE errors
@@ -363,13 +363,13 @@ class XSecDoubleDiff(XSecBase):
 
         return xsec_array
 
-    def propagate_error(self, inc_hist, int_hist, cov_with_inc, beam_eslice_edges, bin_list):
+    def propagate_error(self, inc_hist, int_hist, cov_with_inc, beam_eslice_edges, bin_lens):
 
         prefactor = self.xsec_prefactor(beam_eslice_edges=beam_eslice_edges)
         deriv_int_hist = prefactor * (1. / inc_hist)
         deriv_inc_hist = - prefactor * (int_hist / (inc_hist * inc_hist))
 
-        bin_lens = np.ma.count(bin_list, axis=1) - 3
+        #bin_lens = np.ma.count(bin_list, axis=1) - 3
         nbins = bin_lens[0]
         jacobian = np.zeros([nbins, 2 * nbins])
 
